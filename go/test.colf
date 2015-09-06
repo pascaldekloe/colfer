@@ -1,0 +1,7 @@
+package colfer
+
+type tstobj struct {
+	b   bool
+	i32 int32
+	s   string
+}

@@ -1,23 +1,18 @@
 package colfer
 
 import (
+	"bytes"
 	"fmt"
+	"go/ast"
+	"go/printer"
+	"go/token"
 	"os"
-	"reflect"
 )
 
-type Object struct {
-	Name   string
-	Fields []*Field
-}
-
 func (d *Object) Generate() error {
-	f, err := os.Create(fmt.Sprintf("./colfer-%s.go", d.Name))
-	if err != nil {
-		return err
-	}
+	buf := new(bytes.Buffer)
 
-	_, err = f.WriteString(fmt.Sprintf(`package colfer
+	buf.WriteString(fmt.Sprintf(`package colfer
 
 import (
 	"encoding/binary"
@@ -25,7 +20,13 @@ import (
 	"fmt"
 	"io"
 )
-	
+`))
+
+	if err := d.appendStructSpec(buf); err != nil {
+		return err
+	}
+
+	buf.WriteString(fmt.Sprintf(`
 func (o *%s) Unmarshal(data []byte) error {
 	for i := 0; i < len(data); {
 		key := data[i]
@@ -38,46 +39,79 @@ func (o *%s) Unmarshal(data []byte) error {
 			return fmt.Errorf("field %%d unknown", field)
 `, d.Name))
 
-	if err != nil {
-		return err
-	}
-
 	for _, field := range d.Fields {
 		s, err := field.switchCase()
 		if err != nil {
 			return err
 		}
-		if _, err = f.WriteString(s); err != nil {
-			return err
+		buf.WriteString(s)
+	}
+
+	buf.WriteString(`		}
+	}
+	return nil
+}
+`)
+
+	f, err := os.Create(fmt.Sprintf("./colfer-%s.go", d.Name))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf.WriteTo(f)
+	return nil
+}
+
+func (o *Object) appendStructSpec(buf *bytes.Buffer) error {
+	fields := make([]*ast.Field, len(o.Fields))
+	for i, f := range o.Fields {
+		fields[i] = &ast.Field{
+			Names: []*ast.Ident{
+				{Name: f.Name},
+			},
+			Type: &ast.Ident{
+				Name: f.Type,
+			},
+			Tag: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("`colfer:\"%d\"`", f.No),
+			},
 		}
 	}
 
-	f.WriteString(`		}
+	spec := &ast.TypeSpec{
+		Type: &ast.StructType{
+			Fields: &ast.FieldList{
+				List: fields,
+			},
+		},
+		Name: &ast.Ident{
+			Name: o.Name,
+			Obj: &ast.Object{
+				Kind: 3,
+				Name: o.Name,
+			},
+		},
 	}
-	return nil
-}`)
 
-	return nil
-}
-
-type Field struct {
-	No   int
-	Name string
-	Kind reflect.Kind
+	buf.WriteString("\ntype ")
+	err := printer.Fprint(buf, token.NewFileSet(), spec)
+	buf.WriteByte('\n')
+	return err
 }
 
 func (f *Field) switchCase() (code string, err error) {
-	switch f.Kind {
+	switch f.Type {
 	default:
-		return "", fmt.Errorf("colfer: kind %s unsupported", f.Kind)
+		return "", fmt.Errorf("colfer: type %s unsupported", f.Type)
 
-	case reflect.Bool:
+	case "bool":
 		code = fmt.Sprintf(`		case %d:
 
 			o.%s = flag
 `, f.No, f.Name)
 
-	case reflect.Int:
+	case "int32":
 		code = fmt.Sprintf(`		case %d:
 			x, n := binary.Uvarint(data[i:])
 			if n == 0 {
@@ -85,19 +119,18 @@ func (f *Field) switchCase() (code string, err error) {
 			}
 			i += n
 
-			// BUG(ps) Detect int byte size
 			if n < 0 || x&0xFFFFFFFF80000000 != 0 {
 				return errors.New("colfer: field %s overflow")
 			}
 
-			v := int(x)
+			v := int32(x)
 			if flag {
 				v = -v
 			}
 			o.%s = v
 `, f.No, f.Name, f.Name)
 
-	case reflect.String:
+	case "string":
 		code = fmt.Sprintf(`		case %d:
 			if flag {
 				return errors.New("field %s flag reserved")
