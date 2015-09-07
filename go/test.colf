@@ -1,8 +1,8 @@
 package colfer
 
 type tstobj struct {
-	b   bool
-	i32 int32
-	f32 float32
-	s   string
+	B   bool
+	I32 int32
+	F32 float32
+	S   string
 }
