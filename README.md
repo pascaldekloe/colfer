@@ -1,22 +1,36 @@
 # Colfer
 
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
+The format is inspired by Proto**col** Buf**fer**.
 
 
 # Encoding
 
-Colfer documents consists of zero or more field value definitions. Each value is applied in the order of appearance.
-Data is represented in a big-endian manner. The format relies on `varints` also known as a [variable-length quantity](https://en.wikipedia.org/wiki/Variable-length_quantity).
+A Colfer representation starts with an 8-bit magic number `0x80` followed by
+zero or more field value definitions. Only those fields with a value other than
+the zero value may be serialized. Fields appear by field number, in ascending
+order.
+
+Data is represented in a big-endian manner. The format relies on *varints* also
+known as a
+[variable-length quantity](https://en.wikipedia.org/wiki/Variable-length_quantity).
 
 
-## Field Definition
+## Value Definiton
 
-The first byte identifies the field number with it's 7 least significant bits. The most significant bit is applied as follows, depending on the data type.
+Each definition starts with an 8-bit *key*. The 7 least significant bits
+identify the field by its numeric value.
 
-bool: the actual value
-int: the sign: `1` for negative
-float: `0` for 32-bit and `1` for 64-bit IEEE 754
-timestamp: `0` for seconds, `1` for nanoseconds
-blob: always `0`; `1` is reserved for future use
+Field occurences of type `bool` set the value to `true`.
 
-Integers and timestamps are followed by a varint value. Blobs are followed with a varint data length and finally the blob itself.
+Types `uint64` and `uint32` are encoded as varints. The most significant bit on
+the key means negative for signed types `int64` and `int32`.
+
+Types `float64` and `float32` are encoded conform IEEE 754.
+
+The 64 bits for `timestamp` have the two's complement representation of the
+number of miliseconds that have elapsed since 00:00:00 UTC, Thursday, 1 January
+1970, not counting leap seconds.
+
+The data for types `string` and `blob` is prefixed with a varint size
+declaration.
