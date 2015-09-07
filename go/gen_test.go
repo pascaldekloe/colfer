@@ -12,11 +12,21 @@ var golden = []struct {
 	serial  string
 	mapping tstobj
 }{
-	{"00", tstobj{}},
+	{"", tstobj{}},
 	{"80", tstobj{b: true}},
 	{"0101", tstobj{i32: 1}},
 	{"8101", tstobj{i32: -1}},
-	{"020141", tstobj{s: "A"}},
+	{"024008f5c3", tstobj{f32: 2.14}},
+	{"030141", tstobj{s: "A"}},
+}
+
+func TestGoldenEncodes(t *testing.T) {
+	for _, gold := range golden {
+		got := hex.EncodeToString(gold.mapping.Marshal(make([]byte, 1000)))
+		if got != gold.serial {
+			t.Errorf("Got 0x%s, want 0x%s", got, gold.serial)
+		}
+	}
 }
 
 func TestGoldenDecodes(t *testing.T) {
