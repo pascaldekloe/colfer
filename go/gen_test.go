@@ -13,22 +13,28 @@ var rnd = rand.New(rand.NewSource(time.Now().Unix()))
 
 //go:generate go run ../cmd/colf/main.go go
 
-var golden = []struct {
+type golden struct {
 	serial  string
 	mapping TstObj
-}{
-	{"80", TstObj{}},
-	{"8000", TstObj{B: true}},
-	{"800101", TstObj{I32: 1}},
-	{"808101", TstObj{I32: -1}},
-	{"80024008f5c3", TstObj{F32: 2.14}},
-	{"80030141", TstObj{S: "A"}},
-	{"8004020100", TstObj{A: []byte{1, 0}}},
+}
+
+func newGoldenCases() []*golden {
+	return []*golden{
+		{"80", TstObj{}},
+		{"8000", TstObj{B: true}},
+		{"800101", TstObj{I32: 1}},
+		{"808101", TstObj{I32: -1}},
+		{"80024008f5c3", TstObj{F32: 2.14}},
+		{"80030000000055ef312a", TstObj{T: time.Unix(1441739050, 0)}},
+		{"80830000000055ef312a00000009", TstObj{T: time.Unix(1441739050, 9)}},
+		{"80040141", TstObj{S: "A"}},
+		{"8005020100", TstObj{A: []byte{1, 0}}},
+	}
 }
 
 func TestGoldenEncodes(t *testing.T) {
-	for _, gold := range golden {
-		got := hex.EncodeToString(gold.mapping.Marshal(make([]byte, 1000)))
+	for _, gold := range newGoldenCases() {
+		got := hex.EncodeToString(gold.mapping.Marshal(make([]byte, 100)))
 		if got != gold.serial {
 			t.Errorf("Got 0x%s, want 0x%s", got, gold.serial)
 		}
@@ -36,7 +42,7 @@ func TestGoldenEncodes(t *testing.T) {
 }
 
 func TestGoldenDecodes(t *testing.T) {
-	for _, gold := range golden {
+	for _, gold := range newGoldenCases() {
 		data, err := hex.DecodeString(gold.serial)
 		if err != nil {
 			t.Fatal(err)

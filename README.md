@@ -30,7 +30,8 @@ Types `float64` and `float32` are encoded conform IEEE 754.
 
 The 64 bits for `timestamp` have the two's complement representation of the
 number of miliseconds that have elapsed since 00:00:00 UTC, Thursday, 1 January
-1970, not counting leap seconds.
+1970, not counting leap seconds. If the most significant bit on the key is set
+then the following 32 bits contain the nanosecond fraction.
 
 The data for types `text` and `binary` is prefixed with a varint size
 declaration.
