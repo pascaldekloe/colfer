@@ -4,5 +4,6 @@ type tstObj struct {
 	b   bool
 	i32 int32
 	f32 float32
-	s   string
+	s   text
+	a   binary
 }

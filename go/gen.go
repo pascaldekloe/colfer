@@ -46,12 +46,20 @@ var (
 func (o *Object) writeTypeCode(buf *bytes.Buffer) error {
 	fields := make([]*ast.Field, len(o.Fields))
 	for i, f := range o.Fields {
+		t := f.Type
+		switch t {
+		case "text":
+			t = "string"
+		case "binary":
+			t = "[]byte"
+		}
+
 		fields[i] = &ast.Field{
 			Names: []*ast.Ident{
 				{Name: f.Name},
 			},
 			Type: &ast.Ident{
-				Name: f.Type,
+				Name: t,
 			},
 			Tag: &ast.BasicLit{
 				Kind:  token.STRING,
@@ -125,9 +133,9 @@ func (o *%s) Marshal(data []byte) []byte {
 	}
 `, f.Name, f.Num)
 
-		case "string":
+		case "text", "binary":
 			fmt.Fprintf(buf, `
-	if v := o.%s; v != "" {
+	if v := o.%s; len(v) != 0 {
 		data[i] = 0x%02x
 		i++
 
@@ -141,6 +149,7 @@ func (o *%s) Marshal(data []byte) []byte {
 		i = to
 	}
 `, f.Name, f.Num)
+
 		}
 	}
 
@@ -217,7 +226,7 @@ func (f *Field) writeUnmarshalSwitchCase(buf *bytes.Buffer) error {
 			i = to
 `, f.Num, f.Name)
 
-	case "string":
+	case "text":
 		fmt.Fprintf(buf, `		case %d:
 			length, n := binary.Uvarint(data[i:])
 			if n == 0 {
@@ -230,6 +239,24 @@ func (f *Field) writeUnmarshalSwitchCase(buf *bytes.Buffer) error {
 				return io.EOF
 			}
 			o.%s = string(data[i:to])
+			i = to
+`, f.Num, f.Name)
+
+	case "binary":
+		fmt.Fprintf(buf, `		case %d:
+			length, n := binary.Uvarint(data[i:])
+			if n == 0 {
+				return io.EOF
+			}
+			i += n
+
+			to := i + int(length)
+			if to < 0 || to > len(data) {
+				return io.EOF
+			}
+			v := make([]byte, to-i)
+			copy(v, data[i:to])
+			o.%s = v
 			i = to
 `, f.Num, f.Name)
 

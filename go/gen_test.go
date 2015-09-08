@@ -23,6 +23,7 @@ var golden = []struct {
 	{"808101", TstObj{I32: -1}},
 	{"80024008f5c3", TstObj{F32: 2.14}},
 	{"80030141", TstObj{S: "A"}},
+	{"8004020100", TstObj{A: []byte{1, 0}}},
 }
 
 func TestGoldenEncodes(t *testing.T) {

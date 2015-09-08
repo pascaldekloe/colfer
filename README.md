@@ -32,5 +32,5 @@ The 64 bits for `timestamp` have the two's complement representation of the
 number of miliseconds that have elapsed since 00:00:00 UTC, Thursday, 1 January
 1970, not counting leap seconds.
 
-The data for types `string` and `blob` is prefixed with a varint size
+The data for types `text` and `binary` is prefixed with a varint size
 declaration.
