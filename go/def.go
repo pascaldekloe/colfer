@@ -7,15 +7,17 @@ import (
 	"go/token"
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 type Object struct {
-	Name   string
-	Fields []*Field
+	Package string
+	Name    string
+	Fields  []*Field
 }
 
 type Field struct {
-	No   int
+	Num  int
 	Name string
 	Type string
 }
@@ -51,6 +53,8 @@ func ReadDefs() ([]*Object, error) {
 					return nil, err
 				}
 				objects = append(objects, o)
+
+				o.Package = file.Name.Name
 			}
 		}
 	}
@@ -60,7 +64,7 @@ func ReadDefs() ([]*Object, error) {
 
 func mapObject(src *ast.TypeSpec) (*Object, error) {
 	dst := &Object{
-		Name: src.Name.Name,
+		Name: strings.Title(src.Name.Name),
 	}
 
 	s, ok := src.Type.(*ast.StructType)
@@ -77,8 +81,8 @@ func mapObject(src *ast.TypeSpec) (*Object, error) {
 		}
 
 		dst.Fields = append(dst.Fields, &Field{
-			No:   i,
-			Name: f.Names[0].Name,
+			Num:  i,
+			Name: strings.Title(f.Names[0].Name),
 			Type: t.Name,
 		})
 	}

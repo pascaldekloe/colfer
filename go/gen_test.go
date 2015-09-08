@@ -6,20 +6,23 @@ import (
 	"reflect"
 	"testing"
 	"testing/quick"
+	"time"
 )
 
-//go:generate go run ../cmd/colf/main.go
+var rnd = rand.New(rand.NewSource(time.Now().Unix()))
+
+//go:generate go run ../cmd/colf/main.go go
 
 var golden = []struct {
 	serial  string
-	mapping tstobj
+	mapping TstObj
 }{
-	{"", tstobj{}},
-	{"80", tstobj{B: true}},
-	{"0101", tstobj{I32: 1}},
-	{"8101", tstobj{I32: -1}},
-	{"024008f5c3", tstobj{F32: 2.14}},
-	{"030141", tstobj{S: "A"}},
+	{"80", TstObj{}},
+	{"8000", TstObj{B: true}},
+	{"800101", TstObj{I32: 1}},
+	{"808101", TstObj{I32: -1}},
+	{"80024008f5c3", TstObj{F32: 2.14}},
+	{"80030141", TstObj{S: "A"}},
 }
 
 func TestGoldenEncodes(t *testing.T) {
@@ -38,7 +41,7 @@ func TestGoldenDecodes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got := new(tstobj)
+		got := new(TstObj)
 		if err = got.Unmarshal(data); err != nil {
 			t.Errorf("%s: %s", gold.serial, err)
 		}
@@ -48,27 +51,26 @@ func TestGoldenDecodes(t *testing.T) {
 	}
 }
 
-func generate(n int) ([]*tstobj, [][]byte, int64) {
-	objects := make([]*tstobj, n)
+func generate(n int) ([]*TstObj, [][]byte, int64) {
+	objects := make([]*TstObj, n)
 	serials := make([][]byte, n)
 	size := 0
 
-	r := rand.New(rand.NewSource(8))
 	typ := reflect.TypeOf(objects).Elem()
 	for i := range objects {
-		v, ok := quick.Value(typ, r)
+		v, ok := quick.Value(typ, rnd)
 		if !ok {
-			panic("Can't generate tstobj")
+			panic("Can't generate TstObj")
 		}
 
-		o, ok := v.Interface().(*tstobj)
-		if o == nil {
-			o = new(tstobj)
-		}
-
+		o, ok := v.Interface().(*TstObj)
 		if !ok {
 			panic("Wrong type generated")
 		}
+		if o == nil {
+			o = new(TstObj)
+		}
+
 		b := o.Marshal(make([]byte, 1000))
 
 		objects[i], serials[i] = o, b
@@ -88,7 +90,7 @@ func BenchmarkEncode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := b.N; i != 0; i-- {
-		objects[rand.Intn(n)].Marshal(buf)
+		objects[rnd.Intn(n)].Marshal(buf)
 	}
 }
 
@@ -101,7 +103,6 @@ func BenchmarkDecode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := b.N; i != 0; i-- {
-		o := new(tstobj)
-		o.Unmarshal(serials[rand.Intn(n)])
+		new(TstObj).Unmarshal(serials[rnd.Intn(n)])
 	}
 }
