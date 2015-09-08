@@ -22,13 +22,17 @@ func newGoldenCases() []*golden {
 	return []*golden{
 		{"80", TstObj{}},
 		{"8000", TstObj{B: true}},
-		{"800101", TstObj{I32: 1}},
-		{"808101", TstObj{I32: -1}},
-		{"80024008f5c3", TstObj{F32: 2.14}},
-		{"80030000000055ef312a", TstObj{T: time.Unix(1441739050, 0)}},
-		{"80830000000055ef312a00000009", TstObj{T: time.Unix(1441739050, 9)}},
-		{"80040141", TstObj{S: "A"}},
-		{"8005020100", TstObj{A: []byte{1, 0}}},
+		{"800101", TstObj{U32: 1}},
+		{"800201", TstObj{U64: 1}},
+		{"800301", TstObj{I32: 1}},
+		{"808301", TstObj{I32: -1}},
+		{"800401", TstObj{I64: 1}},
+		{"808401", TstObj{I64: -1}},
+		{"80054008f5c3", TstObj{F32: 2.14}},
+		{"80070000000055ef312a", TstObj{T: time.Unix(1441739050, 0)}},
+		{"80870000000055ef312a00000009", TstObj{T: time.Unix(1441739050, 9)}},
+		{"80080141", TstObj{S: "A"}},
+		{"8009020100", TstObj{A: []byte{1, 0}}},
 	}
 }
 
