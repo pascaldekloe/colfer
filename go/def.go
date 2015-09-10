@@ -10,18 +10,21 @@ import (
 	"strings"
 )
 
+// Object is a data structure definition.
 type Object struct {
 	Package string
 	Name    string
 	Fields  []*Field
 }
 
+// Field is an Object item definition.
 type Field struct {
 	Num  int
 	Name string
 	Type string
 }
 
+// ReadDefs parses the Colfer files.
 func ReadDefs() ([]*Object, error) {
 	var objects []*Object
 	fileSet := token.NewFileSet()

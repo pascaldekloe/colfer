@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// Generate writes the code into file "colfer.go".
 func Generate(pack string, objects []*Object) error {
 	buf := new(bytes.Buffer)
 

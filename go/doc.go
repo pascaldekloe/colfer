@@ -1,4 +1,4 @@
-// Colfer is a schema-based binary data format.
+// Package colfer generates code.
 package colfer
 
 const (
