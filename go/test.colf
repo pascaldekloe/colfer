@@ -1,5 +1,6 @@
 package colfer
 
+// tstObj contains all supported types.
 type tstObj struct {
 	b   bool
 	u32 uint32
@@ -11,4 +12,15 @@ type tstObj struct {
 	t   timestamp
 	s   text
 	a   binary
+}
+
+// pkg is used for performance benchmarks.
+type pkg struct {
+	key	int64
+	host	text
+	addr	binary
+	port	int32
+	size	int64
+	hash	uint64
+	ratio	float64
 }

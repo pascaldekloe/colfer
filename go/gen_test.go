@@ -62,8 +62,8 @@ func TestGoldenDecodes(t *testing.T) {
 	}
 }
 
-func generate(n int) ([]*TstObj, [][]byte, int64) {
-	objects := make([]*TstObj, n)
+func generate(n int) ([]*Pkg, [][]byte, int64) {
+	objects := make([]*Pkg, n)
 	serials := make([][]byte, n)
 	size := 0
 
@@ -71,15 +71,15 @@ func generate(n int) ([]*TstObj, [][]byte, int64) {
 	for i := range objects {
 		v, ok := quick.Value(typ, rnd)
 		if !ok {
-			panic("Can't generate TstObj")
+			panic("can't generate Pkg values")
 		}
 
-		o, ok := v.Interface().(*TstObj)
+		o, ok := v.Interface().(*Pkg)
 		if !ok {
-			panic("Wrong type generated")
+			panic("wrong type generated")
 		}
 		if o == nil {
-			o = new(TstObj)
+			o = new(Pkg)
 		}
 
 		b := o.Marshal(make([]byte, 1000))
@@ -114,6 +114,6 @@ func BenchmarkDecode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := b.N; i != 0; i-- {
-		new(TstObj).Unmarshal(serials[rnd.Intn(n)])
+		new(Pkg).Unmarshal(serials[rnd.Intn(n)])
 	}
 }
