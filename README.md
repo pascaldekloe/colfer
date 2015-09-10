@@ -1,4 +1,4 @@
-# Colfer
+# Colfer [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer) [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
 The format is inspired by Proto**col** Buf**fer**.
