@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func (o *Object) Generate() error {
+func Generate(pack string, objects []*Object) error {
 	buf := new(bytes.Buffer)
 
 	fmt.Fprintf(buf, `package %s
@@ -22,26 +22,43 @@ import (
 	"time"
 )
 
+// Reference imports to suppress errors if they are not otherwise used.
+var _ = binary.MaxVarintLen64
+var _ = math.E
+var _ = time.RFC3339
+
 var (
 	ErrMagicMismatch = errors.New("colfer: magic header mismatch")
 	ErrCorrupt       = errors.New("colfer: data corrupt")
 )
-`, o.Package)
+`, pack)
 
-	if err := o.writeTypeCode(buf); err != nil {
-		return err
+	for _, o := range objects {
+		if err := o.writeCode(buf); err != nil {
+			return err
+		}
 	}
 
-	o.writeMarshalCode(buf)
-	o.writeUnmarshalCode(buf)
-
-	f, err := os.Create(fmt.Sprintf("./colf_%s.go", o.Name))
+	f, err := os.Create("Colfer.go")
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	_, err = buf.WriteTo(f)
 	return err
+}
+
+func (o *Object) writeCode(buf *bytes.Buffer) error {
+	if err := o.writeTypeCode(buf); err != nil {
+		return err
+	}
+	if err := o.writeMarshalCode(buf); err != nil {
+		return err
+	}
+	if err := o.writeUnmarshalCode(buf); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *Object) writeTypeCode(buf *bytes.Buffer) error {
@@ -92,7 +109,7 @@ func (o *Object) writeTypeCode(buf *bytes.Buffer) error {
 	return err
 }
 
-func (o *Object) writeMarshalCode(buf *bytes.Buffer) {
+func (o *Object) writeMarshalCode(buf *bytes.Buffer) error {
 	fmt.Fprintf(buf, `
 func (o *%s) Marshal(data []byte) []byte {
 	data[0] = 0x%02x
@@ -101,6 +118,9 @@ func (o *%s) Marshal(data []byte) []byte {
 
 	for _, f := range o.Fields {
 		switch f.Type {
+		default:
+			return fmt.Errorf("colfer: type %s unsupported", f.Type)
+
 		case "bool":
 			fmt.Fprintf(buf, `
 	if o.%s == true {
@@ -213,6 +233,7 @@ func (o *%s) Marshal(data []byte) []byte {
 	return data[:i]
 }
 `)
+	return nil
 }
 
 func (o *Object) writeUnmarshalCode(buf *bytes.Buffer) error {

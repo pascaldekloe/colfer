@@ -31,9 +31,14 @@ For now, "go" is the only option`, p)
 		log.Fatal(`Colfer definitons not found (file extension ".colf")`)
 	}
 
+	pack := objects[0].Package
 	for _, o := range objects {
-		if err := o.Generate(); err != nil {
-			log.Fatal(err)
+		if o.Package != pack {
+			log.Fatalf("Package mismatch: %q and %q", pack, o.Package)
 		}
+	}
+
+	if err := colfer.Generate(pack, objects); err != nil {
+		log.Fatal(err)
 	}
 }
