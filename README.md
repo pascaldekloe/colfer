@@ -1,7 +1,14 @@
-# Colfer [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/go?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/go) [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
+# Colfer [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer) [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
 The format is inspired by Proto**col** Buf**fer**.
+
+
+# Build
+
+Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
+
+Run `go generate` before the tests.
 
 
 # Encoding

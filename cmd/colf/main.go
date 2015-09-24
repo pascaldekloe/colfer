@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	colfer "github.com/pascaldekloe/colfer/go"
+	"github.com/pascaldekloe/colfer"
 )
 
 func main() {

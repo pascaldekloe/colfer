@@ -11,7 +11,7 @@ import (
 
 var rnd = rand.New(rand.NewSource(time.Now().Unix()))
 
-//go:generate go run ../cmd/colf/main.go go
+//go:generate go run ./cmd/colf/main.go go
 
 type golden struct {
 	serial  string
