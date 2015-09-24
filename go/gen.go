@@ -1,25 +1,34 @@
 package colfer
 
 import (
-	"bytes"
-	"fmt"
-	"go/ast"
-	"go/printer"
-	"go/token"
 	"os"
+	"text/template"
 )
 
-// Generate writes the code into file "colfer.go".
-func Generate(pack string, objects []*Object) error {
-	buf := new(bytes.Buffer)
+// Generate writes the code into file "Colfer.go".
+func Generate(pkg *Package) error {
+	t := template.New("go-code").Delims("<:", ":>")
+	template.Must(t.Parse(goCode))
+	template.Must(t.New("marshal").Parse(goMarshal))
+	template.Must(t.New("marshal-field").Parse(goMarshalField))
+	template.Must(t.New("unmarshal").Parse(goUnmarshal))
+	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 
-	fmt.Fprintf(buf, `package %s
+	f, err := os.Create("Colfer.go")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return t.Execute(f, pkg)
+}
+
+const goCode = `package <:.Name:>
 
 import (
-	"errors"
-	"io"
-	"math"
-	"time"
+        "errors"
+        "io"
+        "math"
+        "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -27,111 +36,36 @@ var _ = math.E
 var _ = time.RFC3339
 
 var (
-	ErrMagicMismatch = errors.New("colfer: magic header mismatch")
-	ErrCorrupt       = errors.New("colfer: data corrupt")
+        ErrMagicMismatch = errors.New("colfer: magic header mismatch")
+        ErrCorrupt       = errors.New("colfer: data corrupt")
 )
-`, pack)
 
-	for _, o := range objects {
-		if err := o.writeCode(buf); err != nil {
-			return err
-		}
-	}
+<:range .Objects:>
+type <:.Name:> struct {
+<:range .Fields:>	<:.Name:>	<:if eq .Type "timestamp":>time.Time<:else if eq .Type "text":>string<:else if eq .Type "binary":>[]byte<:else:><:.Type:><:end:>
+<:end:>}
+<:end:>
 
-	f, err := os.Create("Colfer.go")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = buf.WriteTo(f)
-	return err
-}
+<:range .Objects:>
+<:template "marshal" .:>
+<:template "unmarshal" .:><:end:>`
 
-func (o *Object) writeCode(buf *bytes.Buffer) error {
-	if err := o.writeTypeCode(buf); err != nil {
-		return err
-	}
-	if err := o.writeMarshalCode(buf); err != nil {
-		return err
-	}
-	if err := o.writeUnmarshalCode(buf); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *Object) writeTypeCode(buf *bytes.Buffer) error {
-	fields := make([]*ast.Field, len(o.Fields))
-	for i, f := range o.Fields {
-		t := f.Type
-		switch t {
-		case "text":
-			t = "string"
-		case "binary":
-			t = "[]byte"
-		case "timestamp":
-			t = "time.Time"
-		}
-
-		fields[i] = &ast.Field{
-			Names: []*ast.Ident{
-				{Name: f.Name},
-			},
-			Type: &ast.Ident{
-				Name: t,
-			},
-			Tag: &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("`colfer:\"%d\"`", f.Num),
-			},
-		}
-	}
-
-	spec := &ast.TypeSpec{
-		Type: &ast.StructType{
-			Fields: &ast.FieldList{
-				List: fields,
-			},
-		},
-		Name: &ast.Ident{
-			Name: o.Name,
-			Obj: &ast.Object{
-				Kind: 3,
-				Name: o.Name,
-			},
-		},
-	}
-
-	buf.WriteString("\ntype ")
-	err := printer.Fprint(buf, token.NewFileSet(), spec)
-	buf.WriteByte('\n')
-	return err
-}
-
-func (o *Object) writeMarshalCode(buf *bytes.Buffer) error {
-	fmt.Fprintf(buf, `
-func (o *%s) Marshal(data []byte) []byte {
-	data[0] = 0x%02x
+const goMarshal = `func (o *<:.Name:>) Marshal(data []byte) []byte {
+	data[0] = 0x80
 	i := 1
-`, o.Name, Magic)
+<:range .Fields:><:template "marshal-field" .:><:end:>
+	return data[:i]
+}
+`
 
-	for _, f := range o.Fields {
-		switch f.Type {
-		default:
-			return fmt.Errorf("colfer: type %s unsupported", f.Type)
-
-		case "bool":
-			fmt.Fprintf(buf, `
-	if o.%s == true {
-		data[i] = 0x%02x
+const goMarshalField = `<:$fieldDecl := printf "data[i] = 0x%02x" .Num :><:if eq .Type "bool":>
+	if o.<:.Name:> == true {
+		<:$fieldDecl:>
 		i++
 	}
-`, f.Name, f.Num)
-
-		case "uint32":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0 {
-		data[i] = 0x%02x
+<:else if eq .Type "uint32":>
+	if v := o.<:.Name:>; v != 0 {
+		<:$fieldDecl:>
 		i++
 		for v >= 0x80 {
 			data[i] = byte(v) | 0x80
@@ -141,12 +75,9 @@ func (o *%s) Marshal(data []byte) []byte {
 		data[i] = byte(v)
 		i++
 	}
-`, f.Name, f.Num)
-
-		case "uint64":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0 {
-		data[i] = 0x%02x
+<:else if eq .Type "uint64":>
+	if v := o.<:.Name:>; v != 0 {
+		<:$fieldDecl:>
 		i++
 		for v >= 0x80 {
 			data[i] = byte(v) | 0x80
@@ -156,17 +87,14 @@ func (o *%s) Marshal(data []byte) []byte {
 		data[i] = byte(v)
 		i++
 	}
-`, f.Name, f.Num)
-
-		case "int32":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0 {
+<:else if eq .Type "int32":>
+	if v := o.<:.Name:>; v != 0 {
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i] = 0x%02x
+			<:$fieldDecl:> | 0x80
 		} else {
-			data[i] = 0x%02x
+			<:$fieldDecl:>
 		}
 		i++
 		for x >= 0x80 {
@@ -177,17 +105,14 @@ func (o *%s) Marshal(data []byte) []byte {
 		data[i] = byte(x)
 		i++
 	}
-`, f.Name, f.Num|0x80, f.Num)
-
-		case "int64":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0 {
+<:else if eq .Type "int64":>
+	if v := o.<:.Name:>; v != 0 {
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i] = 0x%02x
+			<:$fieldDecl:> | 0x80
 		} else {
-			data[i] = 0x%02x
+			<:$fieldDecl:>
 		}
 		i++
 		for x >= 0x80 {
@@ -198,34 +123,25 @@ func (o *%s) Marshal(data []byte) []byte {
 		data[i] = byte(x)
 		i++
 	}
-`, f.Name, f.Num|0x80, f.Num)
-
-		case "float32":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0.0 {
+<:else if eq .Type "float32":>
+	if v := o.<:.Name:>; v != 0.0 {
+		<:$fieldDecl:>
 		x := math.Float32bits(v)
-		data[i] = 0x%02x
 		data[i+1], data[i+2], data[i+3], data[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 5
 	}
-`, f.Name, f.Num)
-
-		case "float64":
-			fmt.Fprintf(buf, `
-	if v := o.%s; v != 0.0 {
+<:else if eq .Type "float64":>
+	if v := o.<:.Name:>; v != 0.0 {
+		<:$fieldDecl:>
 		x := math.Float64bits(v)
-		data[i] = 0x%02x
 		data[i+1], data[i+2], data[i+3], data[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
 		data[i+5], data[i+6], data[i+7], data[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 9
 	}
-`, f.Name, f.Num)
-
-		case "timestamp":
-			fmt.Fprintf(buf, `
-	if v := o.%s; !v.IsZero() {
+<:else if eq .Type "timestamp":>
+	if v := o.<:.Name:>; !v.IsZero() {
+		<:$fieldDecl:>
 		sec, nsec := v.Unix(), v.Nanosecond()
-		data[i] = 0x%02x
 		data[i+1], data[i+2], data[i+3], data[i+4] = byte(sec>>56), byte(sec>>48), byte(sec>>40), byte(sec>>32)
 		data[i+5], data[i+6], data[i+7], data[i+8] = byte(sec>>24), byte(sec>>16), byte(sec>>8), byte(sec)
 		if nsec != 0 {
@@ -235,12 +151,9 @@ func (o *%s) Marshal(data []byte) []byte {
 		}
 		i += 9
 	}
-`, f.Name, f.Num)
-
-		case "text", "binary":
-			fmt.Fprintf(buf, `
-	if v := o.%s; len(v) != 0 {
-		data[i] = 0x%02x
+<:else if eq .Type "text" "binary":>
+	if v := o.<:.Name:>; len(v) != 0 {
+		<:$fieldDecl:>
 		i++
 		length := uint(len(v))
 		for length >= 0x80 {
@@ -254,71 +167,40 @@ func (o *%s) Marshal(data []byte) []byte {
 		copy(data[i:], v)
 		i = to
 	}
-`, f.Name, f.Num)
+<:end:>`
 
-		}
-	}
-
-	buf.WriteString(`
-	return data[:i]
-}
-`)
-	return nil
-}
-
-func (o *Object) writeUnmarshalCode(buf *bytes.Buffer) error {
-	fmt.Fprintf(buf, `
-func (o *%s) Unmarshal(data []byte) error {
+const goUnmarshal = `
+func (o *<:.Name:>) Unmarshal(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
 	}
-	if data[0] != 0x%02x {
+	if data[0] != 0x80 {
 		return ErrMagicMismatch
 	}
 
-	if len(data) < 2 {
+	if len(data) == 1 {
 		return nil
 	}
 	key := data[1]
 	field := key & 0x7f
 	i := 2
-
-`, o.Name, Magic)
-
-	for _, f := range o.Fields {
-		if err := f.writeUnmarshalCode(buf); err != nil {
-			return err
-		}
-	}
-
-	buf.WriteString(`	return ErrCorrupt
+<:range .Fields:><:template "unmarshal-field" .:><:end:>
+	return ErrCorrupt
 }
-`)
-	return nil
-}
+`
 
-func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
-	fmt.Fprintf(buf, `	if field < %d {
+const goUnmarshalField = `
+	if field < <:.Num:> {
 		return ErrCorrupt
 	}
-	if field == %d {`, f.Num, f.Num)
-
-	switch f.Type {
-	default:
-		return fmt.Errorf("colfer: type %s unsupported", f.Type)
-
-	case "bool":
-		fmt.Fprintf(buf, `
-		o.%s = true
-`, f.Name)
-
-	case "uint32":
-		fmt.Fprintf(buf, `
+	if field == <:.Num:> {
+<:if eq .Type "bool":>		o.<:.Name:> = true
+<:else if eq .Type "uint32":>
 		var x uint32
 		for shift := uint(0); shift <= 25; shift += 7 {
 			b := data[i]
 			i++
-			x |= uint32(b & 0x7f) << shift
+			x |= uint32(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -326,16 +208,13 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 				return io.EOF
 			}
 		}
-		o.%s = x
-`, f.Name)
-
-	case "uint64":
-		fmt.Fprintf(buf, `
+		o.<:.Name:> = x
+<:else if eq .Type "uint64":>
 		var x uint64
 		for shift := uint(0); shift <= 57; shift += 7 {
 			b := data[i]
 			i++
-			x |= uint64(b & 0x7f) << shift
+			x |= uint64(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -343,16 +222,13 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 				return io.EOF
 			}
 		}
-		o.%s = x
-`, f.Name)
-
-	case "int32":
-		fmt.Fprintf(buf, `
+		o.<:.Name:> = x
+<:else if eq .Type "int32":>
 		var x uint32
 		for shift := uint(0); shift <= 25; shift += 7 {
 			b := data[i]
 			i++
-			x |= uint32(b & 0x7f) << shift
+			x |= uint32(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -363,16 +239,13 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 		if key&0x80 != 0 {
 			x = ^x + 1
 		}
-		o.%s = int32(x)
-`, f.Name)
-
-	case "int64":
-		fmt.Fprintf(buf, `
+		o.<:.Name:> = int32(x)
+<:else if eq .Type "int64":>
 		var x uint64
 		for shift := uint(0); shift <= 57; shift += 7 {
 			b := data[i]
 			i++
-			x |= uint64(b & 0x7f) << shift
+			x |= uint64(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -383,34 +256,25 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 		if key&0x80 != 0 {
 			x = ^x + 1
 		}
-		o.%s = int64(x)
-`, f.Name)
-
-	case "float32":
-		fmt.Fprintf(buf, `
+		o.<:.Name:> = int64(x)
+<:else if eq .Type "float32":>
 		to := i + 4
 		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		x := uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
-		o.%s = math.Float32frombits(x)
+		o.<:.Name:> = math.Float32frombits(x)
 		i = to
-`, f.Name)
-
-	case "float64":
-		fmt.Fprintf(buf, `
+<:else if eq .Type "float64":>
 		to := i + 8
 		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		o.%s = math.Float64frombits(x)
+		o.<:.Name:> = math.Float64frombits(x)
 		i = to
-`, f.Name)
-
-	case "timestamp":
-		fmt.Fprintf(buf, `
+<:else if eq .Type "timestamp":>
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
 		i += 8
@@ -419,16 +283,13 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 			nsec = uint64(data[i])<<24 | uint64(data[i+1])<<16 | uint64(data[i+2])<<8 | uint64(data[i+3])
 			i += 4
 		}
-		o.%s = time.Unix(int64(sec), int64(nsec))
-`, f.Name)
-
-	case "text":
-		fmt.Fprintf(buf, `
+		o.<:.Name:> = time.Unix(int64(sec), int64(nsec))
+<:else if eq .Type "text":>
 		var length uint
 		for shift := uint(0); shift <= 57; shift += 7 {
 			b := data[i]
 			i++
-			length |= uint(b & 0x7f) << shift
+			length |= uint(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -443,17 +304,14 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 		if to > len(data) {
 			return io.EOF
 		}
-		o.%s = string(data[i:to])
+		o.<:.Name:> = string(data[i:to])
 		i = to
-`, f.Name)
-
-	case "binary":
-		fmt.Fprintf(buf, `
+<:else if eq .Type "binary":>
 		var length uint
 		for shift := uint(0); shift <= 57; shift += 7 {
 			b := data[i]
 			i++
-			length |= uint(b & 0x7f) << shift
+			length |= uint(b&0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -470,20 +328,14 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 		}
 		v := make([]byte, to-i)
 		copy(v, data[i:to])
-		o.%s = v
+		o.<:.Name:> = v
 		i = to
-`, f.Name)
-
-	}
-
-	buf.WriteString(`		if i == len(data) {
+<:end:>
+		if i == len(data) {
 			return nil
 		}
 		key = data[i]
 		field = key & 0x7f
 		i++
 	}
-
-`)
-	return nil
-}
+`

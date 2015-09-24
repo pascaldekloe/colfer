@@ -10,11 +10,16 @@ import (
 	"strings"
 )
 
+// Package is a bundle of one or more Object definitions.
+type Package struct {
+	Name    string
+	Objects []*Object
+}
+
 // Object is a data structure definition.
 type Object struct {
-	Package string
-	Name    string
-	Fields  []*Field
+	Name   string
+	Fields []*Field
 }
 
 // Field is an Object item definition.
@@ -25,8 +30,8 @@ type Field struct {
 }
 
 // ReadDefs parses the Colfer files.
-func ReadDefs() ([]*Object, error) {
-	var objects []*Object
+func ReadDefs() (*Package, error) {
+	pkg := new(Package)
 	fileSet := token.NewFileSet()
 
 	colfFiles, err := filepath.Glob("*.colf")
@@ -37,6 +42,11 @@ func ReadDefs() ([]*Object, error) {
 		file, err := parser.ParseFile(fileSet, path, nil, 0)
 		if err != nil {
 			return nil, err
+		}
+		if pkgName := file.Name.Name; pkg.Name == "" {
+			pkg.Name = pkgName
+		} else if pkgName != pkg.Name {
+			return nil, fmt.Errorf("colfer: package mismatch: %q and %q", pkgName, pkg.Name)
 		}
 
 		for _, decl := range file.Decls {
@@ -55,14 +65,12 @@ func ReadDefs() ([]*Object, error) {
 				if err != nil {
 					return nil, err
 				}
-				objects = append(objects, o)
-
-				o.Package = file.Name.Name
+				pkg.Objects = append(pkg.Objects, o)
 			}
 		}
 	}
 
-	return objects, nil
+	return pkg, nil
 }
 
 func mapObject(src *ast.TypeSpec) (*Object, error) {
