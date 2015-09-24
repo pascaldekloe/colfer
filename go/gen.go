@@ -16,7 +16,6 @@ func Generate(pack string, objects []*Object) error {
 	fmt.Fprintf(buf, `package %s
 
 import (
-	"encoding/binary"
 	"errors"
 	"io"
 	"math"
@@ -24,7 +23,6 @@ import (
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ = binary.MaxVarintLen64
 var _ = math.E
 var _ = time.RFC3339
 
@@ -135,7 +133,13 @@ func (o *%s) Marshal(data []byte) []byte {
 	if v := o.%s; v != 0 {
 		data[i] = 0x%02x
 		i++
-		i += binary.PutUvarint(data[i:], uint64(v))
+		for v >= 0x80 {
+			data[i] = byte(v) | 0x80
+			v >>= 7
+			i++
+		}
+		data[i] = byte(v)
+		i++
 	}
 `, f.Name, f.Num)
 
@@ -144,7 +148,13 @@ func (o *%s) Marshal(data []byte) []byte {
 	if v := o.%s; v != 0 {
 		data[i] = 0x%02x
 		i++
-		i += binary.PutUvarint(data[i:], v)
+		for v >= 0x80 {
+			data[i] = byte(v) | 0x80
+			v >>= 7
+			i++
+		}
+		data[i] = byte(v)
+		i++
 	}
 `, f.Name, f.Num)
 
@@ -159,7 +169,13 @@ func (o *%s) Marshal(data []byte) []byte {
 			data[i] = 0x%02x
 		}
 		i++
-		i += binary.PutUvarint(data[i:], uint64(x))
+		for x >= 0x80 {
+			data[i] = byte(v) | 0x80
+			x >>= 7
+			i++
+		}
+		data[i] = byte(x)
+		i++
 	}
 `, f.Name, f.Num|0x80, f.Num)
 
@@ -174,7 +190,13 @@ func (o *%s) Marshal(data []byte) []byte {
 			data[i] = 0x%02x
 		}
 		i++
-		i += binary.PutUvarint(data[i:], x)
+		for x >= 0x80 {
+			data[i] = byte(v) | 0x80
+			x >>= 7
+			i++
+		}
+		data[i] = byte(x)
+		i++
 	}
 `, f.Name, f.Num|0x80, f.Num)
 
@@ -220,7 +242,14 @@ func (o *%s) Marshal(data []byte) []byte {
 	if v := o.%s; len(v) != 0 {
 		data[i] = 0x%02x
 		i++
-		i += binary.PutUvarint(data[i:], uint64(len(v)))
+		length := uint(len(v))
+		for length >= 0x80 {
+			data[i] = byte(length) | 0x80
+			length >>= 7
+			i++
+		}
+		data[i] = byte(length)
+		i++
 		to := i + len(v)
 		copy(data[i:], v)
 		i = to
@@ -283,16 +312,54 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 		o.%s = true
 `, f.Name)
 
-	case "int32":
+	case "uint32":
 		fmt.Fprintf(buf, `
-		x, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
+		var x uint32
+		for shift := uint(0); shift <= 25; shift += 7 {
+			b := data[i]
+			i++
+			x |= uint32(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
 				return io.EOF
 			}
-			return ErrCorrupt
 		}
-		i += n
+		o.%s = x
+`, f.Name)
+
+	case "uint64":
+		fmt.Fprintf(buf, `
+		var x uint64
+		for shift := uint(0); shift <= 57; shift += 7 {
+			b := data[i]
+			i++
+			x |= uint64(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
+				return io.EOF
+			}
+		}
+		o.%s = x
+`, f.Name)
+
+	case "int32":
+		fmt.Fprintf(buf, `
+		var x uint32
+		for shift := uint(0); shift <= 25; shift += 7 {
+			b := data[i]
+			i++
+			x |= uint32(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
+				return io.EOF
+			}
+		}
 		if key&0x80 != 0 {
 			x = ^x + 1
 		}
@@ -301,44 +368,22 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 
 	case "int64":
 		fmt.Fprintf(buf, `
-		x, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
+		var x uint64
+		for shift := uint(0); shift <= 57; shift += 7 {
+			b := data[i]
+			i++
+			x |= uint64(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
 				return io.EOF
 			}
-			return ErrCorrupt
 		}
-		i += n
 		if key&0x80 != 0 {
 			x = ^x + 1
 		}
 		o.%s = int64(x)
-`, f.Name)
-
-	case "uint32":
-		fmt.Fprintf(buf, `
-		x, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
-				return io.EOF
-			}
-			return ErrCorrupt
-		}
-		i += n
-		o.%s = uint32(x)
-`, f.Name)
-
-	case "uint64":
-		fmt.Fprintf(buf, `
-		x, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
-				return io.EOF
-			}
-			return ErrCorrupt
-		}
-		i += n
-		o.%s = x
 `, f.Name)
 
 	case "float32":
@@ -379,14 +424,18 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 
 	case "text":
 		fmt.Fprintf(buf, `
-		length, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
+		var length uint
+		for shift := uint(0); shift <= 57; shift += 7 {
+			b := data[i]
+			i++
+			length |= uint(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
 				return io.EOF
 			}
-			return ErrCorrupt
 		}
-		i += n
 		to := i + int(length)
 		if to < 0 {
 			return ErrCorrupt
@@ -400,14 +449,18 @@ func (f *Field) writeUnmarshalCode(buf *bytes.Buffer) error {
 
 	case "binary":
 		fmt.Fprintf(buf, `
-		length, n := binary.Uvarint(data[i:])
-		if n <= 0 {
-			if n == 0 {
+		var length uint
+		for shift := uint(0); shift <= 57; shift += 7 {
+			b := data[i]
+			i++
+			length |= uint(b & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+			if i == len(data) {
 				return io.EOF
 			}
-			return ErrCorrupt
 		}
-		i += n
 		to := i + int(length)
 		if to < 0 {
 			return ErrCorrupt
