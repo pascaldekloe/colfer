@@ -13,10 +13,13 @@ Run `go generate` before the tests.
 
 # Encoding
 
-A Colfer representation starts with an 8-bit magic number `0x80` followed by
-zero or more field value definitions. Only those fields with a value other than
-the zero value may be serialized. Fields appear by field number, in ascending
-order.
+Data structures start with an 8-bit magic number `0x80` followed by zero or more
+field *value definitions*. Only those fields with a value other than the *zero
+value* may be serialized. Fields appear in order as stated by the schema.
+
+The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
+timestamps: `1970-01-01T00:00:00.000000000Z` and for text & binary: the empty
+string.
 
 Data is represented in a big-endian manner. The format relies on *varints* also
 known as a
@@ -25,20 +28,21 @@ known as a
 
 ## Value Definiton
 
-Each definition starts with an 8-bit *key*. The 7 least significant bits
-identify the field by its numeric value.
+Each definition starts with an 8-bit header. The 7 least significant bits
+identify the field by its (0-based position) index in the schema. The most
+significant bit is used as a *flag*.
 
-Field occurences of type `bool` set the value to `true`.
+Boolean occurrences set the value to `true`.
 
-Types `uint64` and `uint32` are encoded as varints. The most significant bit on
-the key means negative for signed types `int64` and `int32`.
+Integers are encoded as varints. The header flag indicates negative for signed
+types.
 
-Types `float64` and `float32` are encoded conform IEEE 754.
+Floating points are encoded conform IEEE 754.
 
-The 64 bits for `timestamp` have the two's complement representation of the
-number of miliseconds that have elapsed since 00:00:00 UTC, Thursday, 1 January
-1970, not counting leap seconds. If the most significant bit on the key is set
-then the following 32 bits contain the nanosecond fraction.
+Timestamps are encoded as a 64-bit two's complement integer for the number of
+seconds that have elapsed since 00:00:00 UTC, Thursday, 1 January 1970, not
+counting leap seconds. When the header flag is set then the value is followed
+with 32 bits for the nanosecond fraction. Again, a zero value must not be
+serialized.
 
-The data for types `text` and `binary` is prefixed with a varint size
-declaration.
+The data for text and binaries is prefixed with a varint size declaration.

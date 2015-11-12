@@ -2,14 +2,13 @@ package colfer
 
 import (
 	"encoding/hex"
+	"math"
 	"math/rand"
 	"reflect"
 	"testing"
 	"testing/quick"
 	"time"
 )
-
-var rnd = rand.New(rand.NewSource(time.Now().Unix()))
 
 //go:generate go run ./cmd/colf/main.go go
 
@@ -23,16 +22,25 @@ func newGoldenCases() []*golden {
 		{"80", TstObj{}},
 		{"8000", TstObj{B: true}},
 		{"800101", TstObj{U32: 1}},
+		{"8001ffffffff0f", TstObj{U32: math.MaxUint32}},
 		{"800201", TstObj{U64: 1}},
+		{"8002ffffffffffffffffff01", TstObj{U64: math.MaxUint64}},
 		{"800301", TstObj{I32: 1}},
 		{"808301", TstObj{I32: -1}},
+		{"8003ffffffff07", TstObj{I32: math.MaxInt32}},
+		{"80838080808008", TstObj{I32: math.MinInt32}},
 		{"800401", TstObj{I64: 1}},
 		{"808401", TstObj{I64: -1}},
-		{"80054008f5c3", TstObj{F32: 2.14}},
+		{"8004ffffffffffffffff7f", TstObj{I64: math.MaxInt64}},
+		{"808480808080808080808001", TstObj{I64: math.MinInt64}},
+		{"80057f7fffff", TstObj{F32: math.MaxFloat32}},
+		{"80067fefffffffffffff", TstObj{F64: math.MaxFloat64}},
 		{"80070000000055ef312a", TstObj{T: time.Unix(1441739050, 0)}},
 		{"80870000000055ef312a00000009", TstObj{T: time.Unix(1441739050, 9)}},
 		{"80080141", TstObj{S: "A"}},
-		{"8009020100", TstObj{A: []byte{1, 0}}},
+		{"8008026100", TstObj{S: "a\x00"}},
+		{"800901ff", TstObj{A: []byte{math.MaxUint8}}},
+		{"8009020200", TstObj{A: []byte{2, 0}}},
 	}
 }
 
@@ -55,12 +63,17 @@ func TestGoldenDecodes(t *testing.T) {
 		got := new(TstObj)
 		if err = got.Unmarshal(data); err != nil {
 			t.Errorf("%s: %s", gold.serial, err)
+			continue
 		}
 		if !reflect.DeepEqual(got, &gold.mapping) {
-			t.Errorf("%s: got %+v, want %+v", gold.serial, *got, gold.mapping)
+			t.Errorf("%s: got:\n\t%+v,\nwant:\n\t%+v", gold.serial, *got, gold.mapping)
 		}
 	}
 }
+
+// Benchmarks:
+
+var rnd = rand.New(rand.NewSource(time.Now().Unix()))
 
 func generate(n int) ([]*Pkg, [][]byte, int64) {
 	objects := make([]*Pkg, n)
