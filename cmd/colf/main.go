@@ -27,7 +27,7 @@ For now, "go" is the only option`, p)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(pkg.Objects) == 0 {
+	if len(pkg.Structs) == 0 {
 		log.Fatal(`Colfer definitons not found (file extension ".colf")`)
 	}
 

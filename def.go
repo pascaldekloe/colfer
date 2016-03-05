@@ -10,22 +10,40 @@ import (
 	"strings"
 )
 
-// Package is a bundle of one or more Object definitions.
-type Package struct {
-	Name    string
-	Objects []*Object
+// Datatypes hold all supported names.
+var Datatypes = map[string]struct{}{
+	"bool":      struct{}{},
+	"uint32":    struct{}{},
+	"uint64":    struct{}{},
+	"int32":     struct{}{},
+	"int64":     struct{}{},
+	"float32":   struct{}{},
+	"float64":   struct{}{},
+	"timestamp": struct{}{},
+	"text":      struct{}{},
+	"binary":    struct{}{},
 }
 
-// Object is a data structure definition.
-type Object struct {
+// Package is a named definition bundle.
+type Package struct {
+	Name    string
+	Structs []*Struct
+}
+
+// Struct is data structure definition.
+type Struct struct {
+	// Name is the identification token in title case.
 	Name   string
 	Fields []*Field
 }
 
-// Field is an Object item definition.
+// Field is a Struct member definition.
 type Field struct {
-	Num  int
+	// Index is the Struct.Fields position.
+	Index int
+	// Name is the identification token in title case.
 	Name string
+	// Type is the datatype.
 	Type string
 }
 
@@ -61,11 +79,11 @@ func ReadDefs() (*Package, error) {
 					return nil, fmt.Errorf("colfer: unsupported specification type %s", reflect.TypeOf(spec))
 				}
 
-				o, err := mapObject(s)
+				o, err := mapStruct(s)
 				if err != nil {
 					return nil, err
 				}
-				pkg.Objects = append(pkg.Objects, o)
+				pkg.Structs = append(pkg.Structs, o)
 			}
 		}
 	}
@@ -73,8 +91,8 @@ func ReadDefs() (*Package, error) {
 	return pkg, nil
 }
 
-func mapObject(src *ast.TypeSpec) (*Object, error) {
-	dst := &Object{
+func mapStruct(src *ast.TypeSpec) (*Struct, error) {
+	dst := &Struct{
 		Name: strings.Title(src.Name.Name),
 	}
 
@@ -82,20 +100,24 @@ func mapObject(src *ast.TypeSpec) (*Object, error) {
 	if !ok {
 		return nil, fmt.Errorf("colfer: unsupported type %s", reflect.TypeOf(s))
 	}
+
 	for i, f := range s.Fields.List {
-		t, ok := f.Type.(*ast.Ident)
-		if !ok {
-			return nil, fmt.Errorf("colfer: unknow type for field %d: %#v", i, f.Type)
-		}
+		field := Field{Index: i}
+		dst.Fields = append(dst.Fields, &field)
+
 		if len(f.Names) == 0 {
 			return nil, fmt.Errorf("colfer: missing name for field %d", i)
 		}
+		field.Name = strings.Title(f.Names[0].Name)
 
-		dst.Fields = append(dst.Fields, &Field{
-			Num:  i,
-			Name: strings.Title(f.Names[0].Name),
-			Type: t.Name,
-		})
+		t, ok := f.Type.(*ast.Ident)
+		if !ok {
+			return nil, fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst.Name, field.Index, field.Name, field.Type)
+		}
+		field.Type = t.Name
+		if _, ok := Datatypes[field.Type]; !ok {
+			return nil, fmt.Errorf("colfer: unknown datatype %q in struct %q field %d %q", field.Type, dst.Name, field.Index, field.Name)
+		}
 	}
 
 	return dst, nil

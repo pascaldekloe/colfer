@@ -41,16 +41,16 @@ var _ = time.RFC3339
 
 var (
 	ErrStructMismatch = errors.New("colfer: struct header mismatch")
-	ErrCorrupt       = errors.New("colfer: data corrupt")
+	ErrCorrupt        = errors.New("colfer: data corrupt")
 )
 
-<:range .Objects:>
+<:range .Structs:>
 type <:.Name:> struct {
 <:range .Fields:>	<:.Name:>	<:if eq .Type "timestamp":>time.Time<:else if eq .Type "text":>string<:else if eq .Type "binary":>[]byte<:else:><:.Type:><:end:>
 <:end:>}
 <:end:>
 
-<:range .Objects:>
+<:range .Structs:>
 <:template "marshal" .:>
 <:template "unmarshal" .:><:end:>`
 
@@ -62,7 +62,7 @@ const goMarshal = `func (o *<:.Name:>) Marshal(data []byte) []byte {
 }
 `
 
-const goMarshalFieldDecl = `		data[i] = <:printf "0x%02x" .Num:>
+const goMarshalFieldDecl = `		data[i] = <:printf "0x%02x" .Index:>
 		i++`
 
 const goMarshalField = `<:if eq .Type "bool":>
@@ -158,8 +158,8 @@ func (o *<:.Name:>) Unmarshal(data []byte) error {
 	if len(data) == 1 {
 		return nil
 	}
-	key := data[1]
-	field := key & 0x7f
+	header := data[1]
+	field := header & 0x7f
 	i := 2
 <:range .Fields:><:template "unmarshal-field" .:><:end:>
 	return ErrCorrupt
@@ -167,7 +167,7 @@ func (o *<:.Name:>) Unmarshal(data []byte) error {
 `
 
 const goUnmarshalField = `
-	if field == <:.Num:> {<:if eq .Type "bool":>
+	if field == <:.Index:> {<:if eq .Type "bool":>
 		o.<:.Name:> = true
 <:else if eq .Type "uint32":>
 <:template "unmarshal-varint32":>
@@ -177,13 +177,13 @@ const goUnmarshalField = `
 		o.<:.Name:> = x
 <:else if eq .Type "int32":>
 <:template "unmarshal-varint32":>
-		if key&0x80 != 0 {
+		if header&0x80 != 0 {
 			x = ^x + 1
 		}
 		o.<:.Name:> = int32(x)
 <:else if eq .Type "int64":>
 <:template "unmarshal-varint64":>
-		if key&0x80 != 0 {
+		if header&0x80 != 0 {
 			x = ^x + 1
 		}
 		o.<:.Name:> = int64(x)
@@ -210,7 +210,7 @@ const goUnmarshalField = `
 		i += 8
 
 		var nsec int64
-		if key&0x80 != 0 {
+		if header&0x80 != 0 {
 			v := uint(data[i])<<24 | uint(data[i+1])<<16 | uint(data[i+2])<<8 | uint(data[i+3])
 			i += 4
 			nsec = int64(v)
@@ -246,8 +246,8 @@ const goUnmarshalField = `
 		if i == len(data) {
 			return nil
 		}
-		key = data[i]
-		field = key & 0x7f
+		header = data[i]
+		field = header & 0x7f
 		i++
 	}
 `
