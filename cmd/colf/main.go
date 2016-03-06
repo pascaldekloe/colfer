@@ -32,10 +32,6 @@ func main() {
 		files = args[1:]
 	}
 
-	if p := flag.Arg(0); p != "go" {
-		log.Fatalf("colf: unsupported language %q", p)
-	}
-
 	structs, err := colfer.ReadDefs(files)
 	if err != nil {
 		log.Fatal(err)
@@ -48,8 +44,17 @@ func main() {
 		s.Pkg.Name = path.Join(*prefix, s.Pkg.Name)
 	}
 
-	if err := colfer.Generate(*basedir, structs); err != nil {
-		log.Fatal(err)
+	switch lang := flag.Arg(0); lang {
+	case "go":
+		if err := colfer.Generate(*basedir, structs); err != nil {
+			log.Fatal(err)
+		}
+	case "java":
+		if err := colfer.GenerateJava(*basedir, structs); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		log.Fatalf("colf: unsupported language %q", lang)
 	}
 }
 
@@ -71,7 +76,7 @@ func init() {
 	help += " [" + underline + "file" + clear + " " + underline + "..." + clear + "]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
-	help += ". For now it's just " + bold + "go" + clear + ".\n"
+	help += ". Both " + bold + "go" + clear + " and " + bold + "java" + clear + " are supported.\n"
 	help += "\tThe " + underline + "file" + clear + " operands are processed in command-line order. If " + underline + "file" + clear + " is\n"
 	help += "\tabsent, " + cmd + " reads all \".colf\" files in the working directory.\n\n"
 
