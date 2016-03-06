@@ -7,7 +7,7 @@ import (
 	"text/template"
 )
 
-// Generate writes the code into the respective .java files.
+// GenerateJava writes the code into the respective ".java" files.
 func GenerateJava(basedir string, structs []*Struct) error {
 	t := template.New("java-code").Delims("<:", ":>")
 	template.Must(t.Parse(javaCode))
@@ -37,7 +37,6 @@ const javaCode = `package <:.Pkg.Name:>;
 
 /**
  * @author Commander Colfer
- * @version 9 fields, 2016-03-06T23:40:15Z
  * @see <a href="https://github.com/pascaldekloe/colfer">Colfer's home</a>
  */
 public class <:.Name:> implements java.io.Serializable {
@@ -47,11 +46,8 @@ public class <:.Name:> implements java.io.Serializable {
 <:range .Fields:>	public <:if eq .Type "bool":>boolean<:else if eq .Type "uint32" "int32":>int<:else if eq .Type "uint64" "int64":>long<:else if eq .Type "float32":>float<:else if eq .Type "float64":>double<:else if eq .Type "timestamp":>java.time.Instant<:else if eq .Type "text":>String<:else if eq .Type "binary":>byte[]<:else:><:.Type:><:end:> <:.Name:>;
 <:end:>
 
-
 <:template "marshal" .:>
-
 <:template "unmarshal" .:>
-
 	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.
@@ -114,6 +110,7 @@ public class <:.Name:> implements java.io.Serializable {
 `
 
 const javaMarshal = `	/**
+	 * Writes in Colfer format.
 	 * @param buf the data destination.
 	 * @throws java.nio.BufferOverflowException when {@code buf} is too small.
 	 */
@@ -193,6 +190,7 @@ const javaMarshalField = `<:if eq .Type "bool":>
 <:end:>`
 
 const javaUnmarshal = `	/**
+	 * Reads in Colfer format.
 	 * @param buf the data source.
 	 * @throws java.nio.BufferUnderflowException when {@code buf} is incomplete.
 	 */
@@ -204,13 +202,13 @@ const javaUnmarshal = `	/**
 		if (! buf.hasRemaining()) return;
 		header = buf.get() & 0xff;
 		int field = header & 0x7f;
-
 <:range .Fields:>
 		if (field == <:.Index:>) {<:template "unmarshal-field" .:>
 			if (! buf.hasRemaining()) return;
 			header = buf.get() & 0xff;
 			field = header & 0x7f;
-		}<:end:>
+		}
+<:end:>
 		throw new IllegalArgumentException("pending data");
 	}
 `

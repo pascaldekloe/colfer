@@ -70,10 +70,10 @@ func init() {
 
 	help := bold + "NAME\n\t" + cmd + clear + " \u2014 compile Colfer schemas\n\n"
 	help += bold + "SYNOPSIS\n\t" + cmd + clear
-	help += " [" + bold + "-b" + clear + " " + underline + "dir" + clear + "]"
-	help += " [" + bold + "-p" + clear + " " + underline + "path" + clear + "]"
-	help += " " + underline + "language" + clear
-	help += " [" + underline + "file" + clear + " " + underline + "..." + clear + "]\n\n"
+	help += " [" + bold + "-b" + clear + " <" + underline + "dir" + clear + ">]"
+	help += " [" + bold + "-p" + clear + " <" + underline + "path" + clear + ">]"
+	help += " <" + underline + "language" + clear
+	help += "> [<" + underline + "file" + clear + "> " + underline + "..." + clear + "]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
 	help += ". Both " + bold + "go" + clear + " and " + bold + "java" + clear + " are\n"

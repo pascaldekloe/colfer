@@ -3,14 +3,14 @@
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
 The format is inspired by Proto**col** Buf**fer**.
 
-# Use
+## Use
 
 ```
 NAME
 	colf — compile Colfer schemas
 
 SYNOPSIS
-	colf [-b dir] [-p path] language [file ...]
+	colf [-b <dir>] [-p <path>] <language> [<file> ...]
 
 DESCRIPTION
 	Generates source code for the given language. Both go and java are
@@ -31,14 +31,14 @@ SEE ALSO
 ```
 
 
-# Build
+## Build
 
 Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
 
 Run `go generate` before the tests.
 
 
-# Encoding
+## Format
 
 Data structures start with an 8-bit magic number `0x80` followed by zero or more
 field *value definitions*. Only those fields with a value other than the *zero
@@ -53,7 +53,7 @@ known as a
 [variable-length quantity](https://en.wikipedia.org/wiki/Variable-length_quantity).
 
 
-## Value Definiton
+### Value Definiton
 
 Each definition starts with an 8-bit header. The 7 least significant bits
 identify the field by its (0-based position) index in the schema. The most
