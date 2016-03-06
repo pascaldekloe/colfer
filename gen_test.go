@@ -8,39 +8,41 @@ import (
 	"testing"
 	"testing/quick"
 	"time"
+
+	"github.com/pascaldekloe/colfer/testdata"
 )
 
-//go:generate go run ./cmd/colf/main.go go
+//go:generate go run ./cmd/colf/main.go go testdata/test.colf
 
 type golden struct {
 	serial  string
-	mapping TstObj
+	mapping testdata.O
 }
 
 func newGoldenCases() []*golden {
 	return []*golden{
-		{"80", TstObj{}},
-		{"8000", TstObj{B: true}},
-		{"800101", TstObj{U32: 1}},
-		{"8001ffffffff0f", TstObj{U32: math.MaxUint32}},
-		{"800201", TstObj{U64: 1}},
-		{"8002ffffffffffffffffff01", TstObj{U64: math.MaxUint64}},
-		{"800301", TstObj{I32: 1}},
-		{"808301", TstObj{I32: -1}},
-		{"8003ffffffff07", TstObj{I32: math.MaxInt32}},
-		{"80838080808008", TstObj{I32: math.MinInt32}},
-		{"800401", TstObj{I64: 1}},
-		{"808401", TstObj{I64: -1}},
-		{"8004ffffffffffffffff7f", TstObj{I64: math.MaxInt64}},
-		{"808480808080808080808001", TstObj{I64: math.MinInt64}},
-		{"80057f7fffff", TstObj{F32: math.MaxFloat32}},
-		{"80067fefffffffffffff", TstObj{F64: math.MaxFloat64}},
-		{"80070000000055ef312a", TstObj{T: time.Unix(1441739050, 0)}},
-		{"80870000000055ef312a00000009", TstObj{T: time.Unix(1441739050, 9)}},
-		{"80080141", TstObj{S: "A"}},
-		{"8008026100", TstObj{S: "a\x00"}},
-		{"800901ff", TstObj{A: []byte{math.MaxUint8}}},
-		{"8009020200", TstObj{A: []byte{2, 0}}},
+		{"80", testdata.O{}},
+		{"8000", testdata.O{B: true}},
+		{"800101", testdata.O{U32: 1}},
+		{"8001ffffffff0f", testdata.O{U32: math.MaxUint32}},
+		{"800201", testdata.O{U64: 1}},
+		{"8002ffffffffffffffffff01", testdata.O{U64: math.MaxUint64}},
+		{"800301", testdata.O{I32: 1}},
+		{"808301", testdata.O{I32: -1}},
+		{"8003ffffffff07", testdata.O{I32: math.MaxInt32}},
+		{"80838080808008", testdata.O{I32: math.MinInt32}},
+		{"800401", testdata.O{I64: 1}},
+		{"808401", testdata.O{I64: -1}},
+		{"8004ffffffffffffffff7f", testdata.O{I64: math.MaxInt64}},
+		{"808480808080808080808001", testdata.O{I64: math.MinInt64}},
+		{"80057f7fffff", testdata.O{F32: math.MaxFloat32}},
+		{"80067fefffffffffffff", testdata.O{F64: math.MaxFloat64}},
+		{"80070000000055ef312a", testdata.O{T: time.Unix(1441739050, 0)}},
+		{"80870000000055ef312a00000009", testdata.O{T: time.Unix(1441739050, 9)}},
+		{"80080141", testdata.O{S: "A"}},
+		{"8008026100", testdata.O{S: "a\x00"}},
+		{"800901ff", testdata.O{A: []byte{math.MaxUint8}}},
+		{"8009020200", testdata.O{A: []byte{2, 0}}},
 	}
 }
 
@@ -60,7 +62,7 @@ func TestGoldenDecodes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got := new(TstObj)
+		got := new(testdata.O)
 		if err = got.Unmarshal(data); err != nil {
 			t.Errorf("%s: %s", gold.serial, err)
 			continue
@@ -75,8 +77,8 @@ func TestGoldenDecodes(t *testing.T) {
 
 var rnd = rand.New(rand.NewSource(time.Now().Unix()))
 
-func generate(n int) ([]*Pkg, [][]byte, int64) {
-	objects := make([]*Pkg, n)
+func generate(n int) ([]*testdata.Bench, [][]byte, int64) {
+	objects := make([]*testdata.Bench, n)
 	serials := make([][]byte, n)
 	size := 0
 
@@ -84,15 +86,15 @@ func generate(n int) ([]*Pkg, [][]byte, int64) {
 	for i := range objects {
 		v, ok := quick.Value(typ, rnd)
 		if !ok {
-			panic("can't generate Pkg values")
+			panic("can't generate Bench values")
 		}
 
-		o, ok := v.Interface().(*Pkg)
+		o, ok := v.Interface().(*testdata.Bench)
 		if !ok {
 			panic("wrong type generated")
 		}
 		if o == nil {
-			o = new(Pkg)
+			o = new(testdata.Bench)
 		}
 
 		b := o.Marshal(make([]byte, 1000))
@@ -127,6 +129,6 @@ func BenchmarkDecode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := b.N; i != 0; i-- {
-		new(Pkg).Unmarshal(serials[rnd.Intn(n)])
+		new(testdata.Bench).Unmarshal(serials[rnd.Intn(n)])
 	}
 }

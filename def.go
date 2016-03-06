@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -32,6 +31,7 @@ type Package struct {
 
 // Struct is data structure definition.
 type Struct struct {
+	Pkg *Package
 	// Name is the identification token in title case.
 	Name   string
 	Fields []*Field
@@ -48,24 +48,18 @@ type Field struct {
 }
 
 // ReadDefs parses the Colfer files.
-func ReadDefs() (*Package, error) {
-	pkg := new(Package)
-	fileSet := token.NewFileSet()
+func ReadDefs(files []string) ([]*Struct, error) {
+	var structs []*Struct
 
-	colfFiles, err := filepath.Glob("*.colf")
-	if err != nil {
-		return nil, err
-	}
-	for _, path := range colfFiles {
-		file, err := parser.ParseFile(fileSet, path, nil, 0)
+	fileSet := token.NewFileSet()
+	for _, file := range files {
+		file, err := parser.ParseFile(fileSet, file, nil, 0)
 		if err != nil {
 			return nil, err
 		}
-		if pkgName := file.Name.Name; pkg.Name == "" {
-			pkg.Name = pkgName
-		} else if pkgName != pkg.Name {
-			return nil, fmt.Errorf("colfer: package mismatch: %q and %q", pkgName, pkg.Name)
-		}
+
+		pkg := new(Package)
+		pkg.Name = file.Name.Name
 
 		for _, decl := range file.Decls {
 			d, ok := decl.(*ast.GenDecl)
@@ -83,12 +77,13 @@ func ReadDefs() (*Package, error) {
 				if err != nil {
 					return nil, err
 				}
-				pkg.Structs = append(pkg.Structs, o)
+				o.Pkg = pkg
+				structs = append(structs, o)
 			}
 		}
 	}
 
-	return pkg, nil
+	return structs, nil
 }
 
 func mapStruct(src *ast.TypeSpec) (*Struct, error) {

@@ -2,31 +2,49 @@ package colfer
 
 import (
 	"os"
+	"path/filepath"
 	"text/template"
 )
 
 // Generate writes the code into file "Colfer.go".
-func Generate(pkg *Package) error {
+func Generate(basedir string, structs []*Struct) error {
+	pkgT := template.New("go-header").Delims("<:", ":>")
+	template.Must(pkgT.Parse(goPackage))
+
 	t := template.New("go-code").Delims("<:", ":>")
 	template.Must(t.Parse(goCode))
-	template.Must(t.New("marshal").Parse(goMarshal))
 	template.Must(t.New("marshal-field").Parse(goMarshalField))
 	template.Must(t.New("marshal-fieldDecl").Parse(goMarshalFieldDecl))
 	template.Must(t.New("marshal-varint").Parse(goMarshalVarint))
-	template.Must(t.New("unmarshal").Parse(goUnmarshal))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
 	template.Must(t.New("unmarshal-varint64").Parse(goUnmarshalVarint64))
 
-	f, err := os.Create("Colfer.go")
-	if err != nil {
-		return err
+	pkgFiles := make(map[string]*os.File)
+
+	for _, s := range structs {
+		f, ok := pkgFiles[s.Pkg.Name]
+		if !ok {
+			var err error
+			f, err = os.Create(filepath.Join(basedir, s.Pkg.Name, "Colfer.go"))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			pkgFiles[s.Pkg.Name] = f
+			if err = pkgT.Execute(f, s.Pkg); err != nil {
+				return err
+			}
+		}
+		if err := t.Execute(f, s); err != nil {
+			return err
+		}
 	}
-	defer f.Close()
-	return t.Execute(f, pkg)
+	return nil
 }
 
-const goCode = `package <:.Name:>
+const goPackage = `package <:.Name:>
 
 import (
 	"errors"
@@ -44,21 +62,35 @@ var (
 	ErrCorrupt        = errors.New("colfer: data corrupt")
 )
 
-<:range .Structs:>
-type <:.Name:> struct {
+`
+
+const goCode = `type <:.Name:> struct {
 <:range .Fields:>	<:.Name:>	<:if eq .Type "timestamp":>time.Time<:else if eq .Type "text":>string<:else if eq .Type "binary":>[]byte<:else:><:.Type:><:end:>
 <:end:>}
-<:end:>
 
-<:range .Structs:>
-<:template "marshal" .:>
-<:template "unmarshal" .:><:end:>`
-
-const goMarshal = `func (o *<:.Name:>) Marshal(data []byte) []byte {
+func (o *<:.Name:>) Marshal(data []byte) []byte {
 	data[0] = 0x80
 	i := 1
 <:range .Fields:><:template "marshal-field" .:><:end:>
 	return data[:i]
+}
+
+func (o *<:.Name:>) Unmarshal(data []byte) error {
+	if len(data) == 0 {
+		return io.EOF
+	}
+	if data[0] != 0x80 {
+		return ErrStructMismatch
+	}
+
+	if len(data) == 1 {
+		return nil
+	}
+	header := data[1]
+	field := header & 0x7f
+	i := 2
+<:range .Fields:><:template "unmarshal-field" .:><:end:>
+	return ErrCorrupt
 }
 `
 
@@ -145,26 +177,6 @@ const goMarshalVarint = `		for x >= 0x80 {
 		}
 		data[i] = byte(x)
 		i++`
-
-const goUnmarshal = `
-func (o *<:.Name:>) Unmarshal(data []byte) error {
-	if len(data) == 0 {
-		return io.EOF
-	}
-	if data[0] != 0x80 {
-		return ErrStructMismatch
-	}
-
-	if len(data) == 1 {
-		return nil
-	}
-	header := data[1]
-	field := header & 0x7f
-	i := 2
-<:range .Fields:><:template "unmarshal-field" .:><:end:>
-	return ErrCorrupt
-}
-`
 
 const goUnmarshalField = `
 	if field == <:.Index:> {<:if eq .Type "bool":>

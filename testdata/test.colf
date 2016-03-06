@@ -1,7 +1,7 @@
-package colfer
+package testdata
 
-// tstObj contains all supported types.
-type tstObj struct {
+// o contains all supported data types.
+type o struct {
 	b   bool
 	u32 uint32
 	u64 uint64
@@ -14,8 +14,8 @@ type tstObj struct {
 	a   binary
 }
 
-// pkg is used for performance benchmarks.
-type pkg struct {
+// bench is used for performance benchmarks.
+type bench struct {
 	key	int64
 	host	text
 	addr	binary

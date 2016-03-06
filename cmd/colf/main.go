@@ -3,35 +3,85 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/pascaldekloe/colfer"
 )
 
+var basedir = flag.String("b", ".", "Use a specific destination base directory.")
+var prefix = flag.String("p", "", "Adds a package prefix. Use slash as a separator when nesting.")
+
 func main() {
 	log.SetFlags(0)
-
 	flag.Parse()
-	switch len(flag.Args()) {
-	default:
-		log.Fatal("Too many arguments")
+
+	var files []string
+	switch args := flag.Args(); len(args) {
 	case 0:
-		log.Fatal("Please specify the destination platform as an argument")
+		flag.Usage()
+		os.Exit(2)
 	case 1:
-		if p := flag.Arg(0); p != "go" {
-			log.Fatalf(`Unsupported destination platform: %s
-For now, "go" is the only option`, p)
+		colfFiles, err := filepath.Glob("*.colf")
+		if err != nil {
+			log.Fatal(err)
 		}
+		files = colfFiles
+	default:
+		files = args[1:]
 	}
 
-	pkg, err := colfer.ReadDefs()
+	if p := flag.Arg(0); p != "go" {
+		log.Fatalf("colf: unsupported language %q", p)
+	}
+
+	structs, err := colfer.ReadDefs(files)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(pkg.Structs) == 0 {
-		log.Fatal(`Colfer definitons not found (file extension ".colf")`)
+	if len(structs) == 0 {
+		log.Fatal("colfer: no struct definitons found")
 	}
 
-	if err := colfer.Generate(pkg); err != nil {
+	for _, s := range structs {
+		s.Pkg.Name = path.Join(*prefix, s.Pkg.Name)
+	}
+
+	if err := colfer.Generate(*basedir, structs); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// ANSI escape codes for markup
+const (
+	bold      = "\x1b[1m"
+	underline = "\x1b[4m"
+	clear     = "\x1b[0m"
+)
+
+func init() {
+	cmd := os.Args[0]
+
+	help := bold + "NAME\n\t" + cmd + clear + " \u2014 compile Colfer schemas\n\n"
+	help += bold + "SYNOPSIS\n\t" + cmd + clear
+	help += " " + underline + "language" + clear
+	help += " [" + bold + "-b" + clear + " " + underline + "dir" + clear + "]"
+	help += " [" + bold + "-p" + clear + " " + underline + "path" + clear + "]"
+	help += " [" + underline + "file" + clear + " " + underline + "..." + clear + "]\n\n"
+	help += bold + "DESCRIPTION\n\t" + clear
+	help += "Generates source code for the given " + underline + "language" + clear
+	help += ". For now it's just " + bold + "go" + clear + ".\n"
+	help += "\tThe " + underline + "file" + clear + " operands are processed in command-line order. If " + underline + "file" + clear + " is\n"
+	help += "\tabsent, " + cmd + " reads all \".colf\" files in the working directory.\n\n"
+
+	tail := "\n" + bold + "BUGS" + clear
+	tail += "\n\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
+	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
+
+	flag.Usage = func() {
+		os.Stderr.WriteString(help)
+		flag.PrintDefaults()
+		os.Stderr.WriteString(tail)
 	}
 }
