@@ -76,7 +76,8 @@ func init() {
 	help += " [" + underline + "file" + clear + " " + underline + "..." + clear + "]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
-	help += ". Both " + bold + "go" + clear + " and " + bold + "java" + clear + " are supported.\n"
+	help += ". Both " + bold + "go" + clear + " and " + bold + "java" + clear + " are\n"
+	help += "\tsupported.\n"
 	help += "\tThe " + underline + "file" + clear + " operands are processed in command-line order. If " + underline + "file" + clear + " is\n"
 	help += "\tabsent, " + cmd + " reads all \".colf\" files in the working directory.\n\n"
 

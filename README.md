@@ -3,6 +3,33 @@
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
 The format is inspired by Proto**col** Buf**fer**.
 
+# Use
+
+```
+NAME
+	colf — compile Colfer schemas
+
+SYNOPSIS
+	colf [-b dir] [-p path] language [file ...]
+
+DESCRIPTION
+	Generates source code for the given language. Both go and java are
+	supported.
+	The file operands are processed in command-line order. If file is
+	absent, colf reads all ".colf" files in the working directory.
+
+  -b string
+	Use a specific destination base directory. (default ".")
+  -p string
+	Adds a package prefix. Use slash as a separator when nesting.
+
+BUGS
+	Report bugs at https://github.com/pascaldekloe/colfer/issues
+
+SEE ALSO
+	protoc(1)
+```
+
 
 # Build
 
