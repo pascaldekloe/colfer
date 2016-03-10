@@ -7,12 +7,15 @@ import (
 	"testing/quick"
 	"time"
 
+	flatbuffers "github.com/google/flatbuffers/go"
+
 	"github.com/pascaldekloe/colfer/testdata/bench"
 )
 
 //go:generate go run ./cmd/colf/main.go -p testdata go testdata/bench/scheme.colf
 //go:generate go run ./cmd/colf/main.go -p testdata java testdata/bench/scheme.colf
 //go:generate protoc --gogofaster_out=. -I. -I${GOPATH}/src -I${GOPATH}/src/github.com/gogo/protobuf/protobuf testdata/bench/scheme.proto
+//go:generate flatc -o testdata -g testdata/bench/scheme.fbs
 
 var testSet = make([]*bench.Colfer, 1000)
 
@@ -76,7 +79,38 @@ func BenchmarkEncodeProtoBuf(b *testing.B) {
 	}
 }
 
-var holdColfer = new(bench.Colfer)
+func BenchmarkEncodeFlatBuffers(b *testing.B) {
+	builder := flatbuffers.NewBuilder(0)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := b.N; i != 0; i-- {
+		o := testSet[i%len(testSet)]
+
+		builder.Reset()
+		host := builder.CreateString(o.Host)
+		addr := builder.CreateByteVector(o.Addr)
+		bench.FlatBuffersStart(builder)
+		bench.FlatBuffersAddKey(builder, o.Key)
+		bench.FlatBuffersAddHost(builder, host)
+		bench.FlatBuffersAddAddr(builder, addr)
+		bench.FlatBuffersAddPort(builder, o.Port)
+		bench.FlatBuffersAddSize(builder, o.Size)
+		bench.FlatBuffersAddHash(builder, o.Hash)
+		bench.FlatBuffersAddRatio(builder, o.Ratio)
+		if o.Route {
+			bench.FlatBuffersAddRoute(builder, 1)
+		} else {
+			bench.FlatBuffersAddRoute(builder, 0)
+		}
+		builder.Finish(bench.FlatBuffersEnd(builder))
+
+		holdData = builder.Bytes[builder.Head():]
+	}
+}
+
+// holdColfer prevents compiler optimization.
+var holdColfer *bench.Colfer
 
 func BenchmarkDecode(b *testing.B) {
 	serials := make([][]byte, len(testSet))
@@ -84,19 +118,16 @@ func BenchmarkDecode(b *testing.B) {
 		serials[i] = o.Marshal(make([]byte, 1024))
 	}
 
-	zero := new(bench.Colfer)
-	buf := new(bench.Colfer)
-
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
-		*buf = *zero	// init
-		buf.Unmarshal(serials[i%len(serials)])
-		*holdColfer = *buf
+		holdColfer = new(bench.Colfer)
+		holdColfer.Unmarshal(serials[i%len(serials)])
 	}
 }
 
-var holdProtoBuf = new(bench.ProtoBuf)
+// holdProtoBuf prevents compiler optimization.
+var holdProtoBuf *bench.ProtoBuf
 
 func BenchmarkDecodeProtoBuf(b *testing.B) {
 	serials := make([][]byte, len(testSet))
@@ -118,17 +149,58 @@ func BenchmarkDecodeProtoBuf(b *testing.B) {
 		}
 	}
 
-	zero := new(bench.ProtoBuf)
-	buf := new(bench.ProtoBuf)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := b.N; i != 0; i-- {
+		holdProtoBuf := new(bench.ProtoBuf)
+		if err := holdProtoBuf.Unmarshal(serials[i%len(serials)]); err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkDecodeFlatBuf(b *testing.B) {
+	serials := make([][]byte, len(testSet))
+	for i, o := range testSet {
+		builder := flatbuffers.NewBuilder(0)
+		host := builder.CreateString(o.Host)
+		addr := builder.CreateByteVector(o.Addr)
+		bench.FlatBuffersStart(builder)
+		bench.FlatBuffersAddKey(builder, o.Key)
+		bench.FlatBuffersAddHost(builder, host)
+		bench.FlatBuffersAddAddr(builder, addr)
+		bench.FlatBuffersAddPort(builder, o.Port)
+		bench.FlatBuffersAddSize(builder, o.Size)
+		bench.FlatBuffersAddHash(builder, o.Hash)
+		bench.FlatBuffersAddRatio(builder, o.Ratio)
+		if o.Route {
+			bench.FlatBuffersAddRoute(builder, 1)
+		} else {
+			bench.FlatBuffersAddRoute(builder, 0)
+		}
+		builder.Finish(bench.FlatBuffersEnd(builder))
+		serials[i] = builder.FinishedBytes()
+	}
+
+	buf := new(bench.FlatBuffers)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
-		*buf = *zero	// init
-		holdProtoBuf := new(bench.ProtoBuf)
-		if err := buf.Unmarshal(serials[i%len(serials)]); err != nil {
-			b.Error(err)
+		d := serials[i%len(serials)]
+		buf.Init(d, flatbuffers.GetUOffsetT(d))
+		holdColfer = new(bench.Colfer)
+		holdColfer.Key = buf.Key()
+		holdColfer.Host = string(buf.Host())
+		n := buf.AddrLength()
+		holdColfer.Addr = make([]byte, n)
+		for i := 0; i < n; i++ {
+			holdColfer.Addr[i] = byte(buf.Addr(i))
 		}
-		*holdProtoBuf = *buf
+		holdColfer.Port = buf.Port()
+		holdColfer.Size = buf.Size()
+		holdColfer.Hash = buf.Hash()
+		holdColfer.Ratio = buf.Ratio()
+		holdColfer.Route = buf.Route() == 1
 	}
 }
