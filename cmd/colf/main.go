@@ -45,11 +45,11 @@ func main() {
 	}
 
 	switch lang := flag.Arg(0); lang {
-	case "go":
+	case "go", "Go":
 		if err := colfer.Generate(*basedir, structs); err != nil {
 			log.Fatal(err)
 		}
-	case "java":
+	case "java", "Java":
 		if err := colfer.GenerateJava(*basedir, structs); err != nil {
 			log.Fatal(err)
 		}

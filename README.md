@@ -13,7 +13,7 @@ SYNOPSIS
 	colf [-b <dir>] [-p <path>] <language> [<file> ...]
 
 DESCRIPTION
-	Generates source code for the given language. Both go and java are
+	Generates source code for the given language. Both Go and Java are
 	supported.
 	The file operands are processed in command-line order. If file is
 	absent, colf reads all ".colf" files in the working directory.
