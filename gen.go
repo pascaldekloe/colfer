@@ -60,6 +60,7 @@ var _ = time.RFC3339
 var (
 	ErrStructMismatch = errors.New("colfer: struct header mismatch")
 	ErrCorrupt        = errors.New("colfer: data corrupt")
+	ErrOverflow       = errors.New("colfer: integer overflow")
 )
 
 `
@@ -171,7 +172,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 <:end:>`
 
 const goMarshalVarint = `		for x >= 0x80 {
-			data[i] = byte(x) | 0x80
+			data[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
@@ -265,10 +266,13 @@ const goUnmarshalField = `
 `
 
 const goUnmarshalVarint32 = `		var x uint32
-		for shift := uint(0); shift <= 32; shift += 7 {
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 32 {
+				return ErrOverflow
+			}
 			b := data[i]
 			i++
-			x |= uint32(b&0x7f) << shift
+			x |= (uint32(b) & 0x7f) << shift
 			if b < 0x80 {
 				break
 			}
@@ -278,10 +282,13 @@ const goUnmarshalVarint32 = `		var x uint32
 		}`
 
 const goUnmarshalVarint64 = `		var x uint64
-		for shift := uint(0); shift <= 64; shift += 7 {
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrOverflow
+			}
 			b := data[i]
 			i++
-			x |= uint64(b&0x7f) << shift
+			x |= (uint64(b) & 0x7f) << shift
 			if b < 0x80 {
 				break
 			}
