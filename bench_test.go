@@ -25,7 +25,7 @@ func init()  {
 	for i := range testSet {
 		v, ok := quick.Value(typ, rnd)
 		if !ok {
-			panic("can't generate Bench values")
+			panic("can't generate testdata.Colfer values")
 		}
 
 		o, ok := v.Interface().(*bench.Colfer)
@@ -40,6 +40,7 @@ func init()  {
 	}
 }
 
+// holdData prevents compiler optimization.
 var holdData []byte
 
 func BenchmarkEncode(b *testing.B) {

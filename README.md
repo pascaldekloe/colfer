@@ -1,7 +1,18 @@
-# Colfer [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer) [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
+# Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
 WIP: schema-based binary data format optimized for speed, size, and simplicity.
 The format is inspired by Proto**col** Buf**fer**.
+
+This is free and unencumbered software released into the public domain.
+
+
+#### Features
+
+* No dependencies other than the core library.
+* Faster & smaller than FlatBuffers.
+* Faster & smaller than Protocol Buffers.
+* The generated code is quite readable.
+
 
 ## Use
 
@@ -35,8 +46,6 @@ SEE ALSO
 
 Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
 
-Run `go generate` before the tests.
-
 
 ## Format
 
@@ -53,7 +62,7 @@ known as a
 [variable-length quantity](https://en.wikipedia.org/wiki/Variable-length_quantity).
 
 
-### Value Definiton
+#### Value Definiton
 
 Each definition starts with an 8-bit header. The 7 least significant bits
 identify the field by its (0-based position) index in the schema. The most
