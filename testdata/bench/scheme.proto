@@ -1,0 +1,18 @@
+package bench;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.marshaler_all) = true;
+
+message ProtoBuf {
+	required int64 key = 1 [(gogoproto.nullable) = false];
+	required string host = 2 [(gogoproto.nullable) = false];
+	optional bytes addr = 3;
+	required int32 port = 4 [(gogoproto.nullable) = false];
+	required int64 size = 5 [(gogoproto.nullable) = false];
+	required uint64 hash = 6 [(gogoproto.nullable) = false];
+	required double ratio = 7 [(gogoproto.nullable) = false];
+	required bool route = 8 [(gogoproto.nullable) = false];
+}
