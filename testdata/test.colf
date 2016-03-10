@@ -13,14 +13,3 @@ type o struct {
 	s   text
 	a   binary
 }
-
-// bench is used for performance benchmarks.
-type bench struct {
-	key	int64
-	host	text
-	addr	binary
-	port	int32
-	size	int64
-	hash	uint64
-	ratio	float64
-}

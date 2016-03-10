@@ -3,10 +3,8 @@ package colfer
 import (
 	"encoding/hex"
 	"math"
-	"math/rand"
 	"reflect"
 	"testing"
-	"testing/quick"
 	"time"
 
 	"github.com/pascaldekloe/colfer/testdata"
@@ -70,65 +68,5 @@ func TestGoldenDecodes(t *testing.T) {
 		if !reflect.DeepEqual(got, &gold.mapping) {
 			t.Errorf("%s: got:\n\t%+v,\nwant:\n\t%+v", gold.serial, *got, gold.mapping)
 		}
-	}
-}
-
-// Benchmarks:
-
-var rnd = rand.New(rand.NewSource(time.Now().Unix()))
-
-func generate(n int) ([]*testdata.Bench, [][]byte, int64) {
-	objects := make([]*testdata.Bench, n)
-	serials := make([][]byte, n)
-	size := 0
-
-	typ := reflect.TypeOf(objects).Elem()
-	for i := range objects {
-		v, ok := quick.Value(typ, rnd)
-		if !ok {
-			panic("can't generate Bench values")
-		}
-
-		o, ok := v.Interface().(*testdata.Bench)
-		if !ok {
-			panic("wrong type generated")
-		}
-		if o == nil {
-			o = new(testdata.Bench)
-		}
-
-		b := o.Marshal(make([]byte, 1000))
-
-		objects[i], serials[i] = o, b
-		size += len(b)
-	}
-
-	return objects, serials, int64(size / n)
-}
-
-func BenchmarkEncode(b *testing.B) {
-	n := 1000
-	objects, _, avgSize := generate(n)
-	buf := make([]byte, 1000)
-
-	b.SetBytes(avgSize)
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := b.N; i != 0; i-- {
-		objects[rnd.Intn(n)].Marshal(buf)
-	}
-}
-
-func BenchmarkDecode(b *testing.B) {
-	n := 1000
-	_, serials, avgSize := generate(n)
-
-	b.SetBytes(avgSize)
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := b.N; i != 0; i-- {
-		new(testdata.Bench).Unmarshal(serials[rnd.Intn(n)])
 	}
 }

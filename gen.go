@@ -3,6 +3,7 @@ package colfer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -23,16 +24,19 @@ func Generate(basedir string, structs []*Struct) error {
 	pkgFiles := make(map[string]*os.File)
 
 	for _, s := range structs {
-		f, ok := pkgFiles[s.Pkg.Name]
+		pkgdir := strings.Replace(s.Pkg.Name, "/", string(filepath.Separator), -1)
+		s.Pkg.Name = s.Pkg.Name[strings.LastIndexByte(s.Pkg.Name, '/')+1:]
+
+		f, ok := pkgFiles[pkgdir]
 		if !ok {
 			var err error
-			f, err = os.Create(filepath.Join(basedir, s.Pkg.Name, "Colfer.go"))
+			f, err = os.Create(filepath.Join(basedir, pkgdir, "Colfer.go"))
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
-			pkgFiles[s.Pkg.Name] = f
+			pkgFiles[pkgdir] = f
 			if err = pkgT.Execute(f, s.Pkg); err != nil {
 				return err
 			}

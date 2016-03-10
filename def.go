@@ -31,7 +31,7 @@ type Package struct {
 
 // Struct is data structure definition.
 type Struct struct {
-	Pkg *Package
+	Pkg Package
 	// Name is the identification token in title case.
 	Name   string
 	Fields []*Field
@@ -58,7 +58,7 @@ func ReadDefs(files []string) ([]*Struct, error) {
 			return nil, err
 		}
 
-		pkg := new(Package)
+		pkg := Package{}
 		pkg.Name = file.Name.Name
 
 		for _, decl := range file.Decls {

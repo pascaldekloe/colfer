@@ -17,15 +17,15 @@ func GenerateJava(basedir string, structs []*Struct) error {
 	template.Must(t.New("unmarshal-field").Parse(javaUnmarshalField))
 
 	for _, s := range structs {
-		s.Name = strings.Title(s.Name)
+		s.Pkg.Name = strings.Replace(s.Pkg.Name, "/", ".", -1)
 
-		f, err := os.Create(filepath.Join(basedir, s.Pkg.Name, s.Name+".java"))
+		pkgdir := strings.Replace(s.Pkg.Name, ".", string(filepath.Separator), -1)
+		f, err := os.Create(filepath.Join(basedir, pkgdir, s.Name+".java"))
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 
-		s.Pkg.Name = strings.Replace(s.Pkg.Name, "/", ".", -1)
 		if err := t.Execute(f, s); err != nil {
 			return err
 		}
