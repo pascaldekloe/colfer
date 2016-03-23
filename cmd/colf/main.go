@@ -32,6 +32,16 @@ func main() {
 		files = args[1:]
 	}
 
+	var gen func(string, []*colfer.Struct) error
+	switch lang := flag.Arg(0); lang {
+	case "go", "Go":
+		gen = colfer.Generate
+	case "java", "Java":
+		gen = colfer.GenerateJava
+	default:
+		log.Fatalf("colf: unsupported language %q", lang)
+	}
+
 	structs, err := colfer.ReadDefs(files)
 	if err != nil {
 		log.Fatal(err)
@@ -44,17 +54,8 @@ func main() {
 		s.Pkg.Name = path.Join(*prefix, s.Pkg.Name)
 	}
 
-	switch lang := flag.Arg(0); lang {
-	case "go", "Go":
-		if err := colfer.Generate(*basedir, structs); err != nil {
-			log.Fatal(err)
-		}
-	case "java", "Java":
-		if err := colfer.GenerateJava(*basedir, structs); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		log.Fatalf("colf: unsupported language %q", lang)
+	if err := gen(*basedir, structs); err != nil {
+		log.Fatal(err)
 	}
 }
 
