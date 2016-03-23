@@ -24,13 +24,15 @@ func Generate(basedir string, structs []*Struct) error {
 	pkgFiles := make(map[string]*os.File)
 
 	for _, s := range structs {
-		pkgdir := strings.Replace(s.Pkg.Name, "/", string(filepath.Separator), -1)
+		pkgdir, err := MakePkgDir(&s.Pkg, basedir)
+		if err != nil {
+			return err
+		}
 		s.Pkg.Name = s.Pkg.Name[strings.LastIndexByte(s.Pkg.Name, '/')+1:]
 
 		f, ok := pkgFiles[pkgdir]
 		if !ok {
-			var err error
-			f, err = os.Create(filepath.Join(basedir, pkgdir, "Colfer.go"))
+			f, err = os.Create(filepath.Join(pkgdir, "Colfer.go"))
 			if err != nil {
 				return err
 			}
@@ -41,11 +43,19 @@ func Generate(basedir string, structs []*Struct) error {
 				return err
 			}
 		}
+
 		if err := t.Execute(f, s); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func MakePkgDir(p *Package, basedir string) (path string, err error) {
+	pkgdir := strings.Replace(p.Name, "/", string(filepath.Separator), -1)
+	path = filepath.Join(basedir, pkgdir)
+	err = os.MkdirAll(path, os.ModeDir|os.ModePerm)
+	return
 }
 
 const goPackage = `package <:.Name:>
