@@ -12,9 +12,9 @@ var _ = math.E
 var _ = time.RFC3339
 
 var (
-	ErrStructMismatch = errors.New("colfer: struct header mismatch")
-	ErrCorrupt        = errors.New("colfer: data corrupt")
-	ErrOverflow       = errors.New("colfer: integer overflow")
+	ErrColferStruct   = errors.New("colfer: struct header mismatch")
+	ErrColferField    = errors.New("colfer: unknown field header")
+	ErrColferOverflow = errors.New("colfer: varint overflow")
 )
 
 type Colfer struct {
@@ -28,133 +28,161 @@ type Colfer struct {
 	Route	bool
 }
 
-func (o *Colfer) Marshal(data []byte) []byte {
-	data[0] = 0x80
+// MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
+// If the buffer is too small, MrashalTo will panic.
+func (o *Colfer) MarshalTo(buf []byte) int {
+	if o == nil {
+		return 0
+	}
+
+	buf[0] = 0x80
 	i := 1
 
 	if v := o.Key; v != 0 {
-		data[i] = 0x00
+		buf[i] = 0x00
 		i++
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i-1] |= 0x80
+			buf[i-1] |= 0x80
 		}
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 	}
 
 	if v := o.Host; len(v) != 0 {
-		data[i] = 0x01
+		buf[i] = 0x01
 		i++
 		x := uint(len(v))
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 		to := i + len(v)
-		copy(data[i:], v)
+		copy(buf[i:], v)
 		i = to
 	}
 
 	if v := o.Addr; len(v) != 0 {
-		data[i] = 0x02
+		buf[i] = 0x02
 		i++
 		x := uint(len(v))
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 		to := i + len(v)
-		copy(data[i:], v)
+		copy(buf[i:], v)
 		i = to
 	}
 
 	if v := o.Port; v != 0 {
-		data[i] = 0x03
+		buf[i] = 0x03
 		i++
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i-1] |= 0x80
+			buf[i-1] |= 0x80
 		}
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 	}
 
 	if v := o.Size; v != 0 {
-		data[i] = 0x04
+		buf[i] = 0x04
 		i++
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i-1] |= 0x80
+			buf[i-1] |= 0x80
 		}
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 	}
 
 	if x := o.Hash; x != 0 {
-		data[i] = 0x05
+		buf[i] = 0x05
 		i++
 		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++
 	}
 
 	if v := o.Ratio; v != 0.0 {
-		data[i] = 0x06
+		buf[i] = 0x06
 		i++
 		x := math.Float64bits(v)
-		data[i], data[i+1], data[i+2], data[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		data[i+4], data[i+5], data[i+6], data[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 8
 	}
 
 	if o.Route {
-		data[i] = 0x07
+		buf[i] = 0x07
 		i++
 	}
 
-	return data[:i]
+	return i
 }
 
-func (o *Colfer) Unmarshal(data []byte) error {
+// MarshalSize returns the number of bytes that will hold the Colfer serial for sure.
+func (o *Colfer) MarshalSize() int {
+	if o == nil {
+		return 0
+	}
+
+	// BUG(pascaldekloe): MarshalBinary panics on documents larger than 2kB due to the
+	// fact that MarshalSize is not implemented yet.
+	return 2048
+}
+
+// MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
+// The error return is always nil.
+func (o *Colfer) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, o.MarshalSize())
+	n := o.MarshalTo(data)
+	return data[:n], nil
+}
+
+// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
+// The error return options are io.EOF, ErrColferStruct, ErrColferField and ErrColferOverflow.
+func (o *Colfer) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
 	}
-	if data[0] != 0x80 {
-		return ErrStructMismatch
-	}
 
+	if data[0] != 0x80 {
+		return ErrColferStruct
+	}
 	if len(data) == 1 {
 		return nil
 	}
+
 	header := data[1]
 	field := header & 0x7f
 	i := 2
@@ -163,7 +191,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -192,7 +220,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 32 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -205,10 +233,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 			}
 		}
 		to := i + int(x)
-		if to < 0 {
-			return ErrCorrupt
-		}
-		if to > len(data) {
+		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		o.Host = string(data[i:to])
@@ -226,7 +251,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 32 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -240,10 +265,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		}
 		length := int(x)
 		to := i + length
-		if to < 0 {
-			return ErrCorrupt
-		}
-		if to > len(data) {
+		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		v := make([]byte, length)
@@ -263,7 +285,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 32 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -292,7 +314,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -321,7 +343,7 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -372,5 +394,5 @@ func (o *Colfer) Unmarshal(data []byte) error {
 		i++
 	}
 
-	return ErrCorrupt
+	return ErrColferField
 }

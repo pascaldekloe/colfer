@@ -72,9 +72,9 @@ var _ = math.E
 var _ = time.RFC3339
 
 var (
-	ErrStructMismatch = errors.New("colfer: struct header mismatch")
-	ErrCorrupt        = errors.New("colfer: data corrupt")
-	ErrOverflow       = errors.New("colfer: integer overflow")
+	ErrColferStruct   = errors.New("colfer: struct header mismatch")
+	ErrColferField    = errors.New("colfer: unknown field header")
+	ErrColferOverflow = errors.New("colfer: varint overflow")
 )
 
 `
@@ -83,33 +83,61 @@ const goCode = `type <:.Name:> struct {
 <:range .Fields:>	<:.Name:>	<:if eq .Type "timestamp":>time.Time<:else if eq .Type "text":>string<:else if eq .Type "binary":>[]byte<:else:><:.Type:><:end:>
 <:end:>}
 
-func (o *<:.Name:>) Marshal(data []byte) []byte {
-	data[0] = 0x80
+// MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
+// If the buffer is too small, MarshalTo will panic.
+func (o *<:.Name:>) MarshalTo(buf []byte) int {
+	if o == nil {
+		return 0
+	}
+
+	buf[0] = 0x80
 	i := 1
 <:range .Fields:><:template "marshal-field" .:><:end:>
-	return data[:i]
+	return i
 }
 
-func (o *<:.Name:>) Unmarshal(data []byte) error {
+// MarshalSize returns the number of bytes that will hold the Colfer serial for sure.
+func (o *<:.Name:>) MarshalSize() int {
+	if o == nil {
+		return 0
+	}
+
+	// BUG(pascaldekloe): MarshalBinary panics on documents larger than 2kB due to the
+	// fact that MarshalSize is not implemented yet.
+	return 2048
+}
+
+// MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
+// The error return is always nil.
+func (o *<:.Name:>) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, o.MarshalSize())
+	n := o.MarshalTo(data)
+	return data[:n], nil
+}
+
+// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
+// The error return options are io.EOF, ErrColferStruct, ErrColferField and ErrColferOverflow.
+func (o *<:.Name:>) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
 	}
-	if data[0] != 0x80 {
-		return ErrStructMismatch
-	}
 
+	if data[0] != 0x80 {
+		return ErrColferStruct
+	}
 	if len(data) == 1 {
 		return nil
 	}
+
 	header := data[1]
 	field := header & 0x7f
 	i := 2
 <:range .Fields:><:template "unmarshal-field" .:><:end:>
-	return ErrCorrupt
+	return ErrColferField
 }
 `
 
-const goMarshalFieldDecl = `		data[i] = <:printf "0x%02x" .Index:>
+const goMarshalFieldDecl = `		buf[i] = <:printf "0x%02x" .Index:>
 		i++`
 
 const goMarshalField = `<:if eq .Type "bool":>
@@ -132,7 +160,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i-1] |= 0x80
+			buf[i-1] |= 0x80
 		}
 <:template "marshal-varint":>
 	}
@@ -142,7 +170,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
-			data[i-1] |= 0x80
+			buf[i-1] |= 0x80
 		}
 <:template "marshal-varint":>
 	}
@@ -150,27 +178,27 @@ const goMarshalField = `<:if eq .Type "bool":>
 	if v := o.<:.Name:>; v != 0.0 {
 <:template "marshal-fieldDecl" .:>
 		x := math.Float32bits(v)
-		data[i], data[i+1], data[i+2], data[i+3] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 4
 	}
 <:else if eq .Type "float64":>
 	if v := o.<:.Name:>; v != 0.0 {
 <:template "marshal-fieldDecl" .:>
 		x := math.Float64bits(v)
-		data[i], data[i+1], data[i+2], data[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		data[i+4], data[i+5], data[i+6], data[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 8
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.Name:>; !v.IsZero() {
 <:template "marshal-fieldDecl" .:>
 		s, ns := v.Unix(), v.Nanosecond()
-		data[i], data[i+1], data[i+2], data[i+3] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
-		data[i+4], data[i+5], data[i+6], data[i+7] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
+		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
+		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
 		i += 8
 		if ns != 0 {
-			data[i-9] |= 0x80
-			data[i], data[i+1], data[i+2], data[i+3] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
+			buf[i-9] |= 0x80
+			buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
 			i += 4
 		}
 	}
@@ -180,17 +208,17 @@ const goMarshalField = `<:if eq .Type "bool":>
 		x := uint(len(v))
 <:template "marshal-varint":>
 		to := i + len(v)
-		copy(data[i:], v)
+		copy(buf[i:], v)
 		i = to
 	}
 <:end:>`
 
 const goMarshalVarint = `		for x >= 0x80 {
-			data[i] = byte(x | 0x80)
+			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
 		}
-		data[i] = byte(x)
+		buf[i] = byte(x)
 		i++`
 
 const goUnmarshalField = `
@@ -232,25 +260,28 @@ const goUnmarshalField = `
 		o.<:.Name:> = math.Float64frombits(x)
 		i = to
 <:else if eq .Type "timestamp":>
+		to := i + 8
+		var nsec int64
+		if header&0x80 == 0 {
+			if to < 0 || to > len(data) {
+				return io.EOF
+			}
+		} else {
+			to += 4
+			if to < 0 || to > len(data) {
+				return io.EOF
+			}
+			nsec = int64(uint(data[i+8])<<24 | uint(data[i+9])<<16 | uint(data[i+10])<<8 | uint(data[i+11]))
+		}
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		i += 8
-
-		var nsec int64
-		if header&0x80 != 0 {
-			v := uint(data[i])<<24 | uint(data[i+1])<<16 | uint(data[i+2])<<8 | uint(data[i+3])
-			i += 4
-			nsec = int64(v)
-		}
+		i = to
 
 		o.<:.Name:> = time.Unix(int64(sec), nsec)
 <:else if eq .Type "text":>
 <:template "unmarshal-varint32":>
 		to := i + int(x)
-		if to < 0 {
-			return ErrCorrupt
-		}
-		if to > len(data) {
+		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		o.<:.Name:> = string(data[i:to])
@@ -259,10 +290,7 @@ const goUnmarshalField = `
 <:template "unmarshal-varint32":>
 		length := int(x)
 		to := i + length
-		if to < 0 {
-			return ErrCorrupt
-		}
-		if to > len(data) {
+		if to < 0 || to > len(data) {
 			return io.EOF
 		}
 		v := make([]byte, length)
@@ -282,7 +310,7 @@ const goUnmarshalField = `
 const goUnmarshalVarint32 = `		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 32 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++
@@ -298,7 +326,7 @@ const goUnmarshalVarint32 = `		var x uint32
 const goUnmarshalVarint64 = `		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return ErrOverflow
+				return ErrColferOverflow
 			}
 			b := data[i]
 			i++

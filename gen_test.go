@@ -2,19 +2,20 @@ package colfer
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/pascaldekloe/colfer/testdata"
+	"github.com/pascaldekloe/goe/verify"
 )
 
 //go:generate go run ./cmd/colf/main.go go testdata/test.colf
 
 type golden struct {
-	serial  string
-	mapping testdata.O
+	serial string
+	object testdata.O
 }
 
 func newGoldenCases() []*golden {
@@ -44,29 +45,31 @@ func newGoldenCases() []*golden {
 	}
 }
 
-func TestGoldenEncodes(t *testing.T) {
+func TestMarshal(t *testing.T) {
 	for _, gold := range newGoldenCases() {
-		got := hex.EncodeToString(gold.mapping.Marshal(make([]byte, 100)))
-		if got != gold.serial {
+		data, err := gold.object.MarshalBinary()
+		if err != nil {
+			t.Errorf("0x%s: %s", gold.serial, err)
+			continue
+		}
+		if got := hex.EncodeToString(data); got != gold.serial {
 			t.Errorf("Got 0x%s, want 0x%s", got, gold.serial)
 		}
 	}
 }
 
-func TestGoldenDecodes(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	for _, gold := range newGoldenCases() {
 		data, err := hex.DecodeString(gold.serial)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		got := new(testdata.O)
-		if err = got.Unmarshal(data); err != nil {
-			t.Errorf("%s: %s", gold.serial, err)
+		got := testdata.O{}
+		if err := got.UnmarshalBinary(data); err != nil {
+			t.Errorf("0x%s: %s", gold.serial, err)
 			continue
 		}
-		if !reflect.DeepEqual(got, &gold.mapping) {
-			t.Errorf("%s: got:\n\t%+v,\nwant:\n\t%+v", gold.serial, *got, gold.mapping)
-		}
+		verify.Values(t, fmt.Sprintf("0x%s", gold.serial), got, gold.object)
 	}
 }

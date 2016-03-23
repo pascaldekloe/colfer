@@ -19,7 +19,7 @@ import (
 
 var testSet = make([]*bench.Colfer, 1000)
 
-func init()  {
+func init() {
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 	typ := reflect.TypeOf(testSet).Elem()
 	for i := range testSet {
@@ -49,7 +49,8 @@ func BenchmarkEncode(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
-		holdData = testSet[i%len(testSet)].Marshal(buf)
+		n := testSet[i%len(testSet)].MarshalTo(buf)
+		holdData = buf[:n]
 	}
 }
 
@@ -58,12 +59,12 @@ func BenchmarkEncodeProtoBuf(b *testing.B) {
 	protoBufSet := make([]*bench.ProtoBuf, len(testSet))
 	for i, o := range testSet {
 		protoBufSet[i] = &bench.ProtoBuf{
-			Key: o.Key,
-			Host: o.Host,
-			Addr: o.Addr,
-			Port: o.Port,
+			Key:   o.Key,
+			Host:  o.Host,
+			Addr:  o.Addr,
+			Port:  o.Port,
 			Size_: o.Size,
-			Hash: o.Hash,
+			Hash:  o.Hash,
 			Ratio: o.Ratio,
 			Route: o.Route,
 		}
@@ -116,14 +117,17 @@ var holdColfer *bench.Colfer
 func BenchmarkDecode(b *testing.B) {
 	serials := make([][]byte, len(testSet))
 	for i, o := range testSet {
-		serials[i] = o.Marshal(make([]byte, 1024))
+		serials[i], _ = o.MarshalBinary()
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
+		data := serials[i%len(serials)]
 		holdColfer = new(bench.Colfer)
-		holdColfer.Unmarshal(serials[i%len(serials)])
+		if err := holdColfer.UnmarshalBinary(data); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -134,12 +138,12 @@ func BenchmarkDecodeProtoBuf(b *testing.B) {
 	serials := make([][]byte, len(testSet))
 	for i, o := range testSet {
 		p := &bench.ProtoBuf{
-			Key: o.Key,
-			Host: o.Host,
-			Addr: o.Addr,
-			Port: o.Port,
+			Key:   o.Key,
+			Host:  o.Host,
+			Addr:  o.Addr,
+			Port:  o.Port,
 			Size_: o.Size,
-			Hash: o.Hash,
+			Hash:  o.Hash,
 			Ratio: o.Ratio,
 			Route: o.Route,
 		}
@@ -153,8 +157,9 @@ func BenchmarkDecodeProtoBuf(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
+		data := serials[i%len(serials)]
 		holdProtoBuf := new(bench.ProtoBuf)
-		if err := holdProtoBuf.Unmarshal(serials[i%len(serials)]); err != nil {
+		if err := holdProtoBuf.Unmarshal(data); err != nil {
 			b.Error(err)
 		}
 	}
@@ -188,8 +193,9 @@ func BenchmarkDecodeFlatBuf(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i != 0; i-- {
-		d := serials[i%len(serials)]
-		buf.Init(d, flatbuffers.GetUOffsetT(d))
+		data := serials[i%len(serials)]
+		buf.Init(data, flatbuffers.GetUOffsetT(data))
+
 		holdColfer = new(bench.Colfer)
 		holdColfer.Key = buf.Key()
 		holdColfer.Host = string(buf.Host())
