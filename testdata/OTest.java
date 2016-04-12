@@ -65,11 +65,17 @@ public class OTest {
 	want.F32 = Float.MAX_VALUE;
 	goldenCases.put("80057f7fffff", want);
 	want = new O();
+	want.F32 = Float.NaN;
+	goldenCases.put("80057fc00000", want);
+	want = new O();
 	want.F64 = Double.MIN_VALUE;
 	goldenCases.put("80060000000000000001", want);
 	want = new O();
 	want.F64 = Double.MAX_VALUE;
 	goldenCases.put("80067fefffffffffffff", want);
+	want = new O();
+	want.F64 = Double.NaN;
+	goldenCases.put("80067ff8000000000000", want);
 	want = new O();
 	want.T = Instant.ofEpochSecond(1441739050, 0);
 	goldenCases.put("80070000000055ef312a", want);

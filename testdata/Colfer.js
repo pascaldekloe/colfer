@@ -47,7 +47,7 @@ var testdata = new function() {
 			segs.push(seg);
 		}
 
-		if (o.f32) {
+		if (o.f32 || Number.isNaN(o.f32)) {
 			if (o.f32 > 3.4028234663852886E38 || o.f32 < -3.4028234663852886E38)
 				throw 'colfer: field "f32" overflow: ' + o.f32;
 			var bytes = new Uint8Array(5);
@@ -56,7 +56,7 @@ var testdata = new function() {
 			segs.push(bytes);
 		}
 
-		if (o.f64) {
+		if (o.f64 || Number.isNaN(o.f64)) {
 			var bytes = new Uint8Array(9);
 			bytes[0] = 6;
 			new DataView(bytes.buffer).setFloat64(1, o.f64);
