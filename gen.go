@@ -24,6 +24,19 @@ func Generate(basedir string, structs []*Struct) error {
 	pkgFiles := make(map[string]*os.File)
 
 	for _, s := range structs {
+		for _, f := range s.Fields {
+			switch f.Type {
+			default:
+				f.TypeNative = f.Type
+			case "timestamp":
+				f.TypeNative = "time.Time"
+			case "text":
+				f.TypeNative = "string"
+			case "binary":
+				f.TypeNative = "[]byte"
+			}
+		}
+
 		pkgdir, err := MakePkgDir(&s.Pkg, basedir)
 		if err != nil {
 			return err
@@ -82,7 +95,7 @@ var (
 `
 
 const goCode = `type <:.NameTitle:> struct {
-<:range .Fields:>	<:.NameTitle:>	<:if eq .Type "timestamp":>time.Time<:else if eq .Type "text":>string<:else if eq .Type "binary":>[]byte<:else:><:.Type:><:end:>
+<:range .Fields:>	<:.NameTitle:>	<:.TypeNative:>
 <:end:>}
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.

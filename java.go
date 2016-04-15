@@ -17,6 +17,29 @@ func GenerateJava(basedir string, structs []*Struct) error {
 	template.Must(t.New("unmarshal-field").Parse(javaUnmarshalField))
 
 	for _, s := range structs {
+		for _, f := range s.Fields {
+			switch f.Type {
+			default:
+				f.TypeNative = f.Type
+			case "bool":
+				f.TypeNative = "boolean"
+			case "uint32", "int32":
+				f.TypeNative = "int"
+			case "uint64", "int64":
+				f.TypeNative = "long"
+			case "float32":
+				f.TypeNative = "float"
+			case "float64":
+				f.TypeNative = "double"
+			case "timestamp":
+				f.TypeNative = "java.time.Instant"
+			case "text":
+				f.TypeNative = "String"
+			case "binary":
+				f.TypeNative = "byte[]"
+			}
+		}
+
 		pkgdir, err := MakePkgDir(&s.Pkg, basedir)
 		if err != nil {
 			return err
@@ -48,12 +71,20 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 	private static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
 
-<:range .Fields:>	public <:if eq .Type "bool":>boolean<:else if eq .Type "uint32" "int32":>int<:else if eq .Type "uint64" "int64":>long<:else if eq .Type "float32":>float<:else if eq .Type "float64":>double<:else if eq .Type "timestamp":>java.time.Instant<:else if eq .Type "text":>String<:else if eq .Type "binary":>byte[]<:else:><:.Type:><:end:> <:.Name:>;
+<:range .Fields:>	public <:.TypeNative:> <:.Name:>;
 <:end:>
 
 <:template "marshal" .:>
 <:template "unmarshal" .:>
-	/**
+<:range .Fields:>	public <:.TypeNative:> get<:.NameTitle:>() {
+		return this.<:.Name:>;
+	}
+
+	public void set<:.NameTitle:>(<:.TypeNative:> value) {
+		this.<:.Name:> = value;
+	}
+
+<:end:>	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.
 	 * @param x the value.

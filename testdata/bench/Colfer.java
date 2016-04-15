@@ -183,6 +183,70 @@ public class Colfer implements java.io.Serializable {
 		throw new IllegalArgumentException("pending data");
 	}
 
+	public long getKey() {
+		return this.key;
+	}
+
+	public void setKey(long value) {
+		this.key = value;
+	}
+
+	public String getHost() {
+		return this.host;
+	}
+
+	public void setHost(String value) {
+		this.host = value;
+	}
+
+	public byte[] getAddr() {
+		return this.addr;
+	}
+
+	public void setAddr(byte[] value) {
+		this.addr = value;
+	}
+
+	public int getPort() {
+		return this.port;
+	}
+
+	public void setPort(int value) {
+		this.port = value;
+	}
+
+	public long getSize() {
+		return this.size;
+	}
+
+	public void setSize(long value) {
+		this.size = value;
+	}
+
+	public long getHash() {
+		return this.hash;
+	}
+
+	public void setHash(long value) {
+		this.hash = value;
+	}
+
+	public double getRatio() {
+		return this.ratio;
+	}
+
+	public void setRatio(double value) {
+		this.ratio = value;
+	}
+
+	public boolean getRoute() {
+		return this.route;
+	}
+
+	public void setRoute(boolean value) {
+		this.route = value;
+	}
+
 	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.

@@ -216,6 +216,86 @@ public class O implements java.io.Serializable {
 		throw new IllegalArgumentException("pending data");
 	}
 
+	public boolean getB() {
+		return this.b;
+	}
+
+	public void setB(boolean value) {
+		this.b = value;
+	}
+
+	public int getU32() {
+		return this.u32;
+	}
+
+	public void setU32(int value) {
+		this.u32 = value;
+	}
+
+	public long getU64() {
+		return this.u64;
+	}
+
+	public void setU64(long value) {
+		this.u64 = value;
+	}
+
+	public int getI32() {
+		return this.i32;
+	}
+
+	public void setI32(int value) {
+		this.i32 = value;
+	}
+
+	public long getI64() {
+		return this.i64;
+	}
+
+	public void setI64(long value) {
+		this.i64 = value;
+	}
+
+	public float getF32() {
+		return this.f32;
+	}
+
+	public void setF32(float value) {
+		this.f32 = value;
+	}
+
+	public double getF64() {
+		return this.f64;
+	}
+
+	public void setF64(double value) {
+		this.f64 = value;
+	}
+
+	public java.time.Instant getT() {
+		return this.t;
+	}
+
+	public void setT(java.time.Instant value) {
+		this.t = value;
+	}
+
+	public String getS() {
+		return this.s;
+	}
+
+	public void setS(String value) {
+		this.s = value;
+	}
+
+	public byte[] getA() {
+		return this.a;
+	}
+
+	public void setA(byte[] value) {
+		this.a = value;
+	}
+
 	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.

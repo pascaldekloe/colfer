@@ -50,6 +50,8 @@ type Field struct {
 	NameTitle string
 	// Type is the datatype.
 	Type string
+	// TypeNative is the language specific datatype placeholder.
+	TypeNative string
 }
 
 // ReadDefs parses the Colfer files.
