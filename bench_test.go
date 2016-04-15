@@ -14,6 +14,7 @@ import (
 
 //go:generate go run ./cmd/colf/main.go -p testdata go testdata/bench/scheme.colf
 //go:generate go run ./cmd/colf/main.go -p testdata java testdata/bench/scheme.colf
+//go:generate go run ./cmd/colf/main.go -b testdata/bench ecmascript testdata/bench/scheme.colf
 //go:generate protoc --gogofaster_out=. -I. -I${GOPATH}/src -I${GOPATH}/src/github.com/gogo/protobuf/protobuf testdata/bench/scheme.proto
 //go:generate flatc -o testdata -g testdata/bench/scheme.fbs
 

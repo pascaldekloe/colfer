@@ -8,6 +8,7 @@ This is free and unencumbered software released into the public domain.
 
 #### Features
 
+* Support for: Go, Java and ECMAScript/JavaScript.
 * No dependencies other than the core library.
 * Faster & smaller than FlatBuffers.
 * Faster & smaller than Protocol Buffers.
@@ -24,8 +25,8 @@ SYNOPSIS
 	colf [-b <dir>] [-p <path>] <language> [<file> ...]
 
 DESCRIPTION
-	Generates source code for the given language. Both Go and Java are
-	supported.
+	Generates source code for the given language. The options are: Go,
+	Java and ECMAScript.
 	The file operands are processed in command-line order. If file is
 	absent, colf reads all ".colf" files in the working directory.
 

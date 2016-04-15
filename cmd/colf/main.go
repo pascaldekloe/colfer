@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pascaldekloe/colfer"
 )
@@ -33,11 +34,13 @@ func main() {
 	}
 
 	var gen func(string, []*colfer.Struct) error
-	switch lang := flag.Arg(0); lang {
-	case "go", "Go":
+	switch lang := flag.Arg(0); strings.ToLower(lang) {
+	case "go":
 		gen = colfer.Generate
-	case "java", "Java":
+	case "java":
 		gen = colfer.GenerateJava
+	case "ecmascript", "javascript", "js":
+		gen = colfer.GenerateECMA
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
@@ -77,8 +80,8 @@ func init() {
 	help += "> [<" + underline + "file" + clear + "> " + underline + "..." + clear + "]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
-	help += ". Both " + bold + "go" + clear + " and " + bold + "java" + clear + " are\n"
-	help += "\tsupported.\n"
+	help += ". The options are: " + bold + "Go" + clear + ",\n"
+	help += "\t" + bold + "Java" + clear + " and " + bold + "ECMAScript" + clear + ".\n"
 	help += "\tThe " + underline + "file" + clear + " operands are processed in command-line order. If " + underline + "file" + clear + " is\n"
 	help += "\tabsent, " + cmd + " reads all \".colf\" files in the working directory.\n\n"
 
