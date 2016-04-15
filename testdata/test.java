@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 
-public class OTest {
+public class test {
 
     static Map<String, O> getGoldenCases() {
 	Map<String, O> goldenCases = new HashMap<>();
