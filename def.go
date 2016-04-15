@@ -25,6 +25,7 @@ var Datatypes = map[string]struct{}{
 
 // Package is a named definition bundle.
 type Package struct {
+	// Name is the identification token.
 	Name    string
 	Structs []*Struct
 }
@@ -32,17 +33,21 @@ type Package struct {
 // Struct is data structure definition.
 type Struct struct {
 	Pkg Package
-	// Name is the identification token in title case.
-	Name   string
-	Fields []*Field
+	// Name is the identification token.
+	Name string
+	// NameTitle is the identification token in title case.
+	NameTitle string
+	Fields    []*Field
 }
 
 // Field is a Struct member definition.
 type Field struct {
 	// Index is the Struct.Fields position.
 	Index int
-	// Name is the identification token in title case.
+	// Name is the identification token.
 	Name string
+	// NameTitle is the identification token in title case.
+	NameTitle string
 	// Type is the datatype.
 	Type string
 }
@@ -88,7 +93,8 @@ func ReadDefs(files []string) ([]*Struct, error) {
 
 func mapStruct(src *ast.TypeSpec) (*Struct, error) {
 	dst := &Struct{
-		Name: strings.Title(src.Name.Name),
+		Name:      src.Name.Name,
+		NameTitle: strings.Title(src.Name.Name),
 	}
 
 	s, ok := src.Type.(*ast.StructType)
@@ -103,7 +109,8 @@ func mapStruct(src *ast.TypeSpec) (*Struct, error) {
 		if len(f.Names) == 0 {
 			return nil, fmt.Errorf("colfer: missing name for field %d", i)
 		}
-		field.Name = strings.Title(f.Names[0].Name)
+		field.Name = f.Names[0].Name
+		field.NameTitle = strings.Title(f.Names[0].Name)
 
 		t, ok := f.Type.(*ast.Ident)
 		if !ok {
