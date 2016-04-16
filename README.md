@@ -1,18 +1,31 @@
 # Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
-WIP: schema-based binary data format optimized for speed, size, and simplicity.
-The format is inspired by Proto**col** Buf**fer**.
+**WIP! USE AT OWN RISC**
+
+Colfer is a schema-based binary data format optimized for speed and size.
+
+The project's compiler `colf(1)` generates source code from schema definitions
+to marshal and unmarshall data structures.
 
 This is free and unencumbered software released into the public domain.
+The format is inspired by Proto**col** Buf**fer**.
 
 
 #### Features
 
+* Simple and straightforward in use.
 * Support for: Go, Java and ECMAScript/JavaScript.
 * No dependencies other than the core library.
 * Faster & smaller than FlatBuffers.
 * Faster & smaller than Protocol Buffers.
 * The generated code is quite readable.
+* Compiler runs on [many platforms](https://golang.org/doc/install/source#environment).
+
+#### TODO's
+
+* Inner objects
+* Arrays
+
 
 
 ## Use
@@ -43,9 +56,127 @@ SEE ALSO
 ```
 
 
+It is recommended to commit the generated source code to the respective version
+control. Fancy developers might want code compilation to be part of the build.
+Here follows a Maven plugin configuration example.
+
+```xml
+<plugins>
+	<plugin>
+		<groupId>org.codehaus.mojo</groupId>
+		<artifactId>exec-maven-plugin</artifactId>
+		<version>1.4.0</version>
+		<configuration>
+			<executable>colf</executable>
+		</configuration>
+		<executions>
+			<execution>
+				<id>compile-colfer-java</id>
+				<phase>generate-sources</phase>
+				<goals>
+					<goal>exec</goal>
+				</goals>
+				<configuration>
+					<arguments>
+						<argument>-b=${project.build.directory}/generated-sources/colfer</argument>
+						<argument>-p=com/example</argument>
+						<argument>java</argument>
+						<argument>${project.basedir}/src/main/colfer/my.colf</argument>
+						<argument>${project.basedir}/src/main/colfer/another.colf</argument>
+					</arguments>
+				</configuration>
+			</execution>
+			<execution>
+				<id>compile-colfer-ecmascript</id>
+				<phase>compile</phase>
+				<goals>
+					<goal>exec</goal>
+				</goals>
+				<configuration>
+					<arguments>
+						<!-- JavaScript in js directory WAR package -->
+						<argument>-b=${project.build.directory}/${project.build.finalName}/js</argument>
+						<argument>ecmascript</argument>
+						<argument>${project.basedir}/src/main/colfer/my.colf</argument>
+					</arguments>
+				</configuration>
+			</execution>
+		</executions>
+	</plugin>
+	<plugin>
+		<groupId>org.codehaus.mojo</groupId>
+		<artifactId>build-helper-maven-plugin</artifactId>
+		<version>1.10</version>
+		<executions>
+			<execution>
+				<id>add-colfer-sources</id>
+				<phase>generate-sources</phase>
+				<goals>
+					<goal>add-source</goal>
+				</goals>
+				<configuration>
+					<sources>
+						<source>${project.build.directory}/generated-sources/colfer</source>
+					</sources>
+				</configuration>
+			</execution>
+		</executions>
+	</plugin>
+</plugins>
+```
+
+
+
+## Schema
+
+Data structures are defined per package in `.colf` files. The format is quite
+self explanatory.
+
+```go
+package example
+
+type member struct {
+	id     int64
+	name   text
+	bday   timestamp
+	avatar binary
+	public bool
+}
+```
+
+
+The following table shows how Colfer data types are applied per language.
+
+| Colfer	| ECMAScript	| Go		| Java		|
+|---------------|---------------|---------------|---------------|
+| bool		| Boolean	| bool		| boolean	|
+| uint32	| Number	| uint32	| int		|
+| uint64	| Number	| uint64	| long		|
+| int32		| Number	| int32		| int		|
+| int64		| Number	| int64		| long		|
+| float32	| Number	| float32	| float		|
+| float64	| Number	| float64	| double	|
+| timestamp	| Date + Number	| time.Time	| java.time.Instant |
+| text		| String	| string	| java.lang.String |
+| binary	| Uint8Array	| []byte	| byte[]	|
+
+
+
+## Compatibility
+
+Name changes do not affect the serialization format. Deprecated fields can be
+renamed to clearly discourage it's use.
+
+The following changes are backward compatible.
+* Adding new fields to the end of Colfer structs
+* Raising the bit size (which is actually just a limit) of integers
+
+
+
 ## Build
 
 Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
+
 
 
 ## Format
@@ -82,4 +213,5 @@ counting leap seconds. When the header flag is set then the value is followed
 with 32 bits for the nanosecond fraction. Again, a zero value must not be
 serialized.
 
-The data for text and binaries is prefixed with a varint size declaration.
+The data for text and binaries is prefixed with a varint size declaration. Text
+is encoded as UTF-8.
