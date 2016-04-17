@@ -2,8 +2,6 @@
 
 var testdata = new function() {
 	const EOF = 'colfer: EOF';
-	const StructMis = 'colfer: struct header mismatch';
-	const UnknownField = 'colfer: unknown field header';
 
 	this.marshalO = function(o) {
 		var segs = [[128]];
@@ -16,43 +14,47 @@ var testdata = new function() {
 			if (o.u32 > 4294967295)
 				throw 'colfer: field "u32" overflow: ' + o.u32;
 			var seg = [1];
+			if (o.u32 > Number.MAX_SAFE_INTEGER) throw 'colfer: field u32 exceeds Number.MAX_SAFE_INTEGER';
 			encodeVarint(seg, o.u32);
 			segs.push(seg);
 		}
 
 		if (o.u64) {
-			if (o.u64 > 18446744073709551616)
-				throw 'colfer: field "u64" overflow: ' + o.u64;
 			var seg = [2];
+			if (o.u64 > Number.MAX_SAFE_INTEGER) throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
 			encodeVarint(seg, o.u64);
 			segs.push(seg);
 		}
 
 		if (o.i32) {
-			if (o.i32 > 2147483647 || o.i32 < -2147483648)
-				throw 'colfer: field "i32" overflow: ' + o.i32;
 			var seg = [3];
 			if (o.i32 < 0) {
 				seg[0] |= 128;
+				if (o.i32 < -2147483648) throw 'colfer: field i32 exceeds 32-bit range';
 				encodeVarint(seg, -o.i32);
-			} else	encodeVarint(seg, o.i32);
+			} else {
+				if (o.i32 > 2147483647) throw 'colfer: field i32 exceeds 32-bit range';
+				encodeVarint(seg, o.i32);
+			}
 			segs.push(seg);
 		}
 
 		if (o.i64) {
-			if (o.i64 > 9223372036854775807 || o.i64 < -9223372036854775808)
-				throw 'colfer: field "i64" overflow: ' + o.i64;
 			var seg = [4];
 			if (o.i64 < 0) {
 				seg[0] |= 128;
+				if (o.i64 < -Number.MAX_SAFE_INTEGER) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
 				encodeVarint(seg, -o.i64);
-			} else	encodeVarint(seg, o.i64);
+			} else {
+				if (o.i64 > Number.MAX_SAFE_INTEGER) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, o.i64);
+			}
 			segs.push(seg);
 		}
 
 		if (o.f32 || Number.isNaN(o.f32)) {
 			if (o.f32 > 3.4028234663852886E38 || o.f32 < -3.4028234663852886E38)
-				throw 'colfer: field "f32" overflow: ' + o.f32;
+				throw 'colfer: field f32 exceeds 32-bit range';
 			var bytes = new Uint8Array(5);
 			bytes[0] = 5;
 			new DataView(bytes.buffer).setFloat32(1, o.f32);
@@ -68,9 +70,14 @@ var testdata = new function() {
 
 		if (o.t) {
 			var ms = o.t.getTime()
-			var s = ms / 1000;
-			var ns = (ms % 1000) * 1E6;
-			if (o.t_ns) ns += o.t_ns % 1E6;
+			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
+				throw 'colfer: field t second value exceeds Number capacity for ms';
+			var s = ms / 1E3;
+			var ns = (ms % 1E3) * 1E6;
+			if (o.t_ns) {
+				if (o.t_ns > 1E6) throw 'colfer: field t_ns exceeds ms range';
+				ns += o.t_ns % 1E6;
+			}
 
 			var bytes = new Uint8Array((ns) ? 13 : 9);
 			bytes[0] = 7;
@@ -99,146 +106,7 @@ var testdata = new function() {
 			segs.push(o.a);
 		}
 
-		return joinSegs(segs);
-	}
-
-	this.unmarshalO = function(data) {
-		if (!data || ! data.length) return null;
-		var i = 0;
-		if (data[i++] != 0x80) throw StructMis;
-
-		var readVarint = function() {
-			var pos = 0, result = 0;
-			while (true) {
-				var c = data[i+pos];
-				result += (c & 127) * Math.pow(128, pos);
-				++pos;
-				if (c < 128) {
-					i += pos;
-					return result;
-				}
-				if (pos == data.length) throw EOF;
-			}
-		}
-
-		var o = {};
-		if (i == data.length) return o;
-
-		var header = data[i++];
-		var field = header & 127;
-
-		if (field == 0) {
-			o.b = true;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 1) {
-			o.u32 = readVarint();
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 2) {
-			o.u64 = readVarint();
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 3) {
-			o.i32 = readVarint();
-			if (header & 0x80) o.i32 *= -1;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 4) {
-			o.i64 = readVarint();
-			if (header & 0x80) o.i64 *= -1;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 5) {
-			if (data.length < i + 4) throw EOF;
-			o.f32 = new DataView(data.buffer).getFloat32(i);
-			i += 4;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 6) {
-			if (data.length < i + 8) throw EOF;
-			o.f64 = new DataView(data.buffer).getFloat64(i);
-			i += 8;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 7) {
-			if (data.length < i + 8) throw EOF;
-			var view = new DataView(data.buffer);
-			// BUG(pascaldekloe): negative time offset not supported
-			var ms = view.getUint32(i) * Math.pow(2, 32);
-			ms += view.getUint32(i + 4);
-			ms *= 1000;
-			i += 8;
-			if (header&0x80) {
-				if (data.length < i + 4) throw EOF;
-				var ns = view.getUint32(i);
-				i += 4;
-				ms += ns / 1E6;
-				o.t_ns = ns % 1E6;
-			}
-			o.t = new Date();
-			o.t.setTime(ms);
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 8) {
-			var to = readVarint() + i;
-			if (to > data.length) throw EOF;
-			o.s = decodeUTF8(data.subarray(i, to));
-			i = to;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 9) {
-			var to = readVarint() + i;
-			if (to > data.length) throw EOF;
-			o.a = data.subarray(i, to);
-			i = to;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		return UnknownField;
-	}
-
-	var joinSegs = function(segs) {
-		var size = 0;
+		var size = 1;
 		segs.forEach(function(seg) {
 			size += seg.length;
 		});
@@ -249,7 +117,149 @@ var testdata = new function() {
 			bytes.set(seg, i);
 			i += seg.length;
 		});
+		bytes[i] = 127;
 		return bytes;
+	}
+
+	this.unmarshalO = function(data) {
+		if (!data || ! data.length) return null;
+		if (data[0] != 0x80) throw "colfer: unknown header at byte 0";
+		var i = 1;
+		var header;
+		var readHeader = function() {
+			if (i == data.length) throw EOF;
+			header = data[i++];
+		}
+
+		var readVarint = function() {
+			var pos = 0, result = 0;
+			while (pos != 8) {
+				var c = data[i+pos];
+				result += (c & 127) * Math.pow(128, pos);
+				++pos;
+				if (c < 128) {
+					i += pos;
+					if (result > Number.MAX_SAFE_INTEGER) break;
+					return result;
+				}
+				if (pos == data.length) throw EOF;
+			}
+			return -1;
+		}
+
+		var o = {};
+		readHeader();
+
+		if (header == 0) {
+			o.b = true;
+			readHeader();
+		}
+
+		if (header == 1) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field u32 exceeds Number.MAX_SAFE_INTEGER';
+			o.u32 = x;
+			readHeader();
+		}
+
+		if (header == 2) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
+			o.u64 = x;
+			readHeader();
+		}
+
+		if (header == 3) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field i32 exceeds Number.MAX_SAFE_INTEGER';
+			o.i32 = x;
+			readHeader();
+		} else if (header == (3 | 128)) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field i32 exceeds Number.MAX_SAFE_INTEGER';
+			o.i32 = -1 * x;
+			readHeader();
+		}
+
+		if (header == 4) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
+			o.i64 = x;
+			readHeader();
+		} else if (header == (4 | 128)) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
+			o.i64 = -1 * x;
+			readHeader();
+		}
+
+		if (header == 5) {
+			if (i + 4 > data.length) throw EOF;
+			o.f32 = new DataView(data.buffer).getFloat32(i);
+			i += 4;
+			readHeader();
+		}
+
+		if (header == 6) {
+			if (i + 8 > data.length) throw EOF;
+			o.f64 = new DataView(data.buffer).getFloat64(i);
+			i += 8;
+			readHeader();
+		}
+
+		// BUG(pascaldekloe): negative time offset not supported
+		if (header == 7) {
+			if (i + 8 > data.length) throw EOF;
+			var view = new DataView(data.buffer);
+			var ms = view.getUint32(i) * Math.pow(2, 32);
+			ms += view.getUint32(i + 4);
+			ms *= 1000;
+			if (ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field t second value exceeds Number capacity for ms';
+			i += 8;
+			o.t = new Date();
+			o.t.setTime(ms);
+			readHeader();
+		} else if (header == (7 | 128)) {
+			if (i + 12 > data.length) throw EOF;
+			var view = new DataView(data.buffer);
+			var ms = view.getUint32(i) * Math.pow(2, 32);
+			ms += view.getUint32(i + 4);
+			ms *= 1000;
+			if (ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field t second value exceeds Number capacity for ms';
+			var ns = view.getUint32(i + 8);
+			ms += ns / 1E6;
+			i += 12;
+			o.t = new Date();
+			o.t.setTime(ms);
+			o.t_ns = ns % 1E6;
+			readHeader();
+		}
+
+		if (header == 8) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field s length exceeds Number.MAX_SAFE_INTEGER';
+			var to = i + length;
+			if (to > data.length) throw EOF;
+			o.s = decodeUTF8(data.subarray(i, to));
+			i = to;
+			readHeader();
+		}
+
+		if (header == 9) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field a length exceeds Number.MAX_SAFE_INTEGER';
+			var to = i + length;
+			if (to > data.length) throw EOF;
+			o.a = data.subarray(i, to);
+			i = to;
+			readHeader();
+		}
+
+		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
+		if (i != data.length) throw 'colfer: data continuation at byte ' + i
+		return o;
 	}
 
 	var encodeVarint = function(bytes, x) {

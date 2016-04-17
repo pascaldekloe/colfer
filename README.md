@@ -1,7 +1,5 @@
 # Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
-**WIP! USE AT OWN RISC**
-
 Colfer is a schema-based binary data format optimized for speed and size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
@@ -66,9 +64,6 @@ Here follows a Maven plugin configuration example.
 		<groupId>org.codehaus.mojo</groupId>
 		<artifactId>exec-maven-plugin</artifactId>
 		<version>1.4.0</version>
-		<configuration>
-			<executable>colf</executable>
-		</configuration>
 		<executions>
 			<execution>
 				<id>compile-colfer-java</id>
@@ -77,6 +72,7 @@ Here follows a Maven plugin configuration example.
 					<goal>exec</goal>
 				</goals>
 				<configuration>
+					<executable>colf</executable>
 					<arguments>
 						<argument>-b=${project.build.directory}/generated-sources/colfer</argument>
 						<argument>-p=com/example</argument>
@@ -93,6 +89,7 @@ Here follows a Maven plugin configuration example.
 					<goal>exec</goal>
 				</goals>
 				<configuration>
+					<executable>colf</executable>
 					<arguments>
 						<!-- JavaScript in js directory WAR package -->
 						<argument>-b=${project.build.directory}/${project.build.finalName}/js</argument>
@@ -132,7 +129,7 @@ Here follows a Maven plugin configuration example.
 Data structures are defined per package in `.colf` files. The format is quite
 self explanatory.
 
-```go
+```
 package example
 
 type member struct {
@@ -148,7 +145,7 @@ type member struct {
 The following table shows how Colfer data types are applied per language.
 
 | Colfer	| ECMAScript	| Go		| Java		|
-|---------------|---------------|---------------|---------------|
+|:--------------|:--------------|:--------------|:--------------|
 | bool		| Boolean	| bool		| boolean	|
 | uint32	| Number	| uint32	| int		|
 | uint64	| Number	| uint64	| long		|
@@ -184,6 +181,7 @@ Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
 Data structures start with an 8-bit magic number `0x80` followed by zero or more
 field *value definitions*. Only those fields with a value other than the *zero
 value* may be serialized. Fields appear in order as stated by the schema.
+Data structures are terminated with byte `0x7f`.
 
 The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
 timestamps: `1970-01-01T00:00:00.000000000Z` and for text & binary: the empty

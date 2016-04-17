@@ -5,33 +5,33 @@ function getGoldenCases() {
 	nanoCase.setTime(1441739050777);
 
 	return {
-		'80': {},
-		'8000': {b: true},
-		'800101': {u32: 1},
-		'8001ffffffff0f': {u32: 4294967295},
-		'800201': {u64: 1},
-		'800280808080808080808002': {u64: 18446744073709552000},
-		'800301': {i32: 1},
-		'808301': {i32: -1},
-		'8003ffffffff07': {i32: 2147483647},
-		'80838080808008': {i32: -2147483648},
-		'800401': {i64: 1},
-		'808401': {i64: -1},
-		'800480808080808080808001': {i64: 9223372036854776000},
-		'808480808080808080808001': {i64: -9223372036854775808},
-		'800500000001': {f32: 1.401298464324817e-45},
-		'80057f7fffff': {f32: 3.4028234663852886e+38},
-		'80057fc00000': {f32: NaN},
-		'80060000000000000001': {f64: Number.MIN_VALUE},
-		'80067fefffffffffffff': {f64: Number.MAX_VALUE},
-		'80067ff8000000000000': {f64: NaN},
-		'80070000000055ef312a': {t: unixCase},
-		'80870000000055ef312a2e5da4e7': {t: nanoCase, t_ns: 888999},
-		'80080141': {s: 'A'},
-		'8008026100': {s: 'a\x00'},
-		'800809c280e0a080f0908080': {s: '\u0080\u0800\u{10000}'},
-		'800901ff': {a: new Uint8Array([0xFF])},
-		'8009020200': {a: new Uint8Array([2, 0])}
+		'807f': {},
+		'80007f': {b: true},
+		'8001017f': {u32: 1},
+		'8001ffffffff0f7f': {u32: 4294967295},
+		'8002017f': {u64: 1},
+		'8002ffffffffffffff0f7f': {u64: Number.MAX_SAFE_INTEGER},
+		'8003017f': {i32: 1},
+		'8083017f': {i32: -1},
+		'8003ffffffff077f': {i32: 2147483647},
+		'808380808080087f': {i32: -2147483648},
+		'8004017f': {i64: 1},
+		'8084017f': {i64: -1},
+		'8004ffffffffffffff0f7f': {i64: Number.MAX_SAFE_INTEGER},
+		'8084ffffffffffffff0f7f': {i64: -Number.MAX_SAFE_INTEGER},
+		'8005000000017f': {f32: 1.401298464324817e-45},
+		'80057f7fffff7f': {f32: 3.4028234663852886e+38},
+		'80057fc000007f': {f32: NaN},
+		'800600000000000000017f': {f64: Number.MIN_VALUE},
+		'80067fefffffffffffff7f': {f64: Number.MAX_VALUE},
+		'80067ff80000000000007f': {f64: NaN},
+		'80070000000055ef312a7f': {t: unixCase},
+		'80870000000055ef312a2e5da4e77f': {t: nanoCase, t_ns: 888999},
+		'800801417f': {s: 'A'},
+		'80080261007f': {s: 'a\x00'},
+		'800809c280e0a080f09080807f': {s: '\u0080\u0800\u{10000}'},
+		'800901ff7f': {a: new Uint8Array([0xFF])},
+		'80090202007f': {a: new Uint8Array([2, 0])}
 	}
 }
 
@@ -39,8 +39,13 @@ QUnit.test('marshal', function(assert) {
 	var golden = getGoldenCases()
 	for (hex in golden) {
 		var feed = golden[hex];
-		var got = encodeHex(testdata.marshalO(feed));
-		assert.equal(got, hex, hex + ': ' + JSON.stringify(feed));
+		var desc = hex + ': ' + JSON.stringify(feed)
+		try {
+			var got = encodeHex(testdata.marshalO(feed));
+			assert.equal(got, hex, desc);
+		} catch (err) {
+			assert.equal(err, 'no error', desc);
+		}
 	}
 });
 
@@ -48,8 +53,13 @@ QUnit.test('unmarshal', function(assert) {
 	var golden = getGoldenCases()
 	for (hex in golden) {
 		var want = golden[hex];
-		var got = testdata.unmarshalO(decodeHex(hex));
-		assert.deepEqual(got, want, hex + ': ' + JSON.stringify(want));
+		var desc = hex + ': ' + JSON.stringify(want)
+		try {
+			var got = testdata.unmarshalO(decodeHex(hex));
+			assert.deepEqual(got, want, desc);
+		} catch (err) {
+			assert.equal(err, 'no error', desc);
+		}
 	}
 });
 

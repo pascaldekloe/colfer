@@ -2,20 +2,20 @@
 
 var bench = new function() {
 	const EOF = 'colfer: EOF';
-	const StructMis = 'colfer: struct header mismatch';
-	const UnknownField = 'colfer: unknown field header';
 
 	this.marshalColfer = function(o) {
 		var segs = [[128]];
 
 		if (o.key) {
-			if (o.key > 9223372036854775807 || o.key < -9223372036854775808)
-				throw 'colfer: field "key" overflow: ' + o.key;
 			var seg = [4];
 			if (o.key < 0) {
 				seg[0] |= 128;
+				if (o.key < -Number.MAX_SAFE_INTEGER) throw 'colfer: field key exceeds Number.MAX_SAFE_INTEGER';
 				encodeVarint(seg, -o.key);
-			} else	encodeVarint(seg, o.key);
+			} else {
+				if (o.key > Number.MAX_SAFE_INTEGER) throw 'colfer: field key exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, o.key);
+			}
 			segs.push(seg);
 		}
 
@@ -35,31 +35,34 @@ var bench = new function() {
 		}
 
 		if (o.port) {
-			if (o.port > 2147483647 || o.port < -2147483648)
-				throw 'colfer: field "port" overflow: ' + o.port;
 			var seg = [3];
 			if (o.port < 0) {
 				seg[0] |= 128;
+				if (o.port < -2147483648) throw 'colfer: field port exceeds 32-bit range';
 				encodeVarint(seg, -o.port);
-			} else	encodeVarint(seg, o.port);
+			} else {
+				if (o.port > 2147483647) throw 'colfer: field port exceeds 32-bit range';
+				encodeVarint(seg, o.port);
+			}
 			segs.push(seg);
 		}
 
 		if (o.size) {
-			if (o.size > 9223372036854775807 || o.size < -9223372036854775808)
-				throw 'colfer: field "size" overflow: ' + o.size;
 			var seg = [4];
 			if (o.size < 0) {
 				seg[0] |= 128;
+				if (o.size < -Number.MAX_SAFE_INTEGER) throw 'colfer: field size exceeds Number.MAX_SAFE_INTEGER';
 				encodeVarint(seg, -o.size);
-			} else	encodeVarint(seg, o.size);
+			} else {
+				if (o.size > Number.MAX_SAFE_INTEGER) throw 'colfer: field size exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, o.size);
+			}
 			segs.push(seg);
 		}
 
 		if (o.hash) {
-			if (o.hash > 18446744073709551616)
-				throw 'colfer: field "hash" overflow: ' + o.hash;
 			var seg = [5];
+			if (o.hash > Number.MAX_SAFE_INTEGER) throw 'colfer: field hash exceeds Number.MAX_SAFE_INTEGER';
 			encodeVarint(seg, o.hash);
 			segs.push(seg);
 		}
@@ -75,114 +78,7 @@ var bench = new function() {
 			segs.push([7]);
 		}
 
-		return joinSegs(segs);
-	}
-
-	this.unmarshalColfer = function(data) {
-		if (!data || ! data.length) return null;
-		var i = 0;
-		if (data[i++] != 0x80) throw StructMis;
-
-		var readVarint = function() {
-			var pos = 0, result = 0;
-			while (true) {
-				var c = data[i+pos];
-				result += (c & 127) * Math.pow(128, pos);
-				++pos;
-				if (c < 128) {
-					i += pos;
-					return result;
-				}
-				if (pos == data.length) throw EOF;
-			}
-		}
-
-		var o = {};
-		if (i == data.length) return o;
-
-		var header = data[i++];
-		var field = header & 127;
-
-		if (field == 0) {
-			o.key = readVarint();
-			if (header & 0x80) o.key *= -1;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 1) {
-			var to = readVarint() + i;
-			if (to > data.length) throw EOF;
-			o.host = decodeUTF8(data.subarray(i, to));
-			i = to;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 2) {
-			var to = readVarint() + i;
-			if (to > data.length) throw EOF;
-			o.addr = data.subarray(i, to);
-			i = to;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 3) {
-			o.port = readVarint();
-			if (header & 0x80) o.port *= -1;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 4) {
-			o.size = readVarint();
-			if (header & 0x80) o.size *= -1;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 5) {
-			o.hash = readVarint();
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 6) {
-			if (data.length < i + 8) throw EOF;
-			o.ratio = new DataView(data.buffer).getFloat64(i);
-			i += 8;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		if (field == 7) {
-			o.route = true;
-
-			if (i == data.length) return o;
-			header = data[i++];
-			field = header & 127;
-		}
-
-		return UnknownField;
-	}
-
-	var joinSegs = function(segs) {
-		var size = 0;
+		var size = 1;
 		segs.forEach(function(seg) {
 			size += seg.length;
 		});
@@ -193,7 +89,117 @@ var bench = new function() {
 			bytes.set(seg, i);
 			i += seg.length;
 		});
+		bytes[i] = 127;
 		return bytes;
+	}
+
+	this.unmarshalColfer = function(data) {
+		if (!data || ! data.length) return null;
+		if (data[0] != 0x80) throw "colfer: unknown header at byte 0";
+		var i = 1;
+		var header;
+		var readHeader = function() {
+			if (i == data.length) throw EOF;
+			header = data[i++];
+		}
+
+		var readVarint = function() {
+			var pos = 0, result = 0;
+			while (pos != 8) {
+				var c = data[i+pos];
+				result += (c & 127) * Math.pow(128, pos);
+				++pos;
+				if (c < 128) {
+					i += pos;
+					if (result > Number.MAX_SAFE_INTEGER) break;
+					return result;
+				}
+				if (pos == data.length) throw EOF;
+			}
+			return -1;
+		}
+
+		var o = {};
+		readHeader();
+
+		if (header == 0) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field key exceeds Number.MAX_SAFE_INTEGER';
+			o.key = x;
+			readHeader();
+		} else if (header == (0 | 128)) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field key exceeds Number.MAX_SAFE_INTEGER';
+			o.key = -1 * x;
+			readHeader();
+		}
+
+		if (header == 1) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field host length exceeds Number.MAX_SAFE_INTEGER';
+			var to = i + length;
+			if (to > data.length) throw EOF;
+			o.host = decodeUTF8(data.subarray(i, to));
+			i = to;
+			readHeader();
+		}
+
+		if (header == 2) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field addr length exceeds Number.MAX_SAFE_INTEGER';
+			var to = i + length;
+			if (to > data.length) throw EOF;
+			o.addr = data.subarray(i, to);
+			i = to;
+			readHeader();
+		}
+
+		if (header == 3) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field port exceeds Number.MAX_SAFE_INTEGER';
+			o.port = x;
+			readHeader();
+		} else if (header == (3 | 128)) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field port exceeds Number.MAX_SAFE_INTEGER';
+			o.port = -1 * x;
+			readHeader();
+		}
+
+		if (header == 4) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field size exceeds Number.MAX_SAFE_INTEGER';
+			o.size = x;
+			readHeader();
+		} else if (header == (4 | 128)) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field size exceeds Number.MAX_SAFE_INTEGER';
+			o.size = -1 * x;
+			readHeader();
+		}
+
+		if (header == 5) {
+			var x = readVarint();
+			if (x < 0) throw 'colfer: field hash exceeds Number.MAX_SAFE_INTEGER';
+			o.hash = x;
+			readHeader();
+		}
+
+		if (header == 6) {
+			if (i + 8 > data.length) throw EOF;
+			o.ratio = new DataView(data.buffer).getFloat64(i);
+			i += 8;
+			readHeader();
+		}
+
+		if (header == 7) {
+			o.route = true;
+			readHeader();
+		}
+
+		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
+		if (i != data.length) throw 'colfer: data continuation at byte ' + i
+		return o;
 	}
 
 	var encodeVarint = function(bytes, x) {
