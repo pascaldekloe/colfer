@@ -51,12 +51,12 @@ func (o *O) MarshalTo(buf []byte) int {
 	i := 1
 
 	if o.B {
-		buf[i] = 0x00
+		buf[i] = 0
 		i++
 	}
 
 	if x := o.U32; x != 0 {
-		buf[i] = 0x01
+		buf[i] = 1
 		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
@@ -68,7 +68,7 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if x := o.U64; x != 0 {
-		buf[i] = 0x02
+		buf[i] = 2
 		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
@@ -80,13 +80,14 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if v := o.I32; v != 0 {
-		buf[i] = 0x03
-		i++
 		x := uint32(v)
-		if v < 0 {
+		if v >= 0 {
+			buf[i] = 3
+		} else {
 			x = ^x + 1
-			buf[i-1] |= 0x80
+			buf[i] = 3 | 0x80
 		}
+		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -97,13 +98,14 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if v := o.I64; v != 0 {
-		buf[i] = 0x04
-		i++
 		x := uint64(v)
-		if v < 0 {
+		if v >= 0 {
+			buf[i] = 4
+		} else {
 			x = ^x + 1
-			buf[i-1] |= 0x80
+			buf[i] = 4 | 0x80
 		}
+		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -114,38 +116,36 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if v := o.F32; v != 0.0 {
-		buf[i] = 0x05
-		i++
+		buf[i] = 5
 		x := math.Float32bits(v)
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-		i += 4
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 5
 	}
 
 	if v := o.F64; v != 0.0 {
-		buf[i] = 0x06
-		i++
+		buf[i] = 6
 		x := math.Float64bits(v)
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-		i += 8
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 9
 	}
 
 	if v := o.T; !v.IsZero() {
-		buf[i] = 0x07
-		i++
+		buf[i] = 7
 		s, ns := v.Unix(), v.Nanosecond()
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
-		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
-		i += 8
-		if ns != 0 {
-			buf[i-9] |= 0x80
-			buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
-			i += 4
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
+		if ns == 0 {
+			i += 9
+		} else {
+			buf[i] |= 0x80
+			buf[i+9], buf[i+10], buf[i+11], buf[i+12] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
+			i += 13
 		}
 	}
 
 	if v := o.S; len(v) != 0 {
-		buf[i] = 0x08
+		buf[i] = 8
 		i++
 		x := uint(len(v))
 		for x >= 0x80 {
@@ -161,7 +161,7 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if v := o.A; len(v) != 0 {
-		buf[i] = 0x09
+		buf[i] = 9
 		i++
 		x := uint(len(v))
 		for x >= 0x80 {
@@ -181,23 +181,101 @@ func (o *O) MarshalTo(buf []byte) int {
 	return i
 }
 
-// MarshalSize returns the number of bytes that will hold the Colfer serial for sure.
-func (o *O) MarshalSize() int {
+// MarshalLen returns the Colfer serial byte size.
+func (o *O) MarshalLen() int {
 	if o == nil {
 		return 0
 	}
 
-	// BUG(pascaldekloe): MarshalBinary panics on documents larger than 2kB due to the
-	// fact that MarshalSize is not implemented yet.
-	return 2048
+	l := 2
+
+	if o.B {
+		l++
+	}
+
+	if x := o.U32; x != 0 {
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	if x := o.U64; x != 0 {
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	if v := o.I32; v != 0 {
+		x := uint32(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	if v := o.I64; v != 0 {
+		x := uint64(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	if o.F32 != 0.0 {
+		l += 5
+	}
+
+	if o.F64 != 0.0 {
+		l += 9
+	}
+
+	if v := o.T; !v.IsZero() {
+		if v.Nanosecond() == 0 {
+			l += 9
+		} else {
+			l += 13
+		}
+	}
+
+	if x := len(o.S); x != 0 {
+		l += x
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	if x := len(o.A); x != 0 {
+		l += x
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+	}
+
+	return l
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
 // The error return is always nil.
 func (o *O) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, o.MarshalSize())
-	n := o.MarshalTo(data)
-	return data[:n], nil
+	data = make([]byte, o.MarshalLen())
+	o.MarshalTo(data)
+	return data, nil
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
@@ -442,7 +520,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	}
 
 	if header != 0x7f {
-		return ColferError(i-1)
+		return ColferError(i - 1)
 	}
 	if i != len(data) {
 		return ColferContinue(i)

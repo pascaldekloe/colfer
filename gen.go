@@ -15,8 +15,9 @@ func Generate(basedir string, structs []*Struct) error {
 	t := template.New("go-code").Delims("<:", ":>")
 	template.Must(t.Parse(goCode))
 	template.Must(t.New("marshal-field").Parse(goMarshalField))
-	template.Must(t.New("marshal-fieldDecl").Parse(goMarshalFieldDecl))
+	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
 	template.Must(t.New("marshal-varint").Parse(goMarshalVarint))
+	template.Must(t.New("marshal-varint-len").Parse(goMarshalVarintLen))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-header").Parse(goUnmarshalHeader))
 	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
@@ -122,23 +123,23 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 	return i
 }
 
-// MarshalSize returns the number of bytes that will hold the Colfer serial for sure.
-func (o *<:.NameTitle:>) MarshalSize() int {
+// MarshalLen returns the Colfer serial byte size.
+func (o *<:.NameTitle:>) MarshalLen() int {
 	if o == nil {
 		return 0
 	}
 
-	// BUG(pascaldekloe): MarshalBinary panics on documents larger than 2kB due to the
-	// fact that MarshalSize is not implemented yet.
-	return 2048
+	l := 2
+<:range .Fields:><:template "marshal-field-len" .:><:end:>
+	return l
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
 // The error return is always nil.
 func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, o.MarshalSize())
-	n := o.MarshalTo(data)
-	return data[:n], nil
+	data = make([]byte, o.MarshalLen())
+	o.MarshalTo(data)
+	return data, nil
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
@@ -158,7 +159,7 @@ func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 	i := 2
 <:range .Fields:><:template "unmarshal-field" .:><:end:>
 	if header != 0x7f {
-		return ColferError(i-1)
+		return ColferError(i - 1)
 	}
 	if i != len(data) {
 		return ColferContinue(i)
@@ -167,79 +168,136 @@ func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 }
 `
 
-const goMarshalFieldDecl = `		buf[i] = <:printf "0x%02x" .Index:>
-		i++`
-
 const goMarshalField = `<:if eq .Type "bool":>
 	if o.<:.NameTitle:> {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
+		i++
 	}
 <:else if eq .Type "uint32":>
 	if x := o.<:.NameTitle:>; x != 0 {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
+		i++
 <:template "marshal-varint":>
 	}
 <:else if eq .Type "uint64":>
 	if x := o.<:.NameTitle:>; x != 0 {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
+		i++
 <:template "marshal-varint":>
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
-<:template "marshal-fieldDecl" .:>
 		x := uint32(v)
-		if v < 0 {
+		if v >= 0 {
+			buf[i] = <:.Index:>
+		} else {
 			x = ^x + 1
-			buf[i-1] |= 0x80
+			buf[i] = <:.Index:> | 0x80
 		}
+		i++
 <:template "marshal-varint":>
 	}
 <:else if eq .Type "int64":>
 	if v := o.<:.NameTitle:>; v != 0 {
-<:template "marshal-fieldDecl" .:>
 		x := uint64(v)
-		if v < 0 {
+		if v >= 0 {
+			buf[i] = <:.Index:>
+		} else {
 			x = ^x + 1
-			buf[i-1] |= 0x80
+			buf[i] = <:.Index:> | 0x80
 		}
+		i++
 <:template "marshal-varint":>
 	}
 <:else if eq .Type "float32":>
 	if v := o.<:.NameTitle:>; v != 0.0 {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
 		x := math.Float32bits(v)
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-		i += 4
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 5
 	}
 <:else if eq .Type "float64":>
 	if v := o.<:.NameTitle:>; v != 0.0 {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
 		x := math.Float64bits(v)
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-		i += 8
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 9
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.NameTitle:>; !v.IsZero() {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
 		s, ns := v.Unix(), v.Nanosecond()
-		buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
-		buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
-		i += 8
-		if ns != 0 {
-			buf[i-9] |= 0x80
-			buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
-			i += 4
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
+		if ns == 0 {
+			i += 9
+		} else {
+			buf[i] |= 0x80
+			buf[i+9], buf[i+10], buf[i+11], buf[i+12] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
+			i += 13
 		}
 	}
 <:else if eq .Type "text" "binary":>
 	if v := o.<:.NameTitle:>; len(v) != 0 {
-<:template "marshal-fieldDecl" .:>
+		buf[i] = <:.Index:>
+		i++
 		x := uint(len(v))
 <:template "marshal-varint":>
 		to := i + len(v)
 		copy(buf[i:], v)
 		i = to
+	}
+<:end:>`
+
+const goMarshalFieldLen = `<:if eq .Type "bool":>
+	if o.<:.NameTitle:> {
+		l++
+	}
+<:else if eq .Type "uint32":>
+	if x := o.<:.NameTitle:>; x != 0 {
+<:template "marshal-varint-len" .:>
+	}
+<:else if eq .Type "uint64":>
+	if x := o.<:.NameTitle:>; x != 0 {
+<:template "marshal-varint-len" .:>
+	}
+<:else if eq .Type "int32":>
+	if v := o.<:.NameTitle:>; v != 0 {
+		x := uint32(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+<:template "marshal-varint-len" .:>
+	}
+<:else if eq .Type "int64":>
+	if v := o.<:.NameTitle:>; v != 0 {
+		x := uint64(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+<:template "marshal-varint-len" .:>
+	}
+<:else if eq .Type "float32":>
+	if o.<:.NameTitle:> != 0.0 {
+		l += 5
+	}
+<:else if eq .Type "float64":>
+	if o.<:.NameTitle:> != 0.0 {
+		l += 9
+	}
+<:else if eq .Type "timestamp":>
+	if v := o.<:.NameTitle:>; !v.IsZero() {
+		if v.Nanosecond() == 0 {
+			l += 9
+		} else {
+			l += 13
+		}
+	}
+<:else if eq .Type "text" "binary":>
+	if x := len(o.<:.NameTitle:>); x != 0 {
+		l += x
+<:template "marshal-varint-len" .:>
 	}
 <:end:>`
 
@@ -250,6 +308,12 @@ const goMarshalVarint = `		for x >= 0x80 {
 		}
 		buf[i] = byte(x)
 		i++`
+
+const goMarshalVarintLen = `		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2`
 
 const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
