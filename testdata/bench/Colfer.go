@@ -77,9 +77,8 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		to := i + len(v)
 		copy(buf[i:], v)
-		i = to
+		i += len(v)
 	}
 
 	if v := o.Addr; len(v) != 0 {
@@ -93,9 +92,8 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		to := i + len(v)
 		copy(buf[i:], v)
-		i = to
+		i += len(v)
 	}
 
 	if v := o.Port; v != 0 {
@@ -254,7 +252,7 @@ func (o *Colfer) MarshalBinary() (data []byte, err error) {
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, bench.ColferError, and bench.ColferContinue.
+// The error return options are io.EOF, testdata/bench.ColferError, and testdata/bench.ColferContinue.
 func (o *Colfer) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF

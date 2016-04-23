@@ -21,6 +21,7 @@ public class O implements java.io.Serializable {
 	public java.time.Instant t;
 	public String s;
 	public byte[] a;
+	public O o;
 
 
 	/**
@@ -93,15 +94,20 @@ public class O implements java.io.Serializable {
 
 		if (this.s != null && ! this.s.isEmpty()) {
 			java.nio.ByteBuffer bytes = utf8.encode(this.s);
-			buf.put((byte) 0x08);
+			buf.put((byte) 8);
 			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 
 		if (this.a != null && this.a.length != 0) {
-			buf.put((byte) 0x09);
+			buf.put((byte) 9);
 			putVarint(buf, this.a.length);
 			buf.put(this.a);
+		}
+
+		if (this.o != null) {
+			buf.put((byte) 10);
+			this.o.marshal(buf);
 		}
 
 		buf.put((byte) 0x7f);
@@ -182,7 +188,13 @@ public class O implements java.io.Serializable {
 		if (header == (byte) 9) {
 			int length = getVarint32(buf);
 			this.a = new byte[length];
-			buf.get(a);
+			buf.get(this.a);
+			header = buf.get();
+		}
+
+		if (header == (byte) 10) {
+			this.o = new O();
+			this.o.unmarshal(buf);
 			header = buf.get();
 		}
 
@@ -268,6 +280,14 @@ public class O implements java.io.Serializable {
 
 	public void setA(byte[] value) {
 		this.a = value;
+	}
+
+	public O getO() {
+		return this.o;
+	}
+
+	public void setO(O value) {
+		this.o = value;
 	}
 
 	/**

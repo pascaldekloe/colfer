@@ -31,7 +31,8 @@ function getGoldenCases() {
 		'80080261007f': {s: 'a\x00'},
 		'800809c280e0a080f09080807f': {s: '\u0080\u0800\u{10000}'},
 		'800901ff7f': {a: new Uint8Array([0xFF])},
-		'80090202007f': {a: new Uint8Array([2, 0])}
+		'80090202007f': {a: new Uint8Array([2, 0])},
+		'800a807f7f': {o: {}}
 	}
 }
 

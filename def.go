@@ -27,17 +27,26 @@ var Datatypes = map[string]struct{}{
 type Package struct {
 	// Name is the identification token.
 	Name    string
+	// NameNative is the language specific identification token
+	NameNative string
 	Structs []*Struct
 }
 
-// Struct is data structure definition.
+// Struct is a data structure definition.
 type Struct struct {
 	Pkg Package
 	// Name is the identification token.
 	Name string
-	// NameTitle is the identification token in title case.
-	NameTitle string
 	Fields    []*Field
+}
+
+// NameTitle gets the identification token in title case.
+func (s *Struct) NameTitle() string {
+	return strings.Title(s.Name)
+}
+
+func (s *Struct) String() string {
+	return fmt.Sprintf("%s.%s", s.Pkg.Name, s.Name)
 }
 
 // Field is a Struct member definition.
@@ -46,12 +55,21 @@ type Field struct {
 	Index int
 	// Name is the identification token.
 	Name string
-	// NameTitle is the identification token in title case.
-	NameTitle string
 	// Type is the datatype.
 	Type string
 	// TypeNative is the language specific datatype placeholder.
 	TypeNative string
+	// TypeRef is the Colfer data structure reference.
+	TypeRef *Struct
+}
+
+// NameTitle gets the identification token in title case.
+func (f *Field) NameTitle() string {
+	return strings.Title(f.Name)
+}
+
+func (f *Field) String() string {
+	return fmt.Sprintf("%s:%s", f.Name, f.Type)
 }
 
 // ReadDefs parses the Colfer files.
@@ -90,13 +108,47 @@ func ReadDefs(files []string) ([]*Struct, error) {
 		}
 	}
 
+	if err := linkStructs(structs); err != nil {
+		return nil, err
+	}
+
 	return structs, nil
+}
+
+func linkStructs(structs []*Struct) error {
+	names := make(map[string]*Struct)
+
+	for _, s := range structs {
+		qname := s.String()
+		if _, ok := names[qname]; ok {
+			return fmt.Errorf("colfer: duplicate struct definition %q", qname)
+		}
+		names[qname] = s
+	}
+
+	for _, s := range structs {
+		for _, f := range s.Fields {
+			t := f.Type
+			_, ok := Datatypes[t]
+			if ok {
+				continue
+			}
+			if f.TypeRef, ok = names[t]; ok {
+				continue
+			}
+			if f.TypeRef, ok = names[s.Pkg.Name + "." + t]; ok {
+				continue
+			}
+			return fmt.Errorf("colfer: unknown datatype in struct %q field %q", s, f)
+		}
+	}
+
+	return nil
 }
 
 func mapStruct(src *ast.TypeSpec) (*Struct, error) {
 	dst := &Struct{
 		Name:      src.Name.Name,
-		NameTitle: strings.Title(src.Name.Name),
 	}
 
 	s, ok := src.Type.(*ast.StructType)
@@ -112,16 +164,12 @@ func mapStruct(src *ast.TypeSpec) (*Struct, error) {
 			return nil, fmt.Errorf("colfer: missing name for field %d", i)
 		}
 		field.Name = f.Names[0].Name
-		field.NameTitle = strings.Title(f.Names[0].Name)
 
 		t, ok := f.Type.(*ast.Ident)
 		if !ok {
-			return nil, fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst.Name, field.Index, field.Name, field.Type)
+			return nil, fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, field.Type)
 		}
 		field.Type = t.Name
-		if _, ok := Datatypes[field.Type]; !ok {
-			return nil, fmt.Errorf("colfer: unknown datatype %q in struct %q field %d %q", field.Type, dst.Name, field.Index, field.Name)
-		}
 	}
 
 	return dst, nil

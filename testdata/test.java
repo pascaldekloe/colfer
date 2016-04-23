@@ -97,6 +97,9 @@ public class test {
 	want = new O();
 	want.a = new byte[]{2, 0};
 	goldenCases.put("80090202007f", want);
+	want = new O();
+	want.o = new O();
+	goldenCases.put("800a807f7f", want);
 	return goldenCases;
     }
 

@@ -198,7 +198,11 @@ var bench = new function() {
 		}
 
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
-		if (i != data.length) throw 'colfer: data continuation at byte ' + i
+		if (i != data.length) throw {
+			msg: 'colfer: data continuation at byte ' + i,
+			continueAt: i,
+			o: o
+		};
 		return o;
 	}
 

@@ -106,6 +106,11 @@ var testdata = new function() {
 			segs.push(o.a);
 		}
 
+		if (o.o) {
+			segs.push([10]);
+			segs.push(this.marshalO(o.o));
+		}
+
 		var size = 1;
 		segs.forEach(function(seg) {
 			size += seg.length;
@@ -257,8 +262,24 @@ var testdata = new function() {
 			readHeader();
 		}
 
+		if (header == 10) {
+			try {
+				this.unmarshalO(data.subarray(i));
+				throw EOF;
+			} catch (err) {
+				if (! err.continueAt) throw err;
+				i += err.continueAt;
+				o.o = err.o;
+			}
+			readHeader();
+		}
+
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
-		if (i != data.length) throw 'colfer: data continuation at byte ' + i
+		if (i != data.length) throw {
+			msg: 'colfer: data continuation at byte ' + i,
+			continueAt: i,
+			o: o
+		};
 		return o;
 	}
 

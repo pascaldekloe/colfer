@@ -38,6 +38,7 @@ type O struct {
 	T	time.Time
 	S	string
 	A	[]byte
+	O	*O
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -155,9 +156,8 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		to := i + len(v)
 		copy(buf[i:], v)
-		i = to
+		i += len(v)
 	}
 
 	if v := o.A; len(v) != 0 {
@@ -171,9 +171,14 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		to := i + len(v)
 		copy(buf[i:], v)
-		i = to
+		i += len(v)
+	}
+
+	if v := o.O; v != nil {
+		buf[i] = 10
+		i++
+		i += v.MarshalTo(buf[i:])
 	}
 
 	buf[i] = 0x7f
@@ -265,6 +270,10 @@ func (o *O) MarshalLen() int {
 			l++
 		}
 		l += 2
+	}
+
+	if v := o.O; v != nil {
+		l += v.MarshalLen() + 1
 	}
 
 	return l
@@ -517,6 +526,23 @@ func (o *O) UnmarshalBinary(data []byte) error {
 
 		header = data[to]
 		i = to + 1
+	}
+
+	if header == 10 {
+		v := new(O)
+		err := v.UnmarshalBinary(data[i:])
+		switch e := err.(type) {
+		case ColferContinue:
+			i += int(e)
+		case nil:
+			return io.EOF
+		default:
+			return err
+		}
+		o.O = v
+
+		header = data[i]
+		i++
 	}
 
 	if header != 0x7f {

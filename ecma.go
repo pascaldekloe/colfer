@@ -21,7 +21,7 @@ func GenerateECMA(basedir string, structs []*Struct) error {
 	perPkg := make(map[string][]*Struct)
 	for _, s := range structs {
 		pkg := strings.Replace(s.Pkg.Name, "/", "_", -1)
-		s.Pkg.Name = pkg
+		s.Pkg.NameNative = pkg
 		perPkg[pkg] = append(perPkg[pkg], s)
 	}
 
@@ -214,6 +214,11 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 			segs.push(seg);
 			segs.push(o.<:.Name:>);
 		}
+<:else:>
+		if (o.<:.Name:>) {
+			segs.push([<:.Index:>]);
+			segs.push(this.marshal<:.NameTitle:>(o.<:.Name:>));
+		}
 <:end:><:end:>
 		var size = 1;
 		segs.forEach(function(seg) {
@@ -366,8 +371,24 @@ const ecmaUnmarshal = `	this.unmarshal<:.NameTitle:> = function(data) {
 			i = to;
 			readHeader();
 		}
+<:else:>
+		if (header == <:.Index:>) {
+			try {
+				this.unmarshal<:.NameTitle:>(data.subarray(i));
+				throw EOF;
+			} catch (err) {
+				if (! err.continueAt) throw err;
+				i += err.continueAt;
+				o.<:.Name:> = err.o;
+			}
+			readHeader();
+		}
 <:end:><:end:>
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
-		if (i != data.length) throw 'colfer: data continuation at byte ' + i
+		if (i != data.length) throw {
+			msg: 'colfer: data continuation at byte ' + i,
+			continueAt: i,
+			o: o
+		};
 		return o;
 	}`

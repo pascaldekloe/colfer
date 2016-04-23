@@ -14,19 +14,22 @@ The format is inspired by Proto**col** Buf**fer**.
 * Simple and straightforward in use.
 * Support for: Go, Java and ECMAScript/JavaScript.
 * No dependencies other than the core library.
-* Faster & smaller than FlatBuffers.
-* Faster & smaller than Protocol Buffers.
-* The generated code is quite readable.
+* Both Faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack.
+* The generated code is human-readable.
 * Compiler runs on [many platforms](https://golang.org/doc/install/source#environment).
 
 #### TODO's
 
-* Inner objects
 * Arrays
+* RMI
+* #hashCode() and #equals(Object) for Java
 
 
 
 ## Use
+
+Run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to install the latest
+compiler.
 
 ```
 NAME
@@ -167,12 +170,6 @@ renamed to clearly discourage it's use.
 The following changes are backward compatible.
 * Adding new fields to the end of Colfer structs
 * Raising the bit size (which is actually just a limit) of integers
-
-
-
-## Build
-
-Run `go get github.com/pascaldekloe/colfer/cmd/colf` to install the compiler.
 
 
 

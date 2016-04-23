@@ -12,4 +12,5 @@ type o struct {
 	t   timestamp
 	s   text
 	a   binary
+	o   o
 }

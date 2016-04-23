@@ -42,13 +42,13 @@ public class Colfer implements java.io.Serializable {
 
 		if (this.host != null && ! this.host.isEmpty()) {
 			java.nio.ByteBuffer bytes = utf8.encode(this.host);
-			buf.put((byte) 0x08);
+			buf.put((byte) 1);
 			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 
 		if (this.addr != null && this.addr.length != 0) {
-			buf.put((byte) 0x09);
+			buf.put((byte) 2);
 			putVarint(buf, this.addr.length);
 			buf.put(this.addr);
 		}
@@ -121,7 +121,7 @@ public class Colfer implements java.io.Serializable {
 		if (header == (byte) 2) {
 			int length = getVarint32(buf);
 			this.addr = new byte[length];
-			buf.get(addr);
+			buf.get(this.addr);
 			header = buf.get();
 		}
 
