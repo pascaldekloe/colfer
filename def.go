@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Datatypes hold all supported names.
+// Datatypes holds all supported names.
 var Datatypes = map[string]struct{}{
 	"bool":      struct{}{},
 	"uint32":    struct{}{},
@@ -26,18 +26,18 @@ var Datatypes = map[string]struct{}{
 // Package is a named definition bundle.
 type Package struct {
 	// Name is the identification token.
-	Name    string
+	Name string
 	// NameNative is the language specific identification token
 	NameNative string
-	Structs []*Struct
+	Structs    []*Struct
 }
 
 // Struct is a data structure definition.
 type Struct struct {
-	Pkg Package
+	Pkg *Package
 	// Name is the identification token.
-	Name string
-	Fields    []*Field
+	Name   string
+	Fields []*Field
 }
 
 // NameTitle gets the identification token in title case.
@@ -73,8 +73,8 @@ func (f *Field) String() string {
 }
 
 // ReadDefs parses the Colfer files.
-func ReadDefs(files []string) ([]*Struct, error) {
-	var structs []*Struct
+func ReadDefs(files []string) ([]*Package, error) {
+	var packages []*Package
 
 	fileSet := token.NewFileSet()
 	for _, file := range files {
@@ -83,8 +83,17 @@ func ReadDefs(files []string) ([]*Struct, error) {
 			return nil, err
 		}
 
-		pkg := Package{}
-		pkg.Name = file.Name.Name
+		var pkg *Package
+		for _, p := range packages {
+			if p.Name == file.Name.Name {
+				pkg = p
+				break
+			}
+		}
+		if pkg == nil {
+			pkg = &Package{Name: file.Name.Name}
+			packages = append(packages, pkg)
+		}
 
 		for _, decl := range file.Decls {
 			d, ok := decl.(*ast.GenDecl)
@@ -98,62 +107,65 @@ func ReadDefs(files []string) ([]*Struct, error) {
 					return nil, fmt.Errorf("colfer: unsupported specification type %s", reflect.TypeOf(spec))
 				}
 
-				o, err := mapStruct(s)
-				if err != nil {
+				if err := addStruct(pkg, s); err != nil {
 					return nil, err
 				}
-				o.Pkg = pkg
-				structs = append(structs, o)
 			}
 		}
 	}
 
-	if err := linkStructs(structs); err != nil {
+	if err := linkStructs(packages); err != nil {
 		return nil, err
 	}
 
-	return structs, nil
+	return packages, nil
 }
 
-func linkStructs(structs []*Struct) error {
+func linkStructs(packages []*Package) error {
 	names := make(map[string]*Struct)
 
-	for _, s := range structs {
-		qname := s.String()
-		if _, ok := names[qname]; ok {
-			return fmt.Errorf("colfer: duplicate struct definition %q", qname)
+	for _, pkg := range packages {
+		for _, s := range pkg.Structs {
+			qname := s.String()
+			if _, ok := names[qname]; ok {
+				return fmt.Errorf("colfer: duplicate struct definition %q", qname)
+			}
+			names[qname] = s
 		}
-		names[qname] = s
 	}
 
-	for _, s := range structs {
-		for _, f := range s.Fields {
-			t := f.Type
-			_, ok := Datatypes[t]
-			if ok {
-				continue
+	for _, pkg := range packages {
+		for _, s := range pkg.Structs {
+			for _, f := range s.Fields {
+				t := f.Type
+				_, ok := Datatypes[t]
+				if ok {
+					continue
+				}
+				if f.TypeRef, ok = names[t]; ok {
+					continue
+				}
+				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
+					continue
+				}
+				return fmt.Errorf("colfer: unknown datatype in struct %q field %q", s, f)
 			}
-			if f.TypeRef, ok = names[t]; ok {
-				continue
-			}
-			if f.TypeRef, ok = names[s.Pkg.Name + "." + t]; ok {
-				continue
-			}
-			return fmt.Errorf("colfer: unknown datatype in struct %q field %q", s, f)
 		}
 	}
 
 	return nil
 }
 
-func mapStruct(src *ast.TypeSpec) (*Struct, error) {
+func addStruct(pkg *Package, src *ast.TypeSpec) error {
 	dst := &Struct{
-		Name:      src.Name.Name,
+		Pkg:  pkg,
+		Name: src.Name.Name,
 	}
+	pkg.Structs = append(pkg.Structs, dst)
 
 	s, ok := src.Type.(*ast.StructType)
 	if !ok {
-		return nil, fmt.Errorf("colfer: unsupported type %s", reflect.TypeOf(s))
+		return fmt.Errorf("colfer: unsupported type %s", reflect.TypeOf(s))
 	}
 
 	for i, f := range s.Fields.List {
@@ -161,16 +173,16 @@ func mapStruct(src *ast.TypeSpec) (*Struct, error) {
 		dst.Fields = append(dst.Fields, &field)
 
 		if len(f.Names) == 0 {
-			return nil, fmt.Errorf("colfer: missing name for field %d", i)
+			return fmt.Errorf("colfer: missing name for field %d", i)
 		}
 		field.Name = f.Names[0].Name
 
 		t, ok := f.Type.(*ast.Ident)
 		if !ok {
-			return nil, fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, field.Type)
+			return fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, field.Type)
 		}
 		field.Type = t.Name
 	}
 
-	return dst, nil
+	return nil
 }

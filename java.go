@@ -8,60 +8,62 @@ import (
 )
 
 // GenerateJava writes the code into the respective ".java" files.
-func GenerateJava(basedir string, structs []*Struct) error {
+func GenerateJava(basedir string, packages []*Package) error {
 	t := template.New("java-code").Delims("<:", ":>")
 	template.Must(t.Parse(javaCode))
 	template.Must(t.New("marshal").Parse(javaMarshal))
 	template.Must(t.New("unmarshal").Parse(javaUnmarshal))
 
-	for _, s := range structs {
-		s.Pkg.NameNative = strings.Replace(s.Pkg.Name, "/", ".", -1)
+	for _, p := range packages {
+		p.NameNative = strings.Replace(p.Name, "/", ".", -1)
 	}
 
-	for _, s := range structs {
-		for _, f := range s.Fields {
-			switch f.Type {
-			default:
-				if f.TypeRef == nil {
-					f.TypeNative = f.Type
-				} else {
-					f.TypeNative = f.TypeRef.NameTitle()
-					if pkg := f.TypeRef.Pkg.NameNative; pkg != s.Pkg.Name {
-						f.TypeNative = pkg + "." + f.TypeNative
+	for _, p := range packages {
+		pkgdir, err := MakePkgDir(p, basedir)
+		if err != nil {
+			return err
+		}
+
+		for _, s := range p.Structs {
+			for _, f := range s.Fields {
+				switch f.Type {
+				default:
+					if f.TypeRef == nil {
+						f.TypeNative = f.Type
+					} else {
+						f.TypeNative = f.TypeRef.NameTitle()
+						if f.TypeRef.Pkg != p {
+							f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
+						}
 					}
+				case "bool":
+					f.TypeNative = "boolean"
+				case "uint32", "int32":
+					f.TypeNative = "int"
+				case "uint64", "int64":
+					f.TypeNative = "long"
+				case "float32":
+					f.TypeNative = "float"
+				case "float64":
+					f.TypeNative = "double"
+				case "timestamp":
+					f.TypeNative = "java.time.Instant"
+				case "text":
+					f.TypeNative = "String"
+				case "binary":
+					f.TypeNative = "byte[]"
 				}
-			case "bool":
-				f.TypeNative = "boolean"
-			case "uint32", "int32":
-				f.TypeNative = "int"
-			case "uint64", "int64":
-				f.TypeNative = "long"
-			case "float32":
-				f.TypeNative = "float"
-			case "float64":
-				f.TypeNative = "double"
-			case "timestamp":
-				f.TypeNative = "java.time.Instant"
-			case "text":
-				f.TypeNative = "String"
-			case "binary":
-				f.TypeNative = "byte[]"
 			}
-		}
 
-		pkgdir, err := MakePkgDir(&s.Pkg, basedir)
-		if err != nil {
-			return err
-		}
+			f, err := os.Create(filepath.Join(pkgdir, s.NameTitle()+".java"))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		f, err := os.Create(filepath.Join(pkgdir, s.NameTitle()+".java"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if err := t.Execute(f, s); err != nil {
-			return err
+			if err := t.Execute(f, s); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -240,7 +242,6 @@ const javaMarshal = `	/**
 		buf.put((byte) 0x7f);
 	}
 `
-
 
 const javaUnmarshal = `	/**
 	 * Reads in Colfer format.

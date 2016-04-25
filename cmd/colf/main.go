@@ -33,7 +33,7 @@ func main() {
 		files = args[1:]
 	}
 
-	var gen func(string, []*colfer.Struct) error
+	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "go":
 		gen = colfer.Generate
@@ -45,19 +45,19 @@ func main() {
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
 
-	structs, err := colfer.ReadDefs(files)
+	packages, err := colfer.ReadDefs(files)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(structs) == 0 {
+	if len(packages) == 0 {
 		log.Fatal("colfer: no struct definitons found")
 	}
 
-	for _, s := range structs {
-		s.Pkg.Name = path.Join(*prefix, s.Pkg.Name)
+	for _, p := range packages {
+		p.Name = path.Join(*prefix, p.Name)
 	}
 
-	if err := gen(*basedir, structs); err != nil {
+	if err := gen(*basedir, packages); err != nil {
 		log.Fatal(err)
 	}
 }
