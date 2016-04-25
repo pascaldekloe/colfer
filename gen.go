@@ -111,8 +111,7 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 		return 0
 	}
 
-	buf[0] = 0x80
-	i := 1
+	var i int
 <:range .Fields:><:template "marshal-field" .:><:end:>
 	buf[i] = 0x7f
 	i++
@@ -125,7 +124,7 @@ func (o *<:.NameTitle:>) MarshalLen() int {
 		return 0
 	}
 
-	l := 2
+	l := 1
 <:range .Fields:><:template "marshal-field-len" .:><:end:>
 	return l
 }
@@ -144,15 +143,9 @@ func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
 	}
-	if data[0] != 0x80 {
-		return ColferError(0)
-	}
 
-	if len(data) == 1 {
-		return io.EOF
-	}
-	header := data[1]
-	i := 2
+	header := data[0]
+	i := 1
 <:range .Fields:><:template "unmarshal-field" .:><:end:>
 	if header != 0x7f {
 		return ColferError(i - 1)

@@ -31,7 +31,6 @@ public class O implements java.io.Serializable {
 	 */
 	public final void marshal(java.nio.ByteBuffer buf) {
 		buf.order(java.nio.ByteOrder.BIG_ENDIAN);
-		buf.put((byte) 0x80);
 
 		if (this.b) {
 			buf.put((byte) 0);
@@ -120,9 +119,6 @@ public class O implements java.io.Serializable {
 	 * @throws java.util.InputMismatchException on malformed data.
 	 */
 	public final void unmarshal(java.nio.ByteBuffer buf) {
-		if (buf.get() != (byte) 0x80)
-			throw new java.util.InputMismatchException("unknown header at byte 0");
-
 		byte header = buf.get();
 
 		if (header == (byte) 0) {

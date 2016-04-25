@@ -110,7 +110,7 @@ var <:.NameNative:> = new function() {
 <:end:>`
 
 const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
-		var segs = [[128]];
+		var segs = [];
 <:range .Fields:><:if eq .Type "bool":>
 		if (o.<:.Name:>) {
 			segs.push([<:.Index:>]);
@@ -235,9 +235,8 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 
 const ecmaUnmarshal = `	this.unmarshal<:.NameTitle:> = function(data) {
 		if (!data || ! data.length) return null;
-		if (data[0] != 0x80) throw "colfer: unknown header at byte 0";
+		var header = data[0];
 		var i = 1;
-		var header;
 		var readHeader = function() {
 			if (i == data.length) throw EOF;
 			header = data[i++];
@@ -260,7 +259,6 @@ const ecmaUnmarshal = `	this.unmarshal<:.NameTitle:> = function(data) {
 		}
 
 		var o = {};
-		readHeader();
 <:range .Fields:><:if eq .Type "bool":>
 		if (header == <:.Index:>) {
 			o.<:.Name:> = true;

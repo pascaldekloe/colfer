@@ -48,8 +48,7 @@ func (o *O) MarshalTo(buf []byte) int {
 		return 0
 	}
 
-	buf[0] = 0x80
-	i := 1
+	var i int
 
 	if o.B {
 		buf[i] = 0
@@ -192,7 +191,7 @@ func (o *O) MarshalLen() int {
 		return 0
 	}
 
-	l := 2
+	l := 1
 
 	if o.B {
 		l++
@@ -293,15 +292,9 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
 	}
-	if data[0] != 0x80 {
-		return ColferError(0)
-	}
 
-	if len(data) == 1 {
-		return io.EOF
-	}
-	header := data[1]
-	i := 2
+	header := data[0]
+	i := 1
 
 	if header == 0 {
 		o.B = true

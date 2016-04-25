@@ -175,10 +175,9 @@ The following changes are backward compatible.
 
 ## Format
 
-Data structures start with an 8-bit magic number `0x80` followed by zero or more
-field *value definitions*. Only those fields with a value other than the *zero
+Data structures consist of zero or more field *value definitions* followed by a
+termination byte `0x7f`. Only those fields with a value other than the *zero
 value* may be serialized. Fields appear in order as stated by the schema.
-Data structures are terminated with byte `0x7f`.
 
 The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
 timestamps: `1970-01-01T00:00:00.000000000Z` and for text & binary: the empty

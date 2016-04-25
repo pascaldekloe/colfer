@@ -165,7 +165,6 @@ const javaMarshal = `	/**
 	 */
 	public final void marshal(java.nio.ByteBuffer buf) {
 		buf.order(java.nio.ByteOrder.BIG_ENDIAN);
-		buf.put((byte) 0x80);
 <:range .Fields:><:if eq .Type "bool":>
 		if (this.<:.Name:>) {
 			buf.put((byte) <:.Index:>);
@@ -250,9 +249,6 @@ const javaUnmarshal = `	/**
 	 * @throws java.util.InputMismatchException on malformed data.
 	 */
 	public final void unmarshal(java.nio.ByteBuffer buf) {
-		if (buf.get() != (byte) 0x80)
-			throw new java.util.InputMismatchException("unknown header at byte 0");
-
 		byte header = buf.get();
 <:range .Fields:><:if eq .Type "bool":>
 		if (header == (byte) <:.Index:>) {

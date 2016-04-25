@@ -18,88 +18,88 @@ public class test {
     static Map<String, O> getGoldenCases() {
 	Map<String, O> goldenCases = new HashMap<>();
 	O want = new O();
-	goldenCases.put("807f", want);
+	goldenCases.put("7f", want);
 	want = new O();
 	want.b = true;
-	goldenCases.put("80007f", want);
+	goldenCases.put("007f", want);
 	want = new O();
 	want.u32 = 1;
-	goldenCases.put("8001017f", want);
+	goldenCases.put("01017f", want);
 	want = new O();
 	want.u32 = -1;
-	goldenCases.put("8001ffffffff0f7f", want);
+	goldenCases.put("01ffffffff0f7f", want);
 	want = new O();
 	want.u64 = 1;
-	goldenCases.put("8002017f", want);
+	goldenCases.put("02017f", want);
 	want = new O();
 	want.u64 = -1;
-	goldenCases.put("8002ffffffffffffffffff017f", want);
+	goldenCases.put("02ffffffffffffffffff017f", want);
 	want = new O();
 	want.i32 = 1;
-	goldenCases.put("8003017f", want);
+	goldenCases.put("03017f", want);
 	want = new O();
 	want.i32 = -1;
-	goldenCases.put("8083017f", want);
+	goldenCases.put("83017f", want);
 	want = new O();
 	want.i32 = Integer.MAX_VALUE;
-	goldenCases.put("8003ffffffff077f", want);
+	goldenCases.put("03ffffffff077f", want);
 	want = new O();
 	want.i32 = Integer.MIN_VALUE;
-	goldenCases.put("808380808080087f", want);
+	goldenCases.put("8380808080087f", want);
 	want = new O();
 	want.i64 = 1;
-	goldenCases.put("8004017f", want);
+	goldenCases.put("04017f", want);
 	want = new O();
 	want.i64 = -1;
-	goldenCases.put("8084017f", want);
+	goldenCases.put("84017f", want);
 	want = new O();
 	want.i64 = Long.MAX_VALUE;
-	goldenCases.put("8004ffffffffffffffff7f7f", want);
+	goldenCases.put("04ffffffffffffffff7f7f", want);
 	want = new O();
 	want.i64 = Long.MIN_VALUE;
-	goldenCases.put("8084808080808080808080017f", want);
+	goldenCases.put("84808080808080808080017f", want);
 	want = new O();
 	want.f32 = Float.MIN_VALUE;
-	goldenCases.put("8005000000017f", want);
+	goldenCases.put("05000000017f", want);
 	want = new O();
 	want.f32 = Float.MAX_VALUE;
-	goldenCases.put("80057f7fffff7f", want);
+	goldenCases.put("057f7fffff7f", want);
 	want = new O();
 	want.f32 = Float.NaN;
-	goldenCases.put("80057fc000007f", want);
+	goldenCases.put("057fc000007f", want);
 	want = new O();
 	want.f64 = Double.MIN_VALUE;
-	goldenCases.put("800600000000000000017f", want);
+	goldenCases.put("0600000000000000017f", want);
 	want = new O();
 	want.f64 = Double.MAX_VALUE;
-	goldenCases.put("80067fefffffffffffff7f", want);
+	goldenCases.put("067fefffffffffffff7f", want);
 	want = new O();
 	want.f64 = Double.NaN;
-	goldenCases.put("80067ff80000000000007f", want);
+	goldenCases.put("067ff80000000000007f", want);
 	want = new O();
 	want.t = Instant.ofEpochSecond(1441739050, 0);
-	goldenCases.put("80070000000055ef312a7f", want);
+	goldenCases.put("070000000055ef312a7f", want);
 	want = new O();
 	want.t = Instant.ofEpochSecond(1441739050, 777888999);
-	goldenCases.put("80870000000055ef312a2e5da4e77f", want);
+	goldenCases.put("870000000055ef312a2e5da4e77f", want);
 	want = new O();
 	want.s = "A";
-	goldenCases.put("800801417f", want);
+	goldenCases.put("0801417f", want);
 	want = new O();
 	want.s = "a\0";
-	goldenCases.put("80080261007f", want);
+	goldenCases.put("080261007f", want);
 	want = new O();
 	want.s = "\u0080\u0800\ud800\udc00";
-	goldenCases.put("800809c280e0a080f09080807f", want);
+	goldenCases.put("0809c280e0a080f09080807f", want);
 	want = new O();
 	want.a = new byte[]{(byte) 0xff};
-	goldenCases.put("800901ff7f", want);
+	goldenCases.put("0901ff7f", want);
 	want = new O();
 	want.a = new byte[]{2, 0};
-	goldenCases.put("80090202007f", want);
+	goldenCases.put("090202007f", want);
 	want = new O();
 	want.o = new O();
-	goldenCases.put("800a807f7f", want);
+	goldenCases.put("0a7f7f", want);
 	return goldenCases;
     }
 
@@ -135,7 +135,10 @@ public class test {
     }
 
     static String toHex(ByteBuffer buf) {
-	return new BigInteger(1, buf.array()).toString(16);
+	String hex = new BigInteger(1, buf.array()).toString(16);
+	while (buf.remaining() * 2 > hex.length())
+		hex = "0" + hex;
+	return hex;
     }
 
     static ByteBuffer parseHex(String s) {

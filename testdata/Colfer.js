@@ -4,7 +4,7 @@ var testdata = new function() {
 	const EOF = 'colfer: EOF';
 
 	this.marshalO = function(o) {
-		var segs = [[128]];
+		var segs = [];
 
 		if (o.b) {
 			segs.push([0]);
@@ -128,9 +128,8 @@ var testdata = new function() {
 
 	this.unmarshalO = function(data) {
 		if (!data || ! data.length) return null;
-		if (data[0] != 0x80) throw "colfer: unknown header at byte 0";
+		var header = data[0];
 		var i = 1;
-		var header;
 		var readHeader = function() {
 			if (i == data.length) throw EOF;
 			header = data[i++];
@@ -153,7 +152,6 @@ var testdata = new function() {
 		}
 
 		var o = {};
-		readHeader();
 
 		if (header == 0) {
 			o.b = true;
