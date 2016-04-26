@@ -47,7 +47,7 @@ func Generate(basedir string, packages []*Package) error {
 			}
 		}
 
-		pkgdir, err := MakePkgDir(p, basedir)
+		pkgdir, err := makePkgDir(p, basedir)
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func Generate(basedir string, packages []*Package) error {
 	return nil
 }
 
-func MakePkgDir(p *Package, basedir string) (path string, err error) {
+func makePkgDir(p *Package, basedir string) (path string, err error) {
 	pkgdir := strings.Replace(p.Name, "/", string(filepath.Separator), -1)
 	path = filepath.Join(basedir, pkgdir)
 	err = os.MkdirAll(path, os.ModeDir|os.ModePerm)

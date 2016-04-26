@@ -1,3 +1,4 @@
+// Package colfer provides the schema interpretation.
 package colfer
 
 import (
@@ -11,16 +12,16 @@ import (
 
 // Datatypes holds all supported names.
 var Datatypes = map[string]struct{}{
-	"bool":      struct{}{},
-	"uint32":    struct{}{},
-	"uint64":    struct{}{},
-	"int32":     struct{}{},
-	"int64":     struct{}{},
-	"float32":   struct{}{},
-	"float64":   struct{}{},
-	"timestamp": struct{}{},
-	"text":      struct{}{},
-	"binary":    struct{}{},
+	"bool":      {},
+	"uint32":    {},
+	"uint64":    {},
+	"int32":     {},
+	"int64":     {},
+	"float32":   {},
+	"float64":   {},
+	"timestamp": {},
+	"text":      {},
+	"binary":    {},
 }
 
 // Package is a named definition bundle.

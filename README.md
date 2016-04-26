@@ -5,7 +5,7 @@ Colfer is a schema-based binary data format optimized for speed and size.
 The project's compiler `colf(1)` generates source code from schema definitions
 to marshal and unmarshall data structures.
 
-This is free and unencumbered software released into the public domain.
+This is free and unencumbered software released into the public domain. [![CC0](https://licensebuttons.net/p/zero/1.0/88x31.png)](http://creativecommons.org/publicdomain/zero/1.0)
 The format is inspired by Proto**col** Buf**fer**.
 
 
@@ -153,12 +153,14 @@ The following table shows how Colfer data types are applied per language.
 | uint32	| Number	| uint32	| int		|
 | uint64	| Number	| uint64	| long		|
 | int32		| Number	| int32		| int		|
-| int64		| Number	| int64		| long		|
+| int64		| Number *	| int64		| long		|
 | float32	| Number	| float32	| float		|
 | float64	| Number	| float64	| double	|
 | timestamp	| Date + Number	| time.Time	| java.time.Instant |
 | text		| String	| string	| java.lang.String |
 | binary	| Uint8Array	| []byte	| byte[]	|
+
+* range limited to 2⁵³ - 1 (see Number.MAX_SAFE_INTEGER)
 
 
 

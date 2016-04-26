@@ -19,7 +19,7 @@ func GenerateJava(basedir string, packages []*Package) error {
 	}
 
 	for _, p := range packages {
-		pkgdir, err := MakePkgDir(p, basedir)
+		pkgdir, err := makePkgDir(p, basedir)
 		if err != nil {
 			return err
 		}
