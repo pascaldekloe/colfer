@@ -99,7 +99,7 @@ var testdata = new function() {
 			segs.push(utf)
 		}
 
-		if (o.a) {
+		if (o.a && o.a.length) {
 			var seg = [9];
 			encodeVarint(seg, o.a.length);
 			segs.push(seg);
@@ -108,7 +108,16 @@ var testdata = new function() {
 
 		if (o.o) {
 			segs.push([10]);
-			segs.push(this.marshalO(o.o));
+			segs.push(testdata.marshalO(o.o));
+		}
+
+		if (o.os && o.os.length) {
+			var seg = [11];
+			encodeVarint(seg, o.os.length);
+			segs.push(seg);
+			o.os.forEach(function(v) {
+				segs.push(testdata.marshalO(v));
+			});
 		}
 
 		var size = 1;
@@ -262,12 +271,29 @@ var testdata = new function() {
 
 		if (header == 10) {
 			try {
-				this.unmarshalO(data.subarray(i));
+				testdata.unmarshalO(data.subarray(i));
 				throw EOF;
 			} catch (err) {
 				if (! err.continueAt) throw err;
 				i += err.continueAt;
 				o.o = err.o;
+			}
+			readHeader();
+		}
+
+		if (header == 11) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field os length exceeds Number.MAX_SAFE_INTEGER';
+			o.os = [];
+			while (--length >= 0) {
+				try {
+					testdata.unmarshalO(data.subarray(i));
+					throw EOF;
+				} catch (err) {
+					if (! err.continueAt) throw err;
+					i += err.continueAt;
+					o.os.push(err.o);
+				}
 			}
 			readHeader();
 		}

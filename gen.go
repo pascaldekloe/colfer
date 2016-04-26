@@ -101,7 +101,7 @@ func (i ColferError) Error() string {
 }
 <:range .Structs:>
 type <:.NameTitle:> struct {
-<:range .Fields:>	<:.NameTitle:>	<:if .TypeRef:>*<:.TypeNative:><:else:><:.TypeNative:><:end:>
+<:range .Fields:>	<:.NameTitle:>	<:if .TypeArray:>[]<:end:><:if .TypeRef:>*<:end:><:.TypeNative:>
 <:end:>}
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -236,6 +236,16 @@ const goMarshalField = `<:if eq .Type "bool":>
 		copy(buf[i:], v)
 		i += len(v)
 	}
+<:else if .TypeArray:>
+	if l := len(o.<:.NameTitle:>); l != 0 {
+		buf[i] = <:.Index:>
+		i++
+		x := uint(l)
+<:template "marshal-varint":>
+		for _, v := range o.<:.NameTitle:> {
+			i += v.MarshalTo(buf[i:])
+		}
+	}
 <:else:>
 	if v := o.<:.NameTitle:>; v != nil {
 		buf[i] = <:.Index:>
@@ -292,6 +302,13 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	if x := len(o.<:.NameTitle:>); x != 0 {
 		l += x
 <:template "marshal-varint-len" .:>
+	}
+<:else if .TypeArray:>
+	if x := len(o.<:.NameTitle:>); x != 0 {
+<:template "marshal-varint-len" .:>
+		for _, v := range o.<:.NameTitle:> {
+			l += v.MarshalLen()
+		}
 	}
 <:else:>
 	if v := o.<:.NameTitle:>; v != nil {
@@ -422,6 +439,33 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 
 		header = data[to]
 		i = to + 1
+	}
+<:else if .TypeArray:>
+	if header == <:.Index:> {
+<:template "unmarshal-varint32":>
+
+		a := make([]*<:.TypeNative:>, int(x))
+		for ai, _ := range a {
+			v := new(<:.TypeNative:>)
+			a[ai] = v
+
+			err := v.UnmarshalBinary(data[i:])
+			switch e := err.(type) {
+			case ColferContinue:
+				i += int(e)
+			case nil:
+				return io.EOF
+			default:
+				return err
+			}
+		}
+		o.<:.NameTitle:> = a
+
+		if i == len(data) {
+			return io.EOF
+		}
+		header = data[i]
+		i++
 	}
 <:else:>
 	if header == <:.Index:> {

@@ -27,7 +27,7 @@ var bench = new function() {
 			segs.push(utf)
 		}
 
-		if (o.addr) {
+		if (o.addr && o.addr.length) {
 			var seg = [2];
 			encodeVarint(seg, o.addr.length);
 			segs.push(seg);

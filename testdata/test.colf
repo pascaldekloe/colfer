@@ -13,4 +13,5 @@ type o struct {
 	s   text
 	a   binary
 	o   o
+	os  []o
 }

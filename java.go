@@ -82,16 +82,16 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 	private static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
 
-<:range .Fields:>	public <:.TypeNative:> <:.Name:>;
+<:range .Fields:>	public <:.TypeNative:><:if .TypeArray:>[]<:end:> <:.Name:>;
 <:end:>
 
 <:template "marshal" .:>
 <:template "unmarshal" .:>
-<:range .Fields:>	public <:.TypeNative:> get<:.NameTitle:>() {
+<:range .Fields:>	public <:.TypeNative:><:if .TypeArray:>[]<:end:> get<:.NameTitle:>() {
 		return this.<:.Name:>;
 	}
 
-	public void set<:.NameTitle:>(<:.TypeNative:> value) {
+	public void set<:.NameTitle:>(<:.TypeNative:><:if .TypeArray:>[]<:end:> value) {
 		this.<:.Name:> = value;
 	}
 
@@ -232,6 +232,13 @@ const javaMarshal = `	/**
 			putVarint(buf, this.<:.Name:>.length);
 			buf.put(this.<:.Name:>);
 		}
+<:else if .TypeArray:>
+		if (this.<:.Name:> != null && this.<:.Name:>.length != 0) {
+			buf.put((byte) <:.Index:>);
+			putVarint(buf, this.<:.Name:>.length);
+			for (<:.TypeNative:> o : this.<:.Name:>)
+				o.marshal(buf);
+		}
 <:else:>
 		if (this.<:.Name:> != null) {
 			buf.put((byte) <:.Index:>);
@@ -315,6 +322,18 @@ const javaUnmarshal = `	/**
 			int length = getVarint32(buf);
 			this.<:.Name:> = new byte[length];
 			buf.get(this.<:.Name:>);
+			header = buf.get();
+		}
+<:else if .TypeArray:>
+		if (header == (byte) <:.Index:>) {
+			int length = getVarint32(buf);
+			<:.TypeNative:>[] a = new <:.TypeNative:>[length];
+			for (int i = 0; i < length; i++) {
+				<:.TypeNative:> o = new <:.TypeNative:>();
+				o.unmarshal(buf);
+				a[i] = o;
+			}
+			this.<:.Name:> = a;
 			header = buf.get();
 		}
 <:else:>

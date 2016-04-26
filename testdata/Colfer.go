@@ -39,6 +39,7 @@ type O struct {
 	S	string
 	A	[]byte
 	O	*O
+	Os	[]*O
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -180,6 +181,22 @@ func (o *O) MarshalTo(buf []byte) int {
 		i += v.MarshalTo(buf[i:])
 	}
 
+	if l := len(o.Os); l != 0 {
+		buf[i] = 11
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.Os {
+			i += v.MarshalTo(buf[i:])
+		}
+	}
+
 	buf[i] = 0x7f
 	i++
 	return i
@@ -273,6 +290,17 @@ func (o *O) MarshalLen() int {
 
 	if v := o.O; v != nil {
 		l += v.MarshalLen() + 1
+	}
+
+	if x := len(o.Os); x != 0 {
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+		for _, v := range o.Os {
+			l += v.MarshalLen()
+		}
 	}
 
 	return l
@@ -534,6 +562,48 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.O = v
 
+		header = data[i]
+		i++
+	}
+
+	if header == 11 {
+		var x uint32
+		for shift := uint(0); ; shift += 7 {
+			if i == len(data) {
+				return io.EOF
+			}
+			b := data[i]
+			i++
+			if shift == 28 {
+				x |= uint32(b) << 28
+				break
+			}
+			x |= (uint32(b) & 0x7f) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+
+		a := make([]*O, int(x))
+		for ai, _ := range a {
+			v := new(O)
+			a[ai] = v
+
+			err := v.UnmarshalBinary(data[i:])
+			switch e := err.(type) {
+			case ColferContinue:
+				i += int(e)
+			case nil:
+				return io.EOF
+			default:
+				return err
+			}
+		}
+		o.Os = a
+
+		if i == len(data) {
+			return io.EOF
+		}
 		header = data[i]
 		i++
 	}

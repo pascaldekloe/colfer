@@ -62,6 +62,8 @@ type Field struct {
 	TypeNative string
 	// TypeRef is the Colfer data structure reference.
 	TypeRef *Struct
+	// TypeArray flags whether the datatype is an array.
+	TypeArray bool
 }
 
 // NameTitle gets the identification token in title case.
@@ -178,11 +180,17 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 		}
 		field.Name = f.Names[0].Name
 
-		t, ok := f.Type.(*ast.Ident)
-		if !ok {
-			return fmt.Errorf("colfer: unknow type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, field.Type)
+		t := f.Type
+		if at, ok := t.(*ast.ArrayType); ok {
+			t = at.Elt
+			field.TypeArray = true
 		}
-		field.Type = t.Name
+
+		id, ok := t.(*ast.Ident)
+		if !ok {
+			return fmt.Errorf("colfer: unknown type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, t)
+		}
+		field.Type = id.Name
 	}
 
 	return nil

@@ -100,6 +100,21 @@ public class test {
 	want = new O();
 	want.o = new O();
 	goldenCases.put("0a7f7f", want);
+
+	want = new O();
+	want.o = new O();
+	want.o.b = true;
+	goldenCases.put("0a007f7f", want);
+	want = new O();
+	want.os = new O[1];
+	want.os[0] = new O();
+	want.os[0].b = true;
+	goldenCases.put("0b01007f7f", want);
+	want = new O();
+	want.os = new O[2];
+	want.os[0] = new O();
+	want.os[1] = new O();
+	goldenCases.put("0b027f7f7f", want);
 	return goldenCases;
     }
 

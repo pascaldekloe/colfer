@@ -205,16 +205,25 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 			segs.push(utf)
 		}
 <:else if eq .Type "binary":>
-		if (o.<:.Name:>) {
+		if (o.<:.Name:> && o.<:.Name:>.length) {
 			var seg = [<:.Index:>];
 			encodeVarint(seg, o.<:.Name:>.length);
 			segs.push(seg);
 			segs.push(o.<:.Name:>);
 		}
+<:else if .TypeArray:>
+		if (o.<:.Name:> && o.<:.Name:>.length) {
+			var seg = [<:.Index:>];
+			encodeVarint(seg, o.<:.Name:>.length);
+			segs.push(seg);
+			o.<:.Name:>.forEach(function(v) {
+				segs.push(<:.TypeRef.Pkg.NameNative:>.marshal<:.TypeRef.NameTitle:>(v));
+			});
+		}
 <:else:>
 		if (o.<:.Name:>) {
 			segs.push([<:.Index:>]);
-			segs.push(this.marshal<:.NameTitle:>(o.<:.Name:>));
+			segs.push(<:.TypeRef.Pkg.NameNative:>.marshal<:.TypeRef.NameTitle:>(o.<:.Name:>));
 		}
 <:end:><:end:>
 		var size = 1;
@@ -366,10 +375,27 @@ const ecmaUnmarshal = `	this.unmarshal<:.NameTitle:> = function(data) {
 			i = to;
 			readHeader();
 		}
+<:else if .TypeArray:>
+		if (header == <:.Index:>) {
+			var length = readVarint();
+			if (length < 0) throw 'colfer: field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
+			o.<:.Name:> = [];
+			while (--length >= 0) {
+				try {
+					<:.TypeRef.Pkg.NameNative:>.unmarshal<:.TypeRef.NameTitle:>(data.subarray(i));
+					throw EOF;
+				} catch (err) {
+					if (! err.continueAt) throw err;
+					i += err.continueAt;
+					o.<:.Name:>.push(err.o);
+				}
+			}
+			readHeader();
+		}
 <:else:>
 		if (header == <:.Index:>) {
 			try {
-				this.unmarshal<:.NameTitle:>(data.subarray(i));
+				<:.TypeRef.Pkg.NameNative:>.unmarshal<:.TypeRef.NameTitle:>(data.subarray(i));
 				throw EOF;
 			} catch (err) {
 				if (! err.continueAt) throw err;

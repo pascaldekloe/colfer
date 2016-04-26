@@ -20,8 +20,8 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### TODO's
 
-* Arrays
 * RMI
+* Arrays for non structs.
 * #hashCode() and #equals(Object) for Java
 
 
@@ -140,7 +140,7 @@ type member struct {
 	name   text
 	bday   timestamp
 	avatar binary
-	public bool
+	allies []member
 }
 ```
 
