@@ -22,7 +22,6 @@ The format is inspired by Proto**col** Buf**fer**.
 
 * RMI
 * Arrays for non structs.
-* #hashCode() and #equals(Object) for Java
 
 
 

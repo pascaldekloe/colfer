@@ -98,15 +98,40 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 <:template "marshal" .:>
 <:template "unmarshal" .:>
-<:range .Fields:>	public <:.TypeNative:><:if .TypeArray:>[]<:end:> get<:.NameTitle:>() {
+<:- range .Fields:>
+	public <:.TypeNative:><:if .TypeArray:>[]<:end:> get<:.NameTitle:>() {
 		return this.<:.Name:>;
 	}
 
 	public void set<:.NameTitle:>(<:.TypeNative:><:if .TypeArray:>[]<:end:> value) {
 		this.<:.Name:> = value;
 	}
+<:end:>
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(0x7f<:range .Fields:>, <:.Name:><:end:>);
+	}
 
-<:end:>	/**
+	@Override
+	public final boolean equals(Object o) {
+		return o instanceof <:.NameTitle:> && equals((<:.NameTitle:>) o);
+	}
+
+	public final boolean equals(<:.NameTitle:> o) {
+		return o != null
+<:- range .Fields:>
+<:- if eq .Type "bool" "uint32" "uint64" "int32" "int64":>
+			&& this.<:.Name:> == o.<:.Name:>
+<:- else if eq .Type "binary":>
+			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
+<:- else if .TypeArray:>
+			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
+<:- else:>
+			&& java.util.Objects.equals(this.<:.Name:>, o.<:.Name:>)
+<:- end:><:end:>;
+	}
+
+	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.
 	 * @param x the value.

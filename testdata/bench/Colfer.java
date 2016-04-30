@@ -221,6 +221,28 @@ public class Colfer implements java.io.Serializable {
 		this.route = value;
 	}
 
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(0x7f, key, host, addr, port, size, hash, ratio, route);
+	}
+
+	@Override
+	public final boolean equals(Object o) {
+		return o instanceof Colfer && equals((Colfer) o);
+	}
+
+	public final boolean equals(Colfer o) {
+		return o != null
+			&& this.key == o.key
+			&& java.util.Objects.equals(this.host, o.host)
+			&& java.util.Arrays.equals(this.addr, o.addr)
+			&& this.port == o.port
+			&& this.size == o.size
+			&& this.hash == o.hash
+			&& java.util.Objects.equals(this.ratio, o.ratio)
+			&& this.route == o.route;
+	}
+
 	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.

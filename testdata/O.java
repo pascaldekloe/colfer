@@ -324,6 +324,32 @@ public class O implements java.io.Serializable {
 		this.os = value;
 	}
 
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(0x7f, b, u32, u64, i32, i64, f32, f64, t, s, a, o, os);
+	}
+
+	@Override
+	public final boolean equals(Object o) {
+		return o instanceof O && equals((O) o);
+	}
+
+	public final boolean equals(O o) {
+		return o != null
+			&& this.b == o.b
+			&& this.u32 == o.u32
+			&& this.u64 == o.u64
+			&& this.i32 == o.i32
+			&& this.i64 == o.i64
+			&& java.util.Objects.equals(this.f32, o.f32)
+			&& java.util.Objects.equals(this.f64, o.f64)
+			&& java.util.Objects.equals(this.t, o.t)
+			&& java.util.Objects.equals(this.s, o.s)
+			&& java.util.Arrays.equals(this.a, o.a)
+			&& java.util.Objects.equals(this.o, o.o)
+			&& java.util.Arrays.equals(this.os, o.os);
+	}
+
 	/**
 	 * Serializes an integer.
 	 * @param buf the data destination.
