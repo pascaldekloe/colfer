@@ -106,11 +106,10 @@ type <:.NameTitle:> struct {
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
+<:- range .Fields:><:if .TypeArray:>
+// All nil entries in .{@link #<:.NameTitle:>} will be replaced with a new value.
+<:- end:><:end:>
 func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
-	if o == nil {
-		return 0
-	}
-
 	var i int
 <:range .Fields:><:template "marshal-field" .:><:end:>
 	buf[i] = 0x7f
@@ -119,11 +118,10 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
+<:- range .Fields:><:if .TypeArray:>
+// All nil entries in .{@link #<:.NameTitle:>} will be replaced with a new value.
+<:- end:><:end:>
 func (o *<:.NameTitle:>) MarshalLen() int {
-	if o == nil {
-		return 0
-	}
-
 	l := 1
 <:range .Fields:><:template "marshal-field-len" .:><:end:>
 	return l
@@ -242,7 +240,11 @@ const goMarshalField = `<:if eq .Type "bool":>
 		i++
 		x := uint(l)
 <:template "marshal-varint":>
-		for _, v := range o.<:.NameTitle:> {
+		for vi, v := range o.<:.NameTitle:> {
+			if v == nil {
+				v = new(<:.TypeNative:>)
+				o.<:.NameTitle:>[vi] = v
+			}
 			i += v.MarshalTo(buf[i:])
 		}
 	}
@@ -306,7 +308,11 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 <:else if .TypeArray:>
 	if x := len(o.<:.NameTitle:>); x != 0 {
 <:template "marshal-varint-len" .:>
-		for _, v := range o.<:.NameTitle:> {
+		for vi, v := range o.<:.NameTitle:> {
+			if v == nil {
+				v = new(<:.TypeNative:>)
+				o.<:.NameTitle:>[vi] = v
+			}
 			l += v.MarshalLen()
 		}
 	}

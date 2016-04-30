@@ -9,11 +9,12 @@ package testdata.bench;
  */
 public class Colfer implements java.io.Serializable {
 
-	private static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
+	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
+	private static final byte[] _zeroAddr = new byte[0];
 
 	public long key;
-	public String host;
-	public byte[] addr;
+	public String host = "";
+	public byte[] addr = _zeroAddr;
 	public int port;
 	public long size;
 	public long hash;
@@ -22,7 +23,7 @@ public class Colfer implements java.io.Serializable {
 
 
 	/**
-	 * Writes in Colfer format.
+	 * Serializes the object.
 	 * @param buf the data destination.
 	 * @throws java.nio.BufferOverflowException when {@code buf} is too small.
 	 */
@@ -39,14 +40,14 @@ public class Colfer implements java.io.Serializable {
 			putVarint(buf, x);
 		}
 
-		if (this.host != null && ! this.host.isEmpty()) {
-			java.nio.ByteBuffer bytes = utf8.encode(this.host);
+		if (! this.host.isEmpty()) {
+			java.nio.ByteBuffer bytes = this._utf8.encode(this.host);
 			buf.put((byte) 1);
 			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 
-		if (this.addr != null && this.addr.length != 0) {
+		if (this.addr.length != 0) {
 			buf.put((byte) 2);
 			putVarint(buf, this.addr.length);
 			buf.put(this.addr);
@@ -90,7 +91,7 @@ public class Colfer implements java.io.Serializable {
 	}
 
 	/**
-	 * Reads in Colfer format.
+	 * Deserializes the object.
 	 * @param buf the data source.
 	 * @throws java.nio.BufferUnderflowException when {@code buf} is incomplete.
 	 * @throws java.util.InputMismatchException on malformed data.
@@ -110,7 +111,7 @@ public class Colfer implements java.io.Serializable {
 			int length = getVarint32(buf);
 			java.nio.ByteBuffer blob = java.nio.ByteBuffer.allocate(length);
 			buf.get(blob.array());
-			this.host = utf8.decode(blob).toString();
+			this.host = this._utf8.decode(blob).toString();
 			header = buf.get();
 		}
 

@@ -80,10 +80,21 @@ const javaCode = `package <:.Pkg.NameNative:>;
  */
 public class <:.NameTitle:> implements java.io.Serializable {
 
-	private static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
+	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
+<:- range .Fields:>
+<:- if eq .Type "binary":>
+	private static final byte[] _zero<:.NameTitle:> = new byte[0];
+<:- else if .TypeArray:>
+	private static final <:.TypeNative:>[] _zero<:.NameTitle:> = new <:.TypeNative:>[0];
+<:- end:>
+<:- end:>
+<:range .Fields:>
+	public <:.TypeNative:><:if .TypeArray:>[]<:end:> <:.Name:>
+<:- if eq .Type "text":> = ""
+<:- else if eq .Type "binary":> = _zero<:.NameTitle:>
+<:- else if .TypeArray:> = _zero<:.NameTitle:>
+<:- end:>;<:end:>
 
-<:range .Fields:>	public <:.TypeNative:><:if .TypeArray:>[]<:end:> <:.Name:>;
-<:end:>
 
 <:template "marshal" .:>
 <:template "unmarshal" .:>
@@ -159,7 +170,10 @@ public class <:.NameTitle:> implements java.io.Serializable {
 `
 
 const javaMarshal = `	/**
-	 * Writes in Colfer format.
+	 * Serializes the object.
+<:- range .Fields:><:if .TypeArray:>
+	 * All {@code null} entries in {@link #<:.Name:>} will be replaced with a {@code new} value.
+<:- end:><:end:>
 	 * @param buf the data destination.
 	 * @throws java.nio.BufferOverflowException when {@code buf} is too small.
 	 */
@@ -220,24 +234,31 @@ const javaMarshal = `	/**
 			}
 		}
 <:else if eq .Type "text":>
-		if (this.<:.Name:> != null && ! this.<:.Name:>.isEmpty()) {
-			java.nio.ByteBuffer bytes = utf8.encode(this.<:.Name:>);
+		if (! this.<:.Name:>.isEmpty()) {
+			java.nio.ByteBuffer bytes = this._utf8.encode(this.<:.Name:>);
 			buf.put((byte) <:.Index:>);
 			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 <:else if eq .Type "binary":>
-		if (this.<:.Name:> != null && this.<:.Name:>.length != 0) {
+		if (this.<:.Name:>.length != 0) {
 			buf.put((byte) <:.Index:>);
 			putVarint(buf, this.<:.Name:>.length);
 			buf.put(this.<:.Name:>);
 		}
 <:else if .TypeArray:>
-		if (this.<:.Name:> != null && this.<:.Name:>.length != 0) {
+		if (this.<:.Name:>.length != 0) {
 			buf.put((byte) <:.Index:>);
-			putVarint(buf, this.<:.Name:>.length);
-			for (<:.TypeNative:> o : this.<:.Name:>)
+			<:.TypeNative:>[] a = this.<:.Name:>;
+			putVarint(buf, a.length);
+			for (int i = 0; i < a.length; i++) {
+				<:.TypeNative:> o = a[i];
+				if (o == null) {
+					o = new <:.TypeNative:>();
+					a[i] = o;
+				}
 				o.marshal(buf);
+			}
 		}
 <:else:>
 		if (this.<:.Name:> != null) {
@@ -250,7 +271,7 @@ const javaMarshal = `	/**
 `
 
 const javaUnmarshal = `	/**
-	 * Reads in Colfer format.
+	 * Deserializes the object.
 	 * @param buf the data source.
 	 * @throws java.nio.BufferUnderflowException when {@code buf} is incomplete.
 	 * @throws java.util.InputMismatchException on malformed data.
@@ -314,7 +335,7 @@ const javaUnmarshal = `	/**
 			int length = getVarint32(buf);
 			java.nio.ByteBuffer blob = java.nio.ByteBuffer.allocate(length);
 			buf.get(blob.array());
-			this.<:.Name:> = utf8.decode(blob).toString();
+			this.<:.Name:> = this._utf8.decode(blob).toString();
 			header = buf.get();
 		}
 <:else if eq .Type "binary":>

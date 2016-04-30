@@ -9,7 +9,9 @@ package testdata;
  */
 public class O implements java.io.Serializable {
 
-	private static final java.nio.charset.Charset utf8 = java.nio.charset.Charset.forName("UTF-8");
+	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
+	private static final byte[] _zeroA = new byte[0];
+	private static final O[] _zeroOs = new O[0];
 
 	public boolean b;
 	public int u32;
@@ -19,14 +21,15 @@ public class O implements java.io.Serializable {
 	public float f32;
 	public double f64;
 	public java.time.Instant t;
-	public String s;
-	public byte[] a;
+	public String s = "";
+	public byte[] a = _zeroA;
 	public O o;
-	public O[] os;
+	public O[] os = _zeroOs;
 
 
 	/**
-	 * Writes in Colfer format.
+	 * Serializes the object.
+	 * All {@code null} entries in {@link #os} will be replaced with a {@code new} value.
 	 * @param buf the data destination.
 	 * @throws java.nio.BufferOverflowException when {@code buf} is too small.
 	 */
@@ -92,14 +95,14 @@ public class O implements java.io.Serializable {
 			}
 		}
 
-		if (this.s != null && ! this.s.isEmpty()) {
-			java.nio.ByteBuffer bytes = utf8.encode(this.s);
+		if (! this.s.isEmpty()) {
+			java.nio.ByteBuffer bytes = this._utf8.encode(this.s);
 			buf.put((byte) 8);
 			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 
-		if (this.a != null && this.a.length != 0) {
+		if (this.a.length != 0) {
 			buf.put((byte) 9);
 			putVarint(buf, this.a.length);
 			buf.put(this.a);
@@ -110,18 +113,25 @@ public class O implements java.io.Serializable {
 			this.o.marshal(buf);
 		}
 
-		if (this.os != null && this.os.length != 0) {
+		if (this.os.length != 0) {
 			buf.put((byte) 11);
-			putVarint(buf, this.os.length);
-			for (O o : this.os)
+			O[] a = this.os;
+			putVarint(buf, a.length);
+			for (int i = 0; i < a.length; i++) {
+				O o = a[i];
+				if (o == null) {
+					o = new O();
+					a[i] = o;
+				}
 				o.marshal(buf);
+			}
 		}
 
 		buf.put((byte) 0x7f);
 	}
 
 	/**
-	 * Reads in Colfer format.
+	 * Deserializes the object.
 	 * @param buf the data source.
 	 * @throws java.nio.BufferUnderflowException when {@code buf} is incomplete.
 	 * @throws java.util.InputMismatchException on malformed data.
@@ -185,7 +195,7 @@ public class O implements java.io.Serializable {
 			int length = getVarint32(buf);
 			java.nio.ByteBuffer blob = java.nio.ByteBuffer.allocate(length);
 			buf.get(blob.array());
-			this.s = utf8.decode(blob).toString();
+			this.s = this._utf8.decode(blob).toString();
 			header = buf.get();
 		}
 

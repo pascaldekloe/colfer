@@ -3,6 +3,10 @@
 var testdata = new function() {
 	const EOF = 'colfer: EOF';
 
+	/**
+	 * Serializes the object into an Uint8Array.
+	 * All null entries in o.os will be replaced with an {}.
+	 */
 	this.marshalO = function(o) {
 		var segs = [];
 
@@ -75,7 +79,8 @@ var testdata = new function() {
 			var s = ms / 1E3;
 			var ns = (ms % 1E3) * 1E6;
 			if (o.t_ns) {
-				if (o.t_ns > 1E6) throw 'colfer: field t_ns exceeds ms range';
+				if ((o.t_ns < 0) || (o.t_ns >= 1E6))
+					throw 'colfer: field t_ns not in range (0, 1ms>';
 				ns += o.t_ns % 1E6;
 			}
 
@@ -112,12 +117,18 @@ var testdata = new function() {
 		}
 
 		if (o.os && o.os.length) {
+			var a = o.os;
 			var seg = [11];
-			encodeVarint(seg, o.os.length);
+			encodeVarint(seg, a.length);
 			segs.push(seg);
-			o.os.forEach(function(v) {
+			for (var i = 0; i < a.length; i++) {
+				var v = a[i];
+				if (! v) {
+					v = {};
+					a[i] = v;
+				}
 				segs.push(testdata.marshalO(v));
-			});
+			};
 		}
 
 		var size = 1;
@@ -135,6 +146,9 @@ var testdata = new function() {
 		return bytes;
 	}
 
+	/**
+	 * Deserializes an object from an Uint8Array.
+	 */
 	this.unmarshalO = function(data) {
 		if (!data || ! data.length) return null;
 		var header = data[0];

@@ -109,7 +109,13 @@ var <:.NameNative:> = new function() {
 }
 <:end:>`
 
-const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
+const ecmaMarshal = `	/**
+	 * Serializes the object into an Uint8Array.
+<:- range .Fields:><:if .TypeArray:>
+	 * All null entries in o.<:.Name:> will be replaced with an {}.
+<:- end:><:end:>
+	 */
+	this.marshal<:.NameTitle:> = function(o) {
 		var segs = [];
 <:range .Fields:><:if eq .Type "bool":>
 		if (o.<:.Name:>) {
@@ -181,7 +187,8 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 			var s = ms / 1E3;
 			var ns = (ms % 1E3) * 1E6;
 			if (o.<:.Name:>_ns) {
-				if (o.<:.Name:>_ns > 1E6) throw 'colfer: field <:.Name:>_ns exceeds ms range';
+				if ((o.<:.Name:>_ns < 0) || (o.<:.Name:>_ns >= 1E6))
+					throw 'colfer: field <:.Name:>_ns not in range (0, 1ms>';
 				ns += o.<:.Name:>_ns % 1E6;
 			}
 
@@ -213,12 +220,18 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 		}
 <:else if .TypeArray:>
 		if (o.<:.Name:> && o.<:.Name:>.length) {
+			var a = o.<:.Name:>;
 			var seg = [<:.Index:>];
-			encodeVarint(seg, o.<:.Name:>.length);
+			encodeVarint(seg, a.length);
 			segs.push(seg);
-			o.<:.Name:>.forEach(function(v) {
+			for (var i = 0; i < a.length; i++) {
+				var v = a[i];
+				if (! v) {
+					v = {};
+					a[i] = v;
+				}
 				segs.push(<:.TypeRef.Pkg.NameNative:>.marshal<:.TypeRef.NameTitle:>(v));
-			});
+			};
 		}
 <:else:>
 		if (o.<:.Name:>) {
@@ -242,7 +255,10 @@ const ecmaMarshal = `	this.marshal<:.NameTitle:> = function(o) {
 	}
 `
 
-const ecmaUnmarshal = `	this.unmarshal<:.NameTitle:> = function(data) {
+const ecmaUnmarshal = `	/**
+	 * Deserializes an object from an Uint8Array.
+	 */
+	this.unmarshal<:.NameTitle:> = function(data) {
 		if (!data || ! data.length) return null;
 		var header = data[0];
 		var i = 1;

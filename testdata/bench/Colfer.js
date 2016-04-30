@@ -3,6 +3,9 @@
 var bench = new function() {
 	const EOF = 'colfer: EOF';
 
+	/**
+	 * Serializes the object into an Uint8Array.
+	 */
 	this.marshalColfer = function(o) {
 		var segs = [];
 
@@ -93,6 +96,9 @@ var bench = new function() {
 		return bytes;
 	}
 
+	/**
+	 * Deserializes an object from an Uint8Array.
+	 */
 	this.unmarshalColfer = function(data) {
 		if (!data || ! data.length) return null;
 		var header = data[0];

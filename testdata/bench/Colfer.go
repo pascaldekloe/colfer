@@ -41,10 +41,6 @@ type Colfer struct {
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
 func (o *Colfer) MarshalTo(buf []byte) int {
-	if o == nil {
-		return 0
-	}
-
 	var i int
 
 	if v := o.Key; v != 0 {
@@ -163,10 +159,6 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 
 // MarshalLen returns the Colfer serial byte size.
 func (o *Colfer) MarshalLen() int {
-	if o == nil {
-		return 0
-	}
-
 	l := 1
 
 	if v := o.Key; v != 0 {

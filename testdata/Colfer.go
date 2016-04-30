@@ -44,11 +44,8 @@ type O struct {
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
+// All nil entries in .{@link #Os} will be replaced with a new value.
 func (o *O) MarshalTo(buf []byte) int {
-	if o == nil {
-		return 0
-	}
-
 	var i int
 
 	if o.B {
@@ -192,7 +189,11 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		for _, v := range o.Os {
+		for vi, v := range o.Os {
+			if v == nil {
+				v = new(O)
+				o.Os[vi] = v
+			}
 			i += v.MarshalTo(buf[i:])
 		}
 	}
@@ -203,11 +204,8 @@ func (o *O) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
+// All nil entries in .{@link #Os} will be replaced with a new value.
 func (o *O) MarshalLen() int {
-	if o == nil {
-		return 0
-	}
-
 	l := 1
 
 	if o.B {
@@ -298,7 +296,11 @@ func (o *O) MarshalLen() int {
 			l++
 		}
 		l += 2
-		for _, v := range o.Os {
+		for vi, v := range o.Os {
+			if v == nil {
+				v = new(O)
+				o.Os[vi] = v
+			}
 			l += v.MarshalLen()
 		}
 	}

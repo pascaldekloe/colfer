@@ -5,7 +5,7 @@ Colfer is a schema-based binary data format optimized for speed and size.
 The project's compiler `colf(1)` generates source code from schema definitions
 to marshal and unmarshall data structures.
 
-This is free and unencumbered software released into the public domain. [![CC0](https://licensebuttons.net/p/zero/1.0/88x31.png)](http://creativecommons.org/publicdomain/zero/1.0)
+This is free and unencumbered software released into the [public domain](http://creativecommons.org/publicdomain/zero/1.0).
 The format is inspired by Proto**col** Buf**fer**.
 
 
@@ -138,7 +138,7 @@ package example
 type member struct {
 	id     int64
 	name   text
-	bday   timestamp
+	joined timestamp
 	avatar binary
 	allies []member
 }
@@ -153,14 +153,14 @@ The following table shows how Colfer data types are applied per language.
 | uint32	| Number	| uint32	| int		|
 | uint64	| Number	| uint64	| long		|
 | int32		| Number	| int32		| int		|
-| int64		| Number *	| int64		| long		|
+| int64		| Number †	| int64		| long		|
 | float32	| Number	| float32	| float		|
 | float64	| Number	| float64	| double	|
 | timestamp	| Date + Number	| time.Time	| java.time.Instant |
 | text		| String	| string	| java.lang.String |
 | binary	| Uint8Array	| []byte	| byte[]	|
 
-* range limited to 2⁵³ - 1 (see Number.MAX_SAFE_INTEGER)
+† range limited to 2⁵³ - 1 (see Number.MAX_SAFE_INTEGER)
 
 
 
@@ -182,8 +182,9 @@ termination byte `0x7f`. Only those fields with a value other than the *zero
 value* may be serialized. Fields appear in order as stated by the schema.
 
 The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
-timestamps: `1970-01-01T00:00:00.000000000Z` and for text & binary: the empty
-string.
+timestamps: `1970-01-01T00:00:00.000000000Z`, text & binary: the empty
+string, nested data structures `null` and an empty list for data structure
+lists.
 
 Data is represented in a big-endian manner. The format relies on *varints* also
 known as a
@@ -209,5 +210,7 @@ counting leap seconds. When the header flag is set then the value is followed
 with 32 bits for the nanosecond fraction. Again, a zero value must not be
 serialized.
 
-The data for text and binaries is prefixed with a varint size declaration. Text
-is encoded as UTF-8.
+The data for text and binaries is prefixed with a varint byte size declaration.
+Text is encoded as UTF-8.
+
+Object arrays are also prefixed with a varint size declaration.
