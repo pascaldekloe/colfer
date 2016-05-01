@@ -52,6 +52,8 @@ func (s *Struct) String() string {
 
 // Field is a Struct member definition.
 type Field struct {
+	// Struct is the parent.
+	Struct *Struct
 	// Index is the Struct.Fields position.
 	Index int
 	// Name is the identification token.
@@ -72,7 +74,7 @@ func (f *Field) NameTitle() string {
 }
 
 func (f *Field) String() string {
-	return fmt.Sprintf("%s:%s", f.Name, f.Type)
+	return fmt.Sprintf("%s.%s", f.Struct, f.Name)
 }
 
 // ReadDefs parses the Colfer files.
@@ -151,7 +153,7 @@ func linkStructs(packages []*Package) error {
 				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
 					continue
 				}
-				return fmt.Errorf("colfer: unknown datatype in struct %q field %q", s, f)
+				return fmt.Errorf("colfer: unknown datatype for field %q", f)
 			}
 		}
 	}
@@ -172,7 +174,7 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 	}
 
 	for i, f := range s.Fields.List {
-		field := Field{Index: i}
+		field := Field{Struct: dst, Index: i}
 		dst.Fields = append(dst.Fields, &field)
 
 		if len(f.Names) == 0 {
@@ -188,7 +190,7 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 
 		id, ok := t.(*ast.Ident)
 		if !ok {
-			return fmt.Errorf("colfer: unknown type in stuct %q field %d %q: %#v", dst, field.Index, field.Name, t)
+			return fmt.Errorf("colfer: unknown datatype declaration for field %q: %#v", field, t)
 		}
 		field.Type = id.Name
 	}

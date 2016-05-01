@@ -3,9 +3,16 @@
 var bench = new function() {
 	const EOF = 'colfer: EOF';
 
-	/**
-	 * Serializes the object into an Uint8Array.
-	 */
+	// The upper limit for serial byte sizes.
+	var colferSizeMax = 16 * 1024 * 1024;
+
+	// The upper limit for text and binary byte sizes.
+	var colferFieldMax = 1024 * 1024;
+
+	// The upper limit for the number of elements in a list.
+	var colferListMax = 64 * 1024;
+
+	// Serializes the object into an Uint8Array.
 	this.marshalColfer = function(o) {
 		var segs = [];
 
@@ -24,6 +31,7 @@ var bench = new function() {
 
 		if (o.host) {
 			var utf = encodeUTF8(o.host);
+			if (utf.length > colferFieldMax) throw 'colfer: field host byte size exceeds colferFieldMax';
 			var seg = [1];
 			encodeVarint(seg, utf.length);
 			segs.push(seg);
@@ -31,6 +39,7 @@ var bench = new function() {
 		}
 
 		if (o.addr && o.addr.length) {
+			if (o.addr.length > colferFieldMax) throw 'colfer: field addr length colferFieldMax';
 			var seg = [2];
 			encodeVarint(seg, o.addr.length);
 			segs.push(seg);
@@ -96,9 +105,7 @@ var bench = new function() {
 		return bytes;
 	}
 
-	/**
-	 * Deserializes an object from an Uint8Array.
-	 */
+	// Deserializes an object from an Uint8Array.
 	this.unmarshalColfer = function(data) {
 		if (!data || ! data.length) return null;
 		var header = data[0];
@@ -141,6 +148,7 @@ var bench = new function() {
 		if (header == 1) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field host length exceeds Number.MAX_SAFE_INTEGER';
+			else if (length > colferFieldMax) throw 'colfer: field host byte size exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.host = decodeUTF8(data.subarray(i, to));
@@ -151,6 +159,7 @@ var bench = new function() {
 		if (header == 2) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field addr length exceeds Number.MAX_SAFE_INTEGER';
+			else if (length > colferFieldMax) throw 'colfer: field addr length exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.addr = data.subarray(i, to);

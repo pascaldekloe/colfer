@@ -86,6 +86,23 @@ import (
 var _ = math.E
 var _ = time.RFC3339
 
+// Colfer configuration attributes
+var (
+	// ColferSizeMax is the upper limit for serial byte sizes.
+	ColferSizeMax = 16 * 1024 * 1024
+
+	// ColferFieldMax is the upper limit for text and binary byte sizes.
+	ColferFieldMax = 1024 * 1024
+
+	// ColferListMax is the upper limit for the number of elements in a list.
+	ColferListMax = 64 * 1024
+)
+
+// ColferMax signals an upper limit breach.
+type ColferMax string
+
+func (m ColferMax) Error() string { return string(m) }
+
 // ColferContinue signals a data continuation as a byte index.
 type ColferContinue int
 
@@ -107,7 +124,7 @@ type <:.NameTitle:> struct {
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
 <:- range .Fields:><:if .TypeArray:>
-// All nil entries in .{@link #<:.NameTitle:>} will be replaced with a new value.
+// All nil entries in o.<:.NameTitle:> will be replaced with a new value.
 <:- end:><:end:>
 func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 	var i int
@@ -119,27 +136,42 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 
 // MarshalLen returns the Colfer serial byte size.
 <:- range .Fields:><:if .TypeArray:>
-// All nil entries in .{@link #<:.NameTitle:>} will be replaced with a new value.
+// All nil entries in o.<:.NameTitle:> will be replaced with a new value.
 <:- end:><:end:>
-func (o *<:.NameTitle:>) MarshalLen() int {
+// The error return option is <:.Pkg.Name:>.ColferMax.
+func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 	l := 1
 <:range .Fields:><:template "marshal-field-len" .:><:end:>
-	return l
+	if l > ColferSizeMax {
+		return l, ColferMax(fmt.Sprintf("colfer: struct <:.String:> exceeds %d bytes", ColferSizeMax))
+	}
+	return l, nil
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return is always nil.
+// The error return option is <:.Pkg.Name:>.ColferMax.
 func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, o.MarshalLen())
+	l, err := o.MarshalLen()
+	if err != nil {
+		return nil, err
+	}
+	data = make([]byte, l)
 	o.MarshalTo(data)
 	return data, nil
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, <:.Pkg.Name:>.ColferError, and <:.Pkg.Name:>.ColferContinue.
+// The error return options are io.EOF, <:.Pkg.Name:>.ColferError, <:.Pkg.Name:>.ColferContinue and <:.Pkg.Name:>.ColferMax.
 func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
+	}
+	if len(data) > ColferSizeMax {
+		err := o.UnmarshalBinary(data[:ColferSizeMax])
+		if err == io.EOF {
+			return ColferMax(fmt.Sprintf("colfer: struct <:.String:> exceeds %d bytes", ColferSizeMax))
+		}
+		return err
 	}
 
 	header := data[0]
@@ -226,13 +258,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 		}
 	}
 <:else if eq .Type "text" "binary":>
-	if v := o.<:.NameTitle:>; len(v) != 0 {
+	if l := len(o.<:.NameTitle:>); l != 0 {
 		buf[i] = <:.Index:>
 		i++
-		x := uint(len(v))
+		x := uint(l)
 <:template "marshal-varint":>
-		copy(buf[i:], v)
-		i += len(v)
+		copy(buf[i:], o.<:.NameTitle:>)
+		i += l
 	}
 <:else if .TypeArray:>
 	if l := len(o.<:.NameTitle:>); l != 0 {
@@ -302,23 +334,37 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "text" "binary":>
 	if x := len(o.<:.NameTitle:>); x != 0 {
+		if x > ColferFieldMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
+		}
 		l += x
 <:template "marshal-varint-len" .:>
 	}
 <:else if .TypeArray:>
 	if x := len(o.<:.NameTitle:>); x != 0 {
+		if x > ColferListMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
+		}
 <:template "marshal-varint-len" .:>
 		for vi, v := range o.<:.NameTitle:> {
 			if v == nil {
 				v = new(<:.TypeNative:>)
 				o.<:.NameTitle:>[vi] = v
 			}
-			l += v.MarshalLen()
+			vl, err := v.MarshalLen()
+			if err != nil {
+				return -1, err
+			}
+			l += vl
 		}
 	}
 <:else:>
 	if v := o.<:.NameTitle:>; v != nil {
-		l += v.MarshalLen() + 1
+		vl, err := v.MarshalLen()
+		if err != nil {
+			return -1, err
+		}
+		l += vl + 1
 	}
 <:end:>`
 
@@ -420,8 +466,12 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "text":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
+		l := int(x)
+		if l > ColferFieldMax {
+			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
+		}
 
-		to := i + int(x)
+		to := i + l
 		if to >= len(data) {
 			return io.EOF
 		}
@@ -433,13 +483,16 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "binary":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
+		l := int(x)
+		if l > ColferFieldMax {
+			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
+		}
 
-		length := int(x)
-		to := i + length
+		to := i + l
 		if to >= len(data) {
 			return io.EOF
 		}
-		v := make([]byte, length)
+		v := make([]byte, l)
 		copy(v, data[i:])
 		o.<:.NameTitle:> = v
 
@@ -449,8 +502,12 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if .TypeArray:>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
+		l := int(x)
+		if l > ColferListMax {
+			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
+		}
 
-		a := make([]*<:.TypeNative:>, int(x))
+		a := make([]*<:.TypeNative:>, l)
 		for ai, _ := range a {
 			v := new(<:.TypeNative:>)
 			a[ai] = v

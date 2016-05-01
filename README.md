@@ -11,12 +11,15 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### Features
 
-* Simple and straightforward in use.
-* Support for: Go, Java and ECMAScript/JavaScript.
-* No dependencies other than the core library.
-* Both Faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack.
-* The generated code is human-readable.
-* Compiler runs on [many platforms](https://golang.org/doc/install/source#environment).
+* Simple and straightforward in use
+* Support for: Go, Java and ECMAScript/JavaScript
+* No dependencies other than the core library
+* Both Faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
+* The generated code is human-readable
+* Compiler runs on [many platforms](https://golang.org/doc/install/source#environment)
+* Configurable data limits with sane defaults (memory protection)
+* Maximum of 127 fields per data structure
+* No support for enumerations
 
 #### TODO's
 

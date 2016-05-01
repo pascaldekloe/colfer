@@ -13,6 +13,23 @@ import (
 var _ = math.E
 var _ = time.RFC3339
 
+// Colfer configuration attributes
+var (
+	// ColferSizeMax is the upper limit for serial byte sizes.
+	ColferSizeMax = 16 * 1024 * 1024
+
+	// ColferFieldMax is the upper limit for text and binary byte sizes.
+	ColferFieldMax = 1024 * 1024
+
+	// ColferListMax is the upper limit for the number of elements in a list.
+	ColferListMax = 64 * 1024
+)
+
+// ColferMax signals an upper limit breach.
+type ColferMax string
+
+func (m ColferMax) Error() string { return string(m) }
+
 // ColferContinue signals a data continuation as a byte index.
 type ColferContinue int
 
@@ -44,7 +61,7 @@ type O struct {
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
-// All nil entries in .{@link #Os} will be replaced with a new value.
+// All nil entries in o.Os will be replaced with a new value.
 func (o *O) MarshalTo(buf []byte) int {
 	var i int
 
@@ -142,10 +159,10 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 	}
 
-	if v := o.S; len(v) != 0 {
+	if l := len(o.S); l != 0 {
 		buf[i] = 8
 		i++
-		x := uint(len(v))
+		x := uint(l)
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -153,14 +170,14 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		copy(buf[i:], v)
-		i += len(v)
+		copy(buf[i:], o.S)
+		i += l
 	}
 
-	if v := o.A; len(v) != 0 {
+	if l := len(o.A); l != 0 {
 		buf[i] = 9
 		i++
-		x := uint(len(v))
+		x := uint(l)
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -168,8 +185,8 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		copy(buf[i:], v)
-		i += len(v)
+		copy(buf[i:], o.A)
+		i += l
 	}
 
 	if v := o.O; v != nil {
@@ -204,8 +221,9 @@ func (o *O) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// All nil entries in .{@link #Os} will be replaced with a new value.
-func (o *O) MarshalLen() int {
+// All nil entries in o.Os will be replaced with a new value.
+// The error return option is testdata.ColferMax.
+func (o *O) MarshalLen() (int, error) {
 	l := 1
 
 	if o.B {
@@ -269,6 +287,9 @@ func (o *O) MarshalLen() int {
 	}
 
 	if x := len(o.S); x != 0 {
+		if x > ColferFieldMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.s exceeds %d bytes", ColferFieldMax))
+		}
 		l += x
 		for x >= 0x80 {
 			x >>= 7
@@ -278,6 +299,9 @@ func (o *O) MarshalLen() int {
 	}
 
 	if x := len(o.A); x != 0 {
+		if x > ColferFieldMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.a exceeds %d bytes", ColferFieldMax))
+		}
 		l += x
 		for x >= 0x80 {
 			x >>= 7
@@ -287,10 +311,17 @@ func (o *O) MarshalLen() int {
 	}
 
 	if v := o.O; v != nil {
-		l += v.MarshalLen() + 1
+		vl, err := v.MarshalLen()
+		if err != nil {
+			return -1, err
+		}
+		l += vl + 1
 	}
 
 	if x := len(o.Os); x != 0 {
+		if x > ColferListMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.os exceeds %d elements", ColferListMax))
+		}
 		for x >= 0x80 {
 			x >>= 7
 			l++
@@ -301,26 +332,44 @@ func (o *O) MarshalLen() int {
 				v = new(O)
 				o.Os[vi] = v
 			}
-			l += v.MarshalLen()
+			vl, err := v.MarshalLen()
+			if err != nil {
+				return -1, err
+			}
+			l += vl
 		}
 	}
 
-	return l
+	if l > ColferSizeMax {
+		return l, ColferMax(fmt.Sprintf("colfer: struct testdata.o exceeds %d bytes", ColferSizeMax))
+	}
+	return l, nil
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return is always nil.
+// The error return option is testdata.ColferMax.
 func (o *O) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, o.MarshalLen())
+	l, err := o.MarshalLen()
+	if err != nil {
+		return nil, err
+	}
+	data = make([]byte, l)
 	o.MarshalTo(data)
 	return data, nil
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, testdata.ColferError, and testdata.ColferContinue.
+// The error return options are io.EOF, testdata.ColferError, testdata.ColferContinue and testdata.ColferMax.
 func (o *O) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
+	}
+	if len(data) > ColferSizeMax {
+		err := o.UnmarshalBinary(data[:ColferSizeMax])
+		if err == io.EOF {
+			return ColferMax(fmt.Sprintf("colfer: struct testdata.o exceeds %d bytes", ColferSizeMax))
+		}
+		return err
 	}
 
 	header := data[0]
@@ -509,8 +558,12 @@ func (o *O) UnmarshalBinary(data []byte) error {
 				break
 			}
 		}
+		l := int(x)
+		if l > ColferFieldMax {
+			return ColferMax(fmt.Sprintf("colfer: field testdata.o.s exceeds %d bytes", ColferFieldMax))
+		}
 
-		to := i + int(x)
+		to := i + l
 		if to >= len(data) {
 			return io.EOF
 		}
@@ -537,13 +590,16 @@ func (o *O) UnmarshalBinary(data []byte) error {
 				break
 			}
 		}
+		l := int(x)
+		if l > ColferFieldMax {
+			return ColferMax(fmt.Sprintf("colfer: field testdata.o.a exceeds %d bytes", ColferFieldMax))
+		}
 
-		length := int(x)
-		to := i + length
+		to := i + l
 		if to >= len(data) {
 			return io.EOF
 		}
-		v := make([]byte, length)
+		v := make([]byte, l)
 		copy(v, data[i:])
 		o.A = v
 
@@ -585,8 +641,12 @@ func (o *O) UnmarshalBinary(data []byte) error {
 				break
 			}
 		}
+		l := int(x)
+		if l > ColferListMax {
+			return ColferMax(fmt.Sprintf("colfer: field testdata.o.os exceeds %d elements", ColferListMax))
+		}
 
-		a := make([]*O, int(x))
+		a := make([]*O, l)
 		for ai, _ := range a {
 			v := new(O)
 			a[ai] = v
