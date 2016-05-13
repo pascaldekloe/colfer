@@ -1,8 +1,8 @@
 function getGoldenCases() {
-	var unixCase = new Date();
-	unixCase.setTime(1441739050000);
-	var nanoCase = new Date();
-	nanoCase.setTime(1441739050777);
+	var date1 = new Date();
+	date1.setTime(1441739050777);
+	var date2 = new Date();
+	date2.setTime(0x100000000 * 1000 + 777);
 
 	return {
 		'7f': {},
@@ -25,8 +25,8 @@ function getGoldenCases() {
 		'0600000000000000017f': {f64: Number.MIN_VALUE},
 		'067fefffffffffffff7f': {f64: Number.MAX_VALUE},
 		'067ff80000000000007f': {f64: NaN},
-		'070000000055ef312a7f': {t: unixCase},
-		'870000000055ef312a2e5da4e77f': {t: nanoCase, t_ns: 888999},
+		'0755ef312a2e5da4e77f': {t: date1, t_ns: 888999},
+		'8700000001000000002e5da4e77f': {t: date2, t_ns: 888999},
 		'0801417f': {s: 'A'},
 		'080261007f': {s: 'a\x00'},
 		'0809c280e0a080f09080807f': {s: '\u0080\u0800\u{10000}'},

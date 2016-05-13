@@ -257,14 +257,16 @@ const goMarshalField = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.NameTitle:>; !v.IsZero() {
-		buf[i] = <:.Index:>
-		s, ns := v.Unix(), v.Nanosecond()
-		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
-		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
-		if ns == 0 {
+		s, ns := uint64(v.Unix()), uint(v.Nanosecond())
+		if s < 1<<32 {
+			buf[i] = <:.Index:>
+			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
+			buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
 			i += 9
 		} else {
-			buf[i] |= 0x80
+			buf[i] = <:.Index:> | 0x80
+			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(s>>56), byte(s>>48), byte(s>>40), byte(s>>32)
+			buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(s>>24), byte(s>>16), byte(s>>8), byte(s)
 			buf[i+9], buf[i+10], buf[i+11], buf[i+12] = byte(ns>>24), byte(ns>>16), byte(ns>>8), byte(ns)
 			i += 13
 		}
@@ -346,7 +348,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.NameTitle:>; !v.IsZero() {
-		if v.Nanosecond() == 0 {
+		if s := v.Unix(); s >= 0 && s < 1<<32 {
 			l += 9
 		} else {
 			l += 13
@@ -490,9 +492,10 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		if i+8 >= len(data) {
 			return io.EOF
 		}
-		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
-		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		o.<:.NameTitle:> = time.Unix(int64(sec), 0)
+		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
+		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
+		v := int64(x)
+		o.<:.NameTitle:> = time.Unix(v>>32, v&(1<<32-1))
 
 		header = data[i+8]
 		i += 9
@@ -502,8 +505,8 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		}
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		nsec := int64(uint(data[i+8])<<24 | uint(data[i+9])<<16 | uint(data[i+10])<<8 | uint(data[i+11]))
-		o.<:.NameTitle:> = time.Unix(int64(sec), nsec)
+		nsec := uint64(data[i+8])<<24 | uint64(data[i+9])<<16 | uint64(data[i+10])<<8 | uint64(data[i+11])
+		o.<:.NameTitle:> = time.Unix(int64(sec), int64(nsec))
 
 		header = data[i+12]
 		i += 13

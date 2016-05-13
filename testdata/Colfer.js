@@ -98,25 +98,33 @@ var testdata = new function() {
 		if (o.t) {
 			var ms = o.t.getTime()
 			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
-				throw 'colfer: field t second value exceeds Number capacity for ms';
+				throw 'colfer: field t millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
 			var s = ms / 1E3;
-			var ns = (ms % 1E3) * 1E6;
-			if (o.t_ns) {
-				if ((o.t_ns < 0) || (o.t_ns >= 1E6))
-					throw 'colfer: field t_ns not in range (0, 1ms>';
-				ns += o.t_ns % 1E6;
-			}
-
-			var bytes = new Uint8Array((ns) ? 13 : 9);
-			bytes[0] = 7;
-			var view = new DataView(bytes.buffer);
-			view.setUint32(1, s / 0x100000000);
-			view.setUint32(5, s % 0x100000000);
+			var ns = o.t_ns
 			if (ns) {
-				bytes[0] |= 128;
-				view.setUint32(9, ns);
+				if ((ns < 0) || (ns >= 1E6))
+					throw 'colfer: field t_ns not in range (0, 1ms>';
+			} else ns = 0;
+			ns += (ms % 1E3) * 1E6;
+
+			if (s != 0 || ns != 0) {
+				if (s > 0xffffffff) {
+					var bytes = new Uint8Array(13);
+					bytes[0] = 7 | 128;
+					var view = new DataView(bytes.buffer);
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+					view.setUint32(9, ns);
+					segs.push(bytes);
+				} else {
+					var bytes = new Uint8Array(9);
+					bytes[0] = 7;
+					var view = new DataView(bytes.buffer);
+					view.setUint32(1, s);
+					view.setUint32(5, ns);
+					segs.push(bytes);
+				}
 			}
-			segs.push(bytes);
 		}
 
 		if (o.s) {
@@ -270,18 +278,19 @@ var testdata = new function() {
 			readHeader();
 		}
 
-		// BUG(pascaldekloe): negative time offset not supported
 		if (header == 7) {
 			if (i + 8 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * 0x100000000;
-			ms += view.getUint32(i + 4);
-			ms *= 1000;
+			var ms = view.getUint32(i) * 1000;
+			var ns = view.getUint32(i + 4);
+			ms += ns / 1E6;
+			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field t second value exceeds Number capacity for ms';
+				throw 'colfer: field t value exceeds Number capacity for ms';
 			i += 8;
 			o.t = new Date();
 			o.t.setTime(ms);
+			o.t_ns = ns;
 			readHeader();
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
@@ -289,14 +298,15 @@ var testdata = new function() {
 			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field t second value exceeds Number capacity for ms';
 			var ns = view.getUint32(i + 8);
 			ms += ns / 1E6;
+			ns %= 1E6;
+			if (ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field t value exceeds Number capacity for ms';
 			i += 12;
 			o.t = new Date();
 			o.t.setTime(ms);
-			o.t_ns = ns % 1E6;
+			o.t_ns = ns;
 			readHeader();
 		}
 

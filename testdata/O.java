@@ -107,15 +107,15 @@ public class O implements java.io.Serializable {
 		if (this.t != null) {
 			long s = this.t.getEpochSecond();
 			int ns = this.t.getNano();
-			if (ns == 0) {
-				if (s != 0) {
+			if (s != 0 || ns != 0) {
+				if (s >= 0 && s < (1L << 32)) {
 					buf.put((byte) 7);
+					buf.putLong(s << 32 | (long) ns);
+				} else {
+					buf.put((byte) (7 | 0x80));
 					buf.putLong(s);
+					buf.putInt(ns);
 				}
-			} else {
-				buf.put((byte) (7 | 0x80));
-				buf.putLong(s);
-				buf.putInt(ns);
 			}
 		}
 
@@ -216,8 +216,8 @@ public class O implements java.io.Serializable {
 		}
 
 		if (header == (byte) 7) {
-			long s = buf.getLong();
-			this.t = java.time.Instant.ofEpochSecond(s);
+			long v = buf.getLong();
+			this.t = java.time.Instant.ofEpochSecond(v >> 32, v & 0xFFFFFFFFL);
 			header = buf.get();
 		} else if (header == (byte) (7 | 0x80)) {
 			long s = buf.getLong();

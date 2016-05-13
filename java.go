@@ -277,15 +277,15 @@ const javaMarshal = `	/**
 		if (this.<:.Name:> != null) {
 			long s = this.<:.Name:>.getEpochSecond();
 			int ns = this.<:.Name:>.getNano();
-			if (ns == 0) {
-				if (s != 0) {
+			if (s != 0 || ns != 0) {
+				if (s >= 0 && s < (1L << 32)) {
 					buf.put((byte) <:.Index:>);
+					buf.putLong(s << 32 | (long) ns);
+				} else {
+					buf.put((byte) (<:.Index:> | 0x80));
 					buf.putLong(s);
+					buf.putInt(ns);
 				}
-			} else {
-				buf.put((byte) (<:.Index:> | 0x80));
-				buf.putLong(s);
-				buf.putInt(ns);
 			}
 		}
 <:else if eq .Type "text":>
@@ -387,8 +387,8 @@ const javaUnmarshal = `	/**
 		}
 <:else if eq .Type "timestamp":>
 		if (header == (byte) <:.Index:>) {
-			long s = buf.getLong();
-			this.<:.Name:> = java.time.Instant.ofEpochSecond(s);
+			long v = buf.getLong();
+			this.<:.Name:> = java.time.Instant.ofEpochSecond(v >> 32, v & 0xFFFFFFFFL);
 			header = buf.get();
 		} else if (header == (byte) (<:.Index:> | 0x80)) {
 			long s = buf.getLong();

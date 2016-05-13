@@ -206,25 +206,33 @@ const ecmaMarshal = `	// Serializes the object into an Uint8Array.
 		if (o.<:.Name:>) {
 			var ms = o.<:.Name:>.getTime()
 			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
-				throw 'colfer: field <:.Name:> second value exceeds Number capacity for ms';
+				throw 'colfer: field <:.Name:> millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
 			var s = ms / 1E3;
-			var ns = (ms % 1E3) * 1E6;
-			if (o.<:.Name:>_ns) {
-				if ((o.<:.Name:>_ns < 0) || (o.<:.Name:>_ns >= 1E6))
-					throw 'colfer: field <:.Name:>_ns not in range (0, 1ms>';
-				ns += o.<:.Name:>_ns % 1E6;
-			}
-
-			var bytes = new Uint8Array((ns) ? 13 : 9);
-			bytes[0] = <:.Index:>;
-			var view = new DataView(bytes.buffer);
-			view.setUint32(1, s / 0x100000000);
-			view.setUint32(5, s % 0x100000000);
+			var ns = o.<:.Name:>_ns
 			if (ns) {
-				bytes[0] |= 128;
-				view.setUint32(9, ns);
+				if ((ns < 0) || (ns >= 1E6))
+					throw 'colfer: field <:.Name:>_ns not in range (0, 1ms>';
+			} else ns = 0;
+			ns += (ms % 1E3) * 1E6;
+
+			if (s != 0 || ns != 0) {
+				if (s > 0xffffffff) {
+					var bytes = new Uint8Array(13);
+					bytes[0] = <:.Index:> | 128;
+					var view = new DataView(bytes.buffer);
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+					view.setUint32(9, ns);
+					segs.push(bytes);
+				} else {
+					var bytes = new Uint8Array(9);
+					bytes[0] = <:.Index:>;
+					var view = new DataView(bytes.buffer);
+					view.setUint32(1, s);
+					view.setUint32(5, ns);
+					segs.push(bytes);
+				}
 			}
-			segs.push(bytes);
 		}
 <:else if eq .Type "text":>
 		if (o.<:.Name:>) {
@@ -379,18 +387,19 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 			readHeader();
 		}
 <:else if eq .Type "timestamp":>
-		// BUG(pascaldekloe): negative time offset not supported
 		if (header == <:.Index:>) {
 			if (i + 8 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * 0x100000000;
-			ms += view.getUint32(i + 4);
-			ms *= 1000;
+			var ms = view.getUint32(i) * 1000;
+			var ns = view.getUint32(i + 4);
+			ms += ns / 1E6;
+			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field <:.Name:> second value exceeds Number capacity for ms';
+				throw 'colfer: field <:.Name:> value exceeds Number capacity for ms';
 			i += 8;
 			o.<:.Name:> = new Date();
 			o.<:.Name:>.setTime(ms);
+			o.<:.Name:>_ns = ns;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 12 > data.length) throw EOF;
@@ -398,14 +407,15 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field <:.Name:> second value exceeds Number capacity for ms';
 			var ns = view.getUint32(i + 8);
 			ms += ns / 1E6;
+			ns %= 1E6;
+			if (ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field <:.Name:> value exceeds Number capacity for ms';
 			i += 12;
 			o.<:.Name:> = new Date();
 			o.<:.Name:>.setTime(ms);
-			o.<:.Name:>_ns = ns % 1E6;
+			o.<:.Name:>_ns = ns;
 			readHeader();
 		}
 <:else if eq .Type "text":>

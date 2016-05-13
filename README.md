@@ -149,20 +149,21 @@ type member struct {
 
 The following table shows how Colfer data types are applied per language.
 
-| Colfer	| ECMAScript	| Go		| Java		|
-|:--------------|:--------------|:--------------|:--------------|
-| bool		| Boolean	| bool		| boolean	|
-| uint32	| Number	| uint32	| int		|
-| uint64	| Number	| uint64	| long		|
-| int32		| Number	| int32		| int		|
-| int64		| Number †	| int64		| long		|
-| float32	| Number	| float32	| float		|
-| float64	| Number	| float64	| double	|
-| timestamp	| Date + Number	| time.Time	| java.time.Instant |
-| text		| String	| string	| java.lang.String |
-| binary	| Uint8Array	| []byte	| byte[]	|
+| Colfer	| ECMAScript		| Go		| Java		|
+|:--------------|:----------------------|:--------------|:--------------|
+| bool		| Boolean		| bool		| boolean	|
+| uint32	| Number		| uint32	| int		|
+| uint64	| Number †		| uint64	| long		|
+| int32		| Number		| int32		| int		|
+| int64		| Number †		| int64		| long		|
+| float32	| Number		| float32	| float		|
+| float64	| Number		| float64	| double	|
+| timestamp	| Date + Number	‡	| time.Time	| java.time.Instant |
+| text		| String		| string	| java.lang.String |
+| binary	| Uint8Array		| []byte	| byte[]	|
 
-† range limited to 2⁵³ - 1 (see Number.MAX_SAFE_INTEGER)
+† range limited to (-2⁵³ + 1, 2⁵³ - 1)
+‡ range limited to (`1970-01-01T00:00:00.000000000Z`, `287396-10-12T08:59:00.991999999`)
 
 
 
@@ -207,11 +208,12 @@ skipped for encoding since it's value is fixed to `0x01`.
 
 Floating points are encoded conform IEEE 754.
 
-Timestamps are encoded as a 64-bit two's complement integer for the number of
-seconds that have elapsed since 00:00:00 UTC, Thursday, 1 January 1970, not
-counting leap seconds. When the header flag is set then the value is followed
-with 32 bits for the nanosecond fraction. Again, a zero value must not be
-serialized.
+Timestamps are encoded as a 32-bit unsigned integer for the number of seconds
+that have elapsed since 00:00:00 UTC, Thursday, 1 January 1970, not counting
+leap seconds. When the header flag is set then the number of seconds is encoded
+as a 64-bit two's complement integer. In both cases the value is followed with
+32 bits for the nanosecond fraction. Note that the first two bits are not in use
+(reserved).
 
 The data for text and binaries is prefixed with a varint byte size declaration.
 Text is encoded as UTF-8.
