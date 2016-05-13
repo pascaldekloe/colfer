@@ -26,20 +26,24 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+const _ = proto.GoGoProtoPackageIsVersion1
+
 type ProtoBuf struct {
 	Key   int64   `protobuf:"varint,1,req,name=key" json:"key"`
 	Host  string  `protobuf:"bytes,2,req,name=host" json:"host"`
-	Addr  []byte  `protobuf:"bytes,3,opt,name=addr" json:"addr"`
 	Port  int32   `protobuf:"varint,4,req,name=port" json:"port"`
 	Size_ int64   `protobuf:"varint,5,req,name=size" json:"size"`
-	Hash  uint64  `protobuf:"varint,6,req,name=hash" json:"hash"`
+	Hash  uint64  `protobuf:"fixed64,6,req,name=hash" json:"hash"`
 	Ratio float64 `protobuf:"fixed64,7,req,name=ratio" json:"ratio"`
 	Route bool    `protobuf:"varint,8,req,name=route" json:"route"`
 }
 
-func (m *ProtoBuf) Reset()         { *m = ProtoBuf{} }
-func (m *ProtoBuf) String() string { return proto.CompactTextString(m) }
-func (*ProtoBuf) ProtoMessage()    {}
+func (m *ProtoBuf) Reset()                    { *m = ProtoBuf{} }
+func (m *ProtoBuf) String() string            { return proto.CompactTextString(m) }
+func (*ProtoBuf) ProtoMessage()               {}
+func (*ProtoBuf) Descriptor() ([]byte, []int) { return fileDescriptorScheme, []int{0} }
 
 func (m *ProtoBuf) GetKey() int64 {
 	if m != nil {
@@ -53,13 +57,6 @@ func (m *ProtoBuf) GetHost() string {
 		return m.Host
 	}
 	return ""
-}
-
-func (m *ProtoBuf) GetAddr() []byte {
-	if m != nil {
-		return m.Addr
-	}
-	return nil
 }
 
 func (m *ProtoBuf) GetPort() int32 {
@@ -122,21 +119,15 @@ func (m *ProtoBuf) MarshalTo(data []byte) (int, error) {
 	i++
 	i = encodeVarintScheme(data, i, uint64(len(m.Host)))
 	i += copy(data[i:], m.Host)
-	if m.Addr != nil {
-		data[i] = 0x1a
-		i++
-		i = encodeVarintScheme(data, i, uint64(len(m.Addr)))
-		i += copy(data[i:], m.Addr)
-	}
 	data[i] = 0x20
 	i++
 	i = encodeVarintScheme(data, i, uint64(m.Port))
 	data[i] = 0x28
 	i++
 	i = encodeVarintScheme(data, i, uint64(m.Size_))
-	data[i] = 0x30
+	data[i] = 0x31
 	i++
-	i = encodeVarintScheme(data, i, uint64(m.Hash))
+	i = encodeFixed64Scheme(data, i, uint64(m.Hash))
 	data[i] = 0x39
 	i++
 	i = encodeFixed64Scheme(data, i, uint64(math.Float64bits(float64(m.Ratio))))
@@ -184,13 +175,9 @@ func (m *ProtoBuf) Size() (n int) {
 	n += 1 + sovScheme(uint64(m.Key))
 	l = len(m.Host)
 	n += 1 + l + sovScheme(uint64(l))
-	if m.Addr != nil {
-		l = len(m.Addr)
-		n += 1 + l + sovScheme(uint64(l))
-	}
 	n += 1 + sovScheme(uint64(m.Port))
 	n += 1 + sovScheme(uint64(m.Size_))
-	n += 1 + sovScheme(uint64(m.Hash))
+	n += 9
 	n += 9
 	n += 2
 	return n
@@ -289,37 +276,6 @@ func (m *ProtoBuf) Unmarshal(data []byte) error {
 			m.Host = string(data[iNdEx:postIndex])
 			iNdEx = postIndex
 			hasFields[0] |= uint64(0x00000002)
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addr", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowScheme
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := data[iNdEx]
-				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthScheme
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Addr = append(m.Addr[:0], data[iNdEx:postIndex]...)
-			if m.Addr == nil {
-				m.Addr = []byte{}
-			}
-			iNdEx = postIndex
 		case 4:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Port", wireType)
@@ -361,24 +317,22 @@ func (m *ProtoBuf) Unmarshal(data []byte) error {
 			}
 			hasFields[0] |= uint64(0x00000008)
 		case 6:
-			if wireType != 0 {
+			if wireType != 1 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Hash", wireType)
 			}
 			m.Hash = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowScheme
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := data[iNdEx]
-				iNdEx++
-				m.Hash |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
 			}
+			iNdEx += 8
+			m.Hash = uint64(data[iNdEx-8])
+			m.Hash |= uint64(data[iNdEx-7]) << 8
+			m.Hash |= uint64(data[iNdEx-6]) << 16
+			m.Hash |= uint64(data[iNdEx-5]) << 24
+			m.Hash |= uint64(data[iNdEx-4]) << 32
+			m.Hash |= uint64(data[iNdEx-3]) << 40
+			m.Hash |= uint64(data[iNdEx-2]) << 48
+			m.Hash |= uint64(data[iNdEx-1]) << 56
 			hasFields[0] |= uint64(0x00000010)
 		case 7:
 			if wireType != 1 {
@@ -566,3 +520,20 @@ var (
 	ErrInvalidLengthScheme = fmt.Errorf("proto: negative length found during unmarshaling")
 	ErrIntOverflowScheme   = fmt.Errorf("proto: integer overflow")
 )
+
+var fileDescriptorScheme = []byte{
+	// 202 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x92, 0x2e, 0x49, 0x2d, 0x2e,
+	0x49, 0x49, 0x2c, 0x49, 0xd4, 0x4f, 0x4a, 0xcd, 0x4b, 0xce, 0xd0, 0x2f, 0x4e, 0xce, 0x48, 0xcd,
+	0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x8b, 0x49, 0xe9, 0xa6, 0x67, 0x96,
+	0x64, 0x94, 0x26, 0xe9, 0x25, 0xe7, 0xe7, 0xea, 0xa7, 0xe7, 0xa7, 0xe7, 0xeb, 0x83, 0x65, 0x93,
+	0x4a, 0xd3, 0xc0, 0x3c, 0x30, 0x07, 0xcc, 0x82, 0xe8, 0x52, 0x9a, 0xce, 0xc8, 0xc5, 0x11, 0x00,
+	0x62, 0x39, 0x95, 0xa6, 0x09, 0x09, 0x72, 0x31, 0x67, 0xa7, 0x56, 0x4a, 0x30, 0x2a, 0x30, 0x69,
+	0x30, 0x3b, 0xb1, 0x9c, 0xb8, 0x27, 0xcf, 0x20, 0x24, 0xc4, 0xc5, 0x92, 0x91, 0x5f, 0x5c, 0x22,
+	0xc1, 0x04, 0x14, 0xe3, 0x44, 0x88, 0x15, 0xe4, 0x17, 0x95, 0x48, 0xb0, 0x00, 0xc5, 0x58, 0x11,
+	0x62, 0xc5, 0x99, 0x55, 0xa9, 0x12, 0xac, 0x68, 0x7a, 0x13, 0x8b, 0x33, 0x24, 0xd8, 0x80, 0x62,
+	0x6c, 0x50, 0x31, 0x61, 0x2e, 0xd6, 0xa2, 0xc4, 0x92, 0xcc, 0x7c, 0x09, 0x76, 0xa0, 0x20, 0x23,
+	0x92, 0x60, 0x7e, 0x69, 0x49, 0xaa, 0x04, 0x07, 0x50, 0x90, 0x03, 0x22, 0xe8, 0x24, 0x70, 0xe2,
+	0x91, 0x1c, 0xe3, 0x05, 0x20, 0x7e, 0x00, 0xc4, 0x13, 0x1e, 0xcb, 0x31, 0x00, 0x02, 0x00, 0x00,
+	0xff, 0xff, 0xd9, 0xbb, 0x12, 0xdc, 0xff, 0x00, 0x00, 0x00,
+}

@@ -3,7 +3,6 @@ namespace bench;
 table FlatBuffers {
 	key:long;
 	host:string;
-	addr:[byte];
 	port:int;
 	size:long;
 	hash:ulong;

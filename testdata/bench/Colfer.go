@@ -47,7 +47,6 @@ func (i ColferError) Error() string {
 type Colfer struct {
 	Key	int64
 	Host	string
-	Addr	[]byte
 	Port	int32
 	Size	int64
 	Hash	uint64
@@ -93,10 +92,15 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		i += l
 	}
 
-	if l := len(o.Addr); l != 0 {
-		buf[i] = 2
+	if v := o.Port; v != 0 {
+		x := uint32(v)
+		if v >= 0 {
+			buf[i] = 2
+		} else {
+			x = ^x + 1
+			buf[i] = 2 | 0x80
+		}
 		i++
-		x := uint(l)
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -104,12 +108,10 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		copy(buf[i:], o.Addr)
-		i += l
 	}
 
-	if v := o.Port; v != 0 {
-		x := uint32(v)
+	if v := o.Size; v != 0 {
+		x := uint64(v)
 		if v >= 0 {
 			buf[i] = 3
 		} else {
@@ -126,26 +128,8 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		i++
 	}
 
-	if v := o.Size; v != 0 {
-		x := uint64(v)
-		if v >= 0 {
-			buf[i] = 4
-		} else {
-			x = ^x + 1
-			buf[i] = 4 | 0x80
-		}
-		i++
-		for x >= 0x80 {
-			buf[i] = byte(x | 0x80)
-			x >>= 7
-			i++
-		}
-		buf[i] = byte(x)
-		i++
-	}
-
 	if x := o.Hash; x != 0 {
-		buf[i] = 5
+		buf[i] = 4
 		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
@@ -157,7 +141,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 	}
 
 	if v := o.Ratio; v != 0.0 {
-		buf[i] = 6
+		buf[i] = 5
 		x := math.Float64bits(v)
 		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
 		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
@@ -165,7 +149,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 	}
 
 	if o.Route {
-		buf[i] = 7
+		buf[i] = 6
 		i++
 	}
 
@@ -194,18 +178,6 @@ func (o *Colfer) MarshalLen() (int, error) {
 	if x := len(o.Host); x != 0 {
 		if x > ColferFieldMax {
 			return -1, ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.host exceeds %d bytes", ColferFieldMax))
-		}
-		l += x
-		for x >= 0x80 {
-			x >>= 7
-			l++
-		}
-		l += 2
-	}
-
-	if x := len(o.Addr); x != 0 {
-		if x > ColferFieldMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.addr exceeds %d bytes", ColferFieldMax))
 		}
 		l += x
 		for x >= 0x80 {
@@ -351,41 +323,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 		i = to + 1
 	}
 
-	if header == 2 {
-		var x uint32
-		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
-			}
-			b := data[i]
-			i++
-			if shift == 28 {
-				x |= uint32(b) << 28
-				break
-			}
-			x |= (uint32(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		l := int(x)
-		if l > ColferFieldMax {
-			return ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.addr exceeds %d bytes", ColferFieldMax))
-		}
-
-		to := i + l
-		if to >= len(data) {
-			return io.EOF
-		}
-		v := make([]byte, l)
-		copy(v, data[i:])
-		o.Addr = v
-
-		header = data[to]
-		i = to + 1
-	}
-
-	if header == 3 || header == 3|0x80 {
+	if header == 2 || header == 2|0x80 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if i == len(data) {
@@ -414,7 +352,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 		i++
 	}
 
-	if header == 4 || header == 4|0x80 {
+	if header == 3 || header == 3|0x80 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if i == len(data) {
@@ -443,7 +381,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 		i++
 	}
 
-	if header == 5 {
+	if header == 4 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if i == len(data) {
@@ -469,7 +407,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 		i++
 	}
 
-	if header == 6 {
+	if header == 5 {
 		if i+8 >= len(data) {
 			return io.EOF
 		}
@@ -481,7 +419,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 		i += 9
 	}
 
-	if header == 7 {
+	if header == 6 {
 		o.Route = true
 
 		if i == len(data) {

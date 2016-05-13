@@ -3,7 +3,6 @@ package bench
 type Colfer struct {
 	key	int64
 	host	text
-	addr	binary
 	port	int32
 	size	int64
 	hash	uint64
