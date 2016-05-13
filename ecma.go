@@ -127,19 +127,38 @@ const ecmaMarshal = `	// Serializes the object into an Uint8Array.
 		}
 <:else if eq .Type "uint32":>
 		if (o.<:.Name:>) {
-			if (o.<:.Name:> > 4294967295)
-				throw 'colfer: field "<:.Name:>" overflow: ' + o.<:.Name:>;
-			var seg = [<:.Index:>];
-			if (o.<:.Name:> > Number.MAX_SAFE_INTEGER) throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			encodeVarint(seg, o.<:.Name:>);
-			segs.push(seg);
+			if (o.<:.Name:> > 4294967295 || o.<:.Name:> < 0)
+				throw 'colfer: field <:.Name:> out of reach: ' + o.<:.Name:>;
+			if (o.<:.Name:> < 0x200000) {
+				var seg = [<:.Index:>];
+				encodeVarint(seg, o.<:.Name:>);
+				segs.push(seg);
+			} else {
+				var bytes = new Uint8Array(5);
+				bytes[0] = <:.Index:> | 128;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, o.<:.Name:>);
+				segs.push(bytes)
+			}
 		}
 <:else if eq .Type "uint64":>
 		if (o.<:.Name:>) {
-			var seg = [<:.Index:>];
-			if (o.<:.Name:> > Number.MAX_SAFE_INTEGER) throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			encodeVarint(seg, o.<:.Name:>);
-			segs.push(seg);
+			if (o.<:.Name:> < 0)
+				throw 'colfer: field <:.Name:> out of reach: ' + o.<:.Name:>;
+			if (o.<:.Name:> > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
+			if (o.<:.Name:> < 0x2000000000000) {
+				var seg = [<:.Index:>];
+				encodeVarint(seg, o.<:.Name:>);
+				segs.push(seg);
+			} else {
+				var bytes = new Uint8Array(9);
+				bytes[0] = <:.Index:> | 128;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, o.<:.Name:> / 0x100000000);
+				view.setUint32(5, o.<:.Name:> % 0x100000000);
+				segs.push(bytes)
+			}
 		}
 <:else if eq .Type "int32":>
 		if (o.<:.Name:>) {
@@ -199,8 +218,8 @@ const ecmaMarshal = `	// Serializes the object into an Uint8Array.
 			var bytes = new Uint8Array((ns) ? 13 : 9);
 			bytes[0] = <:.Index:>;
 			var view = new DataView(bytes.buffer);
-			view.setUint32(1, s / Math.pow(2, 32));
-			view.setUint32(5, s % Math.pow(2, 32));
+			view.setUint32(1, s / 0x100000000);
+			view.setUint32(5, s % 0x100000000);
 			if (ns) {
 				bytes[0] |= 128;
 				view.setUint32(9, ns);
@@ -298,12 +317,27 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 			if (x < 0) throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
 			o.<:.Name:> = x;
 			readHeader();
+		} else if (header == (<:.Index:> | 128)) {
+			if (i + 4 > data.length) throw EOF;
+			o.<:.Name:> = new DataView(data.buffer).getUint32(i);
+			i += 4;
+			readHeader();
 		}
 <:else if eq .Type "uint64":>
 		if (header == <:.Index:>) {
 			var x = readVarint();
 			if (x < 0) throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
 			o.<:.Name:> = x;
+			readHeader();
+		} else if (header == (<:.Index:> | 128)) {
+			if (i + 8 > data.length) throw EOF;
+			var view = new DataView(data.buffer);
+			var x = view.getUint32(i) * 0x100000000;
+			x += view.getUint32(i + 4);
+			if (x > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
+			o.<:.Name:> = x;
+			i += 8;
 			readHeader();
 		}
 <:else if eq .Type "int32":>
@@ -349,7 +383,7 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 		if (header == <:.Index:>) {
 			if (i + 8 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * Math.pow(2, 32);
+			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
 			if (ms > Number.MAX_SAFE_INTEGER)
@@ -361,7 +395,7 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 12 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * Math.pow(2, 32);
+			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
 			if (ms > Number.MAX_SAFE_INTEGER)

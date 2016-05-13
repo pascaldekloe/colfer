@@ -162,7 +162,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	 */
 	private static void putVarint(ByteBuffer buf, long x) {
 		boolean includeLast = x >= 0;
-		while ((x & 0xffffffffffffff80L) != 0) {
+		while ((x & ~0x7f) != 0) {
 			buf.put((byte) (x | 0x80));
 			x >>>= 7;
 		}
@@ -223,10 +223,25 @@ const javaMarshal = `	/**
 		if (this.<:.Name:>) {
 			buf.put((byte) <:.Index:>);
 		}
-<:else if eq .Type "uint32" "uint64":>
+<:else if eq .Type "uint32":>
 		if (this.<:.Name:> != 0) {
-			buf.put((byte) <:.Index:>);
-			putVarint(buf, this.<:.Name:>);
+			if ((this.<:.Name:> & ~((1 << 21) - 1)) != 0) {
+				buf.put((byte) (<:.Index:> | 0x80));
+				buf.putInt(this.<:.Name:>);
+			} else {
+				buf.put((byte) <:.Index:>);
+				putVarint(buf, this.<:.Name:>);
+			}
+		}
+<:else if eq .Type "uint64":>
+		if (this.<:.Name:> != 0) {
+			if ((this.<:.Name:> & ~((1 << 49) - 1)) != 0) {
+				buf.put((byte) (<:.Index:> | 0x80));
+				buf.putLong(this.<:.Name:>);
+			} else {
+				buf.put((byte) <:.Index:>);
+				putVarint(buf, this.<:.Name:>);
+			}
 		}
 <:else if eq .Type "int32":>
 		if (this.<:.Name:> != 0) {
@@ -332,10 +347,16 @@ const javaUnmarshal = `	/**
 		if (header == (byte) <:.Index:>) {
 			this.<:.Name:> = getVarint32(buf);
 			header = buf.get();
+		} else if (header == (byte) (<:.Index:> | 0x80)) {
+			this.<:.Name:> = buf.getInt();
+			header = buf.get();
 		}
 <:else if eq .Type "uint64":>
 		if (header == (byte) <:.Index:>) {
 			this.<:.Name:> = getVarint64(buf);
+			header = buf.get();
+		} else if (header == (byte) (<:.Index:> | 0x80)) {
+			this.<:.Name:> = buf.getLong();
 			header = buf.get();
 		}
 <:else if eq .Type "int32":>

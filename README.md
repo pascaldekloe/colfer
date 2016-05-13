@@ -173,7 +173,7 @@ renamed to clearly discourage it's use.
 
 The following changes are backward compatible.
 * Adding new fields to the end of Colfer structs
-* Raising the bit size (which is actually just a limit) of integers
+* Raising the bit size (which is actually just a limit) of signed integers
 
 
 
@@ -202,8 +202,8 @@ significant bit is used as a *flag*.
 Boolean occurrences set the value to `true`.
 
 Integers are encoded as varints. The header flag indicates negative for signed
-types. The tenth byte for 64-bit integers is skipped for encoding since it's
-value is fixed to `0x01`.
+types and fixed size for unsigned types. The tenth byte for 64-bit integers is
+skipped for encoding since it's value is fixed to `0x01`.
 
 Floating points are encoded conform IEEE 754.
 

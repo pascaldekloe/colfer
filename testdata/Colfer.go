@@ -68,8 +68,13 @@ func (o *O) MarshalTo(buf []byte) int {
 	}
 
 	if x := o.U32; x != 0 {
-		buf[i] = 1
-		i++
+		if x >= 1<<21 {
+			buf[i] = 1 | 0x80
+			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+			i += 5
+		} else {
+			buf[i] = 1
+			i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -77,11 +82,18 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
+		}
 	}
 
 	if x := o.U64; x != 0 {
-		buf[i] = 2
-		i++
+		if x >= 1<<49 {
+			buf[i] = 2 | 0x80
+			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+			buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+			i += 9
+		} else {
+			buf[i] = 2
+			i++
 		for n := 0; n < 8 && x >= 0x80; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -89,6 +101,7 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
+		}
 	}
 
 	if v := o.I32; v != 0 {
@@ -228,19 +241,27 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := o.U32; x != 0 {
+		if x >= 1<<21 {
+			l += 5
+		} else {
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
+		}
 	}
 
 	if x := o.U64; x != 0 {
+		if x >= 1<<49 {
+			l += 9
+		} else {
 		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
 		l += 2
+		}
 	}
 
 	if v := o.I32; v != 0 {
@@ -397,6 +418,13 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		header = data[i]
 		i++
+	} else if header == 1|0x80 {
+		if i+4 >= len(data) {
+			return io.EOF
+		}
+		o.U32 = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
+		header = data[i+4]
+		i += 5
 	}
 
 	if header == 2 {
@@ -420,6 +448,13 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		header = data[i]
 		i++
+	} else if header == 2|0x80 {
+		if i+8 >= len(data) {
+			return io.EOF
+		}
+		o.U64 = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
+		header = data[i+8]
+		i += 9
 	}
 
 	if header == 3 || header == 3|0x80 {

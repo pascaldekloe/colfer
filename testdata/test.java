@@ -20,9 +20,9 @@ public class test {
 		newCase(goldenCases, "7f");
 		newCase(goldenCases, "007f").b = true;
 		newCase(goldenCases, "01017f").u32 = 1;
-		newCase(goldenCases, "01ffffffff0f7f").u32 = -1;
+		newCase(goldenCases, "81ffffffff7f").u32 = -1;
 		newCase(goldenCases, "02017f").u64 = 1;
-		newCase(goldenCases, "02ffffffffffffffffff7f").u64 = -1;
+		newCase(goldenCases, "82ffffffffffffffff7f").u64 = -1;
 		newCase(goldenCases, "03017f").i32 = 1;
 		newCase(goldenCases, "83017f").i32 = -1;
 		newCase(goldenCases, "03ffffffff077f").i32 = Integer.MAX_VALUE;

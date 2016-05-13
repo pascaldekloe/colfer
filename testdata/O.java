@@ -55,13 +55,23 @@ public class O implements java.io.Serializable {
 		}
 
 		if (this.u32 != 0) {
-			buf.put((byte) 1);
-			putVarint(buf, this.u32);
+			if ((this.u32 & ~((1 << 21) - 1)) != 0) {
+				buf.put((byte) (1 | 0x80));
+				buf.putInt(this.u32);
+			} else {
+				buf.put((byte) 1);
+				putVarint(buf, this.u32);
+			}
 		}
 
 		if (this.u64 != 0) {
-			buf.put((byte) 2);
-			putVarint(buf, this.u64);
+			if ((this.u64 & ~((1 << 49) - 1)) != 0) {
+				buf.put((byte) (2 | 0x80));
+				buf.putLong(this.u64);
+			} else {
+				buf.put((byte) 2);
+				putVarint(buf, this.u64);
+			}
 		}
 
 		if (this.i32 != 0) {
@@ -166,10 +176,16 @@ public class O implements java.io.Serializable {
 		if (header == (byte) 1) {
 			this.u32 = getVarint32(buf);
 			header = buf.get();
+		} else if (header == (byte) (1 | 0x80)) {
+			this.u32 = buf.getInt();
+			header = buf.get();
 		}
 
 		if (header == (byte) 2) {
 			this.u64 = getVarint64(buf);
+			header = buf.get();
+		} else if (header == (byte) (2 | 0x80)) {
+			this.u64 = buf.getLong();
 			header = buf.get();
 		}
 
@@ -389,7 +405,7 @@ public class O implements java.io.Serializable {
 	 */
 	private static void putVarint(ByteBuffer buf, long x) {
 		boolean includeLast = x >= 0;
-		while ((x & 0xffffffffffffff80L) != 0) {
+		while ((x & ~0x7f) != 0) {
 			buf.put((byte) (x | 0x80));
 			x >>>= 7;
 		}

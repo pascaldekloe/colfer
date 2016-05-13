@@ -19,19 +19,38 @@ var testdata = new function() {
 		}
 
 		if (o.u32) {
-			if (o.u32 > 4294967295)
-				throw 'colfer: field "u32" overflow: ' + o.u32;
-			var seg = [1];
-			if (o.u32 > Number.MAX_SAFE_INTEGER) throw 'colfer: field u32 exceeds Number.MAX_SAFE_INTEGER';
-			encodeVarint(seg, o.u32);
-			segs.push(seg);
+			if (o.u32 > 4294967295 || o.u32 < 0)
+				throw 'colfer: field u32 out of reach: ' + o.u32;
+			if (o.u32 < 0x200000) {
+				var seg = [1];
+				encodeVarint(seg, o.u32);
+				segs.push(seg);
+			} else {
+				var bytes = new Uint8Array(5);
+				bytes[0] = 1 | 128;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, o.u32);
+				segs.push(bytes)
+			}
 		}
 
 		if (o.u64) {
-			var seg = [2];
-			if (o.u64 > Number.MAX_SAFE_INTEGER) throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
-			encodeVarint(seg, o.u64);
-			segs.push(seg);
+			if (o.u64 < 0)
+				throw 'colfer: field u64 out of reach: ' + o.u64;
+			if (o.u64 > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
+			if (o.u64 < 0x2000000000000) {
+				var seg = [2];
+				encodeVarint(seg, o.u64);
+				segs.push(seg);
+			} else {
+				var bytes = new Uint8Array(9);
+				bytes[0] = 2 | 128;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, o.u64 / 0x100000000);
+				view.setUint32(5, o.u64 % 0x100000000);
+				segs.push(bytes)
+			}
 		}
 
 		if (o.i32) {
@@ -91,8 +110,8 @@ var testdata = new function() {
 			var bytes = new Uint8Array((ns) ? 13 : 9);
 			bytes[0] = 7;
 			var view = new DataView(bytes.buffer);
-			view.setUint32(1, s / Math.pow(2, 32));
-			view.setUint32(5, s % Math.pow(2, 32));
+			view.setUint32(1, s / 0x100000000);
+			view.setUint32(5, s % 0x100000000);
 			if (ns) {
 				bytes[0] |= 128;
 				view.setUint32(9, ns);
@@ -189,12 +208,27 @@ var testdata = new function() {
 			if (x < 0) throw 'colfer: field u32 exceeds Number.MAX_SAFE_INTEGER';
 			o.u32 = x;
 			readHeader();
+		} else if (header == (1 | 128)) {
+			if (i + 4 > data.length) throw EOF;
+			o.u32 = new DataView(data.buffer).getUint32(i);
+			i += 4;
+			readHeader();
 		}
 
 		if (header == 2) {
 			var x = readVarint();
 			if (x < 0) throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
 			o.u64 = x;
+			readHeader();
+		} else if (header == (2 | 128)) {
+			if (i + 8 > data.length) throw EOF;
+			var view = new DataView(data.buffer);
+			var x = view.getUint32(i) * 0x100000000;
+			x += view.getUint32(i + 4);
+			if (x > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
+			o.u64 = x;
+			i += 8;
 			readHeader();
 		}
 
@@ -240,7 +274,7 @@ var testdata = new function() {
 		if (header == 7) {
 			if (i + 8 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * Math.pow(2, 32);
+			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
 			if (ms > Number.MAX_SAFE_INTEGER)
@@ -252,7 +286,7 @@ var testdata = new function() {
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
 			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * Math.pow(2, 32);
+			var ms = view.getUint32(i) * 0x100000000;
 			ms += view.getUint32(i + 4);
 			ms *= 1000;
 			if (ms > Number.MAX_SAFE_INTEGER)
