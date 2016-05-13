@@ -17,9 +17,6 @@ public class O implements java.io.Serializable {
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
 
-	/** The upper limit for text and binary byte sizes. */
-	public static int colferFieldMax = 1024 * 1024;
-
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = 64 * 1024;
 
@@ -115,19 +112,13 @@ public class O implements java.io.Serializable {
 		if (! this.s.isEmpty()) {
 			ByteBuffer bytes = this._utf8.encode(this.s);
 			buf.put((byte) 8);
-			int length = bytes.limit();
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field testdata.o.s exceeds %d bytes", colferFieldMax));
-			putVarint(buf, length);
+			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 
 		if (this.a.length != 0) {
 			buf.put((byte) 9);
-			int length = this.a.length;
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field testdata.o.a exceeds %d bytes", colferFieldMax));
-			putVarint(buf, length);
+			putVarint(buf, this.a.length);
 			buf.put(this.a);
 		}
 
@@ -220,20 +211,14 @@ public class O implements java.io.Serializable {
 		}
 
 		if (header == (byte) 8) {
-			int length = getVarint32(buf);
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field testdata.o.s exceeds %d bytes", colferFieldMax));
-			ByteBuffer blob = ByteBuffer.allocate(length);
+			ByteBuffer blob = ByteBuffer.allocate(getVarint32(buf));
 			buf.get(blob.array());
 			this.s = this._utf8.decode(blob).toString();
 			header = buf.get();
 		}
 
 		if (header == (byte) 9) {
-			int length = getVarint32(buf);
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field testdata.o.a exceeds %d bytes", colferFieldMax));
-			this.a = new byte[length];
+			this.a = new byte[getVarint32(buf)];
 			buf.get(this.a);
 			header = buf.get();
 		}

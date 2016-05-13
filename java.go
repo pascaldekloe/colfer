@@ -88,9 +88,6 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
 
-	/** The upper limit for text and binary byte sizes. */
-	public static int colferFieldMax = 1024 * 1024;
-
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = 64 * 1024;
 
@@ -280,19 +277,13 @@ const javaMarshal = `	/**
 		if (! this.<:.Name:>.isEmpty()) {
 			ByteBuffer bytes = this._utf8.encode(this.<:.Name:>);
 			buf.put((byte) <:.Index:>);
-			int length = bytes.limit();
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field <:.String:> exceeds %d bytes", colferFieldMax));
-			putVarint(buf, length);
+			putVarint(buf, bytes.limit());
 			buf.put(bytes);
 		}
 <:else if eq .Type "binary":>
 		if (this.<:.Name:>.length != 0) {
 			buf.put((byte) <:.Index:>);
-			int length = this.<:.Name:>.length;
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field <:.String:> exceeds %d bytes", colferFieldMax));
-			putVarint(buf, length);
+			putVarint(buf, this.<:.Name:>.length);
 			buf.put(this.<:.Name:>);
 		}
 <:else if .TypeArray:>
@@ -386,20 +377,14 @@ const javaUnmarshal = `	/**
 		}
 <:else if eq .Type "text":>
 		if (header == (byte) <:.Index:>) {
-			int length = getVarint32(buf);
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field <:.String:> exceeds %d bytes", colferFieldMax));
-			ByteBuffer blob = ByteBuffer.allocate(length);
+			ByteBuffer blob = ByteBuffer.allocate(getVarint32(buf));
 			buf.get(blob.array());
 			this.<:.Name:> = this._utf8.decode(blob).toString();
 			header = buf.get();
 		}
 <:else if eq .Type "binary":>
 		if (header == (byte) <:.Index:>) {
-			int length = getVarint32(buf);
-			if (length > colferFieldMax)
-				throw new InputMismatchException(format("colfer: field <:.String:> exceeds %d bytes", colferFieldMax));
-			this.<:.Name:> = new byte[length];
+			this.<:.Name:> = new byte[getVarint32(buf)];
 			buf.get(this.<:.Name:>);
 			header = buf.get();
 		}

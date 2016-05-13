@@ -18,9 +18,6 @@ var (
 	// ColferSizeMax is the upper limit for serial byte sizes.
 	ColferSizeMax = 16 * 1024 * 1024
 
-	// ColferFieldMax is the upper limit for text and binary byte sizes.
-	ColferFieldMax = 1024 * 1024
-
 	// ColferListMax is the upper limit for the number of elements in a list.
 	ColferListMax = 64 * 1024
 )
@@ -176,9 +173,6 @@ func (o *Colfer) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.Host); x != 0 {
-		if x > ColferFieldMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.host exceeds %d bytes", ColferFieldMax))
-		}
 		l += x
 		for x >= 0x80 {
 			x >>= 7
@@ -302,12 +296,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			x |= (uint32(b) & 0x7f) << shift
 		}
-		l := int(x)
-		if l > ColferFieldMax {
-			return ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.host exceeds %d bytes", ColferFieldMax))
-		}
-
-		to := i + l
+		to := i + int(x)
 		if to >= len(data) {
 			return io.EOF
 		}

@@ -93,9 +93,6 @@ var (
 	// ColferSizeMax is the upper limit for serial byte sizes.
 	ColferSizeMax = 16 * 1024 * 1024
 
-	// ColferFieldMax is the upper limit for text and binary byte sizes.
-	ColferFieldMax = 1024 * 1024
-
 	// ColferListMax is the upper limit for the number of elements in a list.
 	ColferListMax = 64 * 1024
 )
@@ -336,9 +333,6 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "text" "binary":>
 	if x := len(o.<:.NameTitle:>); x != 0 {
-		if x > ColferFieldMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
-		}
 		l += x
 <:template "marshal-varint-len" .:>
 	}
@@ -482,12 +476,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "text":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
-		l := int(x)
-		if l > ColferFieldMax {
-			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
-		}
-
-		to := i + l
+		to := i + int(x)
 		if to >= len(data) {
 			return io.EOF
 		}
@@ -500,10 +489,6 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
 		l := int(x)
-		if l > ColferFieldMax {
-			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d bytes", ColferFieldMax))
-		}
-
 		to := i + l
 		if to >= len(data) {
 			return io.EOF

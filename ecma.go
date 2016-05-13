@@ -38,9 +38,6 @@ var <:.NameNative:> = new function() {
 	// The upper limit for serial byte sizes.
 	var colferSizeMax = 16 * 1024 * 1024;
 
-	// The upper limit for text and binary byte sizes.
-	var colferFieldMax = 1024 * 1024;
-
 	// The upper limit for the number of elements in a list.
 	var colferListMax = 64 * 1024;
 <:range .Structs:>
@@ -213,7 +210,6 @@ const ecmaMarshal = `	// Serializes the object into an Uint8Array.
 <:else if eq .Type "text":>
 		if (o.<:.Name:>) {
 			var utf = encodeUTF8(o.<:.Name:>);
-			if (utf.length > colferFieldMax) throw 'colfer: field <:.Name:> byte size exceeds colferFieldMax';
 			var seg = [<:.Index:>];
 			encodeVarint(seg, utf.length);
 			segs.push(seg);
@@ -221,7 +217,6 @@ const ecmaMarshal = `	// Serializes the object into an Uint8Array.
 		}
 <:else if eq .Type "binary":>
 		if (o.<:.Name:> && o.<:.Name:>.length) {
-			if (o.<:.Name:>.length > colferFieldMax) throw 'colfer: field <:.Name:> length colferFieldMax';
 			var seg = [<:.Index:>];
 			encodeVarint(seg, o.<:.Name:>.length);
 			segs.push(seg);
@@ -383,7 +378,6 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 		if (header == <:.Index:>) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
-			else if (length > colferFieldMax) throw 'colfer: field <:.Name:> byte size exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.<:.Name:> = decodeUTF8(data.subarray(i, to));
@@ -394,7 +388,6 @@ const ecmaUnmarshal = `	// Deserializes an object from an Uint8Array.
 		if (header == <:.Index:>) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
-			else if (length > colferFieldMax) throw 'colfer: field <:.Name:> length exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.<:.Name:> = data.subarray(i, to);

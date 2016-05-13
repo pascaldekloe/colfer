@@ -6,9 +6,6 @@ var testdata = new function() {
 	// The upper limit for serial byte sizes.
 	var colferSizeMax = 16 * 1024 * 1024;
 
-	// The upper limit for text and binary byte sizes.
-	var colferFieldMax = 1024 * 1024;
-
 	// The upper limit for the number of elements in a list.
 	var colferListMax = 64 * 1024;
 
@@ -105,7 +102,6 @@ var testdata = new function() {
 
 		if (o.s) {
 			var utf = encodeUTF8(o.s);
-			if (utf.length > colferFieldMax) throw 'colfer: field s byte size exceeds colferFieldMax';
 			var seg = [8];
 			encodeVarint(seg, utf.length);
 			segs.push(seg);
@@ -113,7 +109,6 @@ var testdata = new function() {
 		}
 
 		if (o.a && o.a.length) {
-			if (o.a.length > colferFieldMax) throw 'colfer: field a length colferFieldMax';
 			var seg = [9];
 			encodeVarint(seg, o.a.length);
 			segs.push(seg);
@@ -274,7 +269,6 @@ var testdata = new function() {
 		if (header == 8) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field s length exceeds Number.MAX_SAFE_INTEGER';
-			else if (length > colferFieldMax) throw 'colfer: field s byte size exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.s = decodeUTF8(data.subarray(i, to));
@@ -285,7 +279,6 @@ var testdata = new function() {
 		if (header == 9) {
 			var length = readVarint();
 			if (length < 0) throw 'colfer: field a length exceeds Number.MAX_SAFE_INTEGER';
-			else if (length > colferFieldMax) throw 'colfer: field a length exceeds colferFieldMax';
 			var to = i + length;
 			if (to > data.length) throw EOF;
 			o.a = data.subarray(i, to);
