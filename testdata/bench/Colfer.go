@@ -68,7 +68,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 			buf[i] = 0 | 0x80
 		}
 		i++
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -119,7 +119,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 			buf[i] = 3 | 0x80
 		}
 		i++
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -131,7 +131,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 	if x := o.Hash; x != 0 {
 		buf[i] = 4
 		i++
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -168,7 +168,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 		if v < 0 {
 			x = ^x + 1
 		}
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
@@ -204,7 +204,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 		if v < 0 {
 			x = ^x + 1
 		}
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
@@ -212,7 +212,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 	}
 
 	if x := o.Hash; x != 0 {
-		for x >= 0x80 {
+		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
@@ -270,14 +270,11 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 63 {
-				x |= 1 << 63
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
 				break
 			}
 			x |= (uint64(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}
 		if header&0x80 != 0 {
 			x = ^x + 1
@@ -299,14 +296,11 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 {
-				x |= uint32(b) << 28
+			if shift == 28 || b < 0x80 {
+				x |= uint32(b) << shift
 				break
 			}
 			x |= (uint32(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}
 		l := int(x)
 		if l > ColferFieldMax {
@@ -331,14 +325,11 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 {
-				x |= uint32(b) << 28
+			if shift == 28 || b < 0x80 {
+				x |= uint32(b) << shift
 				break
 			}
 			x |= (uint32(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}
 		if header&0x80 != 0 {
 			x = ^x + 1
@@ -360,14 +351,11 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 63 {
-				x |= 1 << 63
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
 				break
 			}
 			x |= (uint64(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}
 		if header&0x80 != 0 {
 			x = ^x + 1
@@ -389,14 +377,11 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 63 {
-				x |= 1 << 63
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
 				break
 			}
 			x |= (uint64(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}
 		o.Hash = x
 

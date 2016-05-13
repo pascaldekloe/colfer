@@ -385,7 +385,7 @@ public class O implements java.io.Serializable {
 	}
 
 	/**
-	 * Serializes an integer.
+	 * Serializes a 32-bit integer.
 	 * @param buf the data destination.
 	 * @param x the value.
 	 */
@@ -398,16 +398,17 @@ public class O implements java.io.Serializable {
 	}
 
 	/**
-	 * Serializes an integer.
+	 * Serializes a 64-bit integer.
 	 * @param buf the data destination.
 	 * @param x the value.
 	 */
 	private static void putVarint(ByteBuffer buf, long x) {
+		boolean includeLast = x >= 0;
 		while ((x & 0xffffffffffffff80L) != 0) {
 			buf.put((byte) (x | 0x80));
 			x >>>= 7;
 		}
-		buf.put((byte) x);
+		if (includeLast) buf.put((byte) x);
 	}
 
 	/**
@@ -417,14 +418,14 @@ public class O implements java.io.Serializable {
 	 */
 	private static int getVarint32(ByteBuffer buf) {
 		int x = 0;
-		for (int shift = 0; shift != 28; shift += 7) {
+		for (int shift = 0; true; shift += 7) {
 			int b = buf.get() & 0xff;
+			if (shift == 28 || b < 0x80) {
+				x |= b << shift;
+				return x;
+			}
 			x |= (b & 0x7f) << shift;
-			if (b < 0x80) return x;
 		}
-		long b = buf.get() & 0xffL;
-		x |= b << 28;
-		return x;
 	}
 
 	/**
@@ -434,14 +435,14 @@ public class O implements java.io.Serializable {
 	 */
 	private static long getVarint64(ByteBuffer buf) {
 		long x = 0;
-		for (int shift = 0; shift != 63; shift += 7) {
+		for (int shift = 0; true; shift += 7) {
 			long b = buf.get() & 0xffL;
+			if (shift == 56 || b < 0x80) {
+				x |= b << shift;
+				return x;
+			}
 			x |= (b & 0x7f) << shift;
-			if (b < 0x80) return x;
 		}
-		buf.get();
-		x |= 1L << 63;
-		return x;
 	}
 
 }

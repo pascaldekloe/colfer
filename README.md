@@ -202,7 +202,8 @@ significant bit is used as a *flag*.
 Boolean occurrences set the value to `true`.
 
 Integers are encoded as varints. The header flag indicates negative for signed
-types.
+types. The tenth byte for 64-bit integers is skipped for encoding since it's
+value is fixed to `0x01`.
 
 Floating points are encoded conform IEEE 754.
 

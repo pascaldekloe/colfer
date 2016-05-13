@@ -14,7 +14,9 @@ func Generate(basedir string, packages []*Package) error {
 	template.Must(t.New("marshal-field").Parse(goMarshalField))
 	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
 	template.Must(t.New("marshal-varint").Parse(goMarshalVarint))
+	template.Must(t.New("marshal-varint64").Parse(goMarshalVarint64))
 	template.Must(t.New("marshal-varint-len").Parse(goMarshalVarintLen))
+	template.Must(t.New("marshal-varint64-len").Parse(goMarshalVarint64Len))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-header").Parse(goUnmarshalHeader))
 	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
@@ -202,7 +204,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 	if x := o.<:.NameTitle:>; x != 0 {
 		buf[i] = <:.Index:>
 		i++
-<:template "marshal-varint":>
+<:template "marshal-varint64":>
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -226,7 +228,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 			buf[i] = <:.Index:> | 0x80
 		}
 		i++
-<:template "marshal-varint":>
+<:template "marshal-varint64":>
 	}
 <:else if eq .Type "float32":>
 	if v := o.<:.NameTitle:>; v != 0.0 {
@@ -298,7 +300,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "uint64":>
 	if x := o.<:.NameTitle:>; x != 0 {
-<:template "marshal-varint-len" .:>
+<:template "marshal-varint64-len" .:>
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -314,7 +316,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		if v < 0 {
 			x = ^x + 1
 		}
-<:template "marshal-varint-len" .:>
+<:template "marshal-varint64-len" .:>
 	}
 <:else if eq .Type "float32":>
 	if o.<:.NameTitle:> != 0.0 {
@@ -376,7 +378,21 @@ const goMarshalVarint = `		for x >= 0x80 {
 		buf[i] = byte(x)
 		i++`
 
+const goMarshalVarint64 = `		for n := 0; n < 8 && x >= 0x80; n++ {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++`
+
 const goMarshalVarintLen = `		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2`
+
+const goMarshalVarint64Len = `		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
@@ -563,14 +579,11 @@ const goUnmarshalVarint32 = `		var x uint32
 			}
 			b := data[i]
 			i++
-			if shift == 28 {
-				x |= uint32(b) << 28
+			if shift == 28 || b < 0x80 {
+				x |= uint32(b) << shift
 				break
 			}
 			x |= (uint32(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}`
 
 const goUnmarshalVarint64 = `		var x uint64
@@ -580,12 +593,9 @@ const goUnmarshalVarint64 = `		var x uint64
 			}
 			b := data[i]
 			i++
-			if shift == 63 {
-				x |= 1 << 63
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
 				break
 			}
 			x |= (uint64(b) & 0x7f) << shift
-			if b < 0x80 {
-				break
-			}
 		}`
