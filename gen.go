@@ -192,29 +192,25 @@ const goMarshalField = `<:if eq .Type "bool":>
 		i++
 	}
 <:else if eq .Type "uint32":>
-	if x := o.<:.NameTitle:>; x != 0 {
-		if x >= 1<<21 {
-			buf[i] = <:.Index:> | 0x80
-			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-			i += 5
-		} else {
-			buf[i] = <:.Index:>
-			i++
+	if x := o.<:.NameTitle:>; x >= 1<<21 {
+		buf[i] = <:.Index:> | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 5
+	} else if x != 0 {
+		buf[i] = <:.Index:>
+		i++
 <:template "marshal-varint":>
-		}
 	}
 <:else if eq .Type "uint64":>
-	if x := o.<:.NameTitle:>; x != 0 {
-		if x >= 1<<49 {
-			buf[i] = <:.Index:> | 0x80
-			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-			buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-			i += 9
-		} else {
-			buf[i] = <:.Index:>
-			i++
+	if x := o.<:.NameTitle:>; x >= 1<<49 {
+		buf[i] = <:.Index:> | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 9
+	} else if x != 0 {
+		buf[i] = <:.Index:>
+		i++
 <:template "marshal-varint64":>
-		}
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -307,20 +303,16 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		l++
 	}
 <:else if eq .Type "uint32":>
-	if x := o.<:.NameTitle:>; x != 0 {
-		if x >= 1<<21 {
-			l += 5
-		} else {
+	if x := o.<:.NameTitle:>; x >= 1<<21 {
+		l += 5
+	} else if x != 0 {
 <:template "marshal-varint-len" .:>
-		}
 	}
 <:else if eq .Type "uint64":>
-	if x := o.<:.NameTitle:>; x != 0 {
-		if x >= 1<<49 {
-			l += 9
-		} else {
+	if x := o.<:.NameTitle:>; x >= 1<<49 {
+		l += 9
+	} else if x != 0 {
 <:template "marshal-varint64-len" .:>
-		}
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -447,21 +439,23 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		i += 9
 	}
 <:else if eq .Type "int32":>
-	if header == <:.Index:> || header == <:.Index:>|0x80 {
+	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
-		if header&0x80 != 0 {
-			x = ^x + 1
-		}
 		o.<:.NameTitle:> = int32(x)
+<:template "unmarshal-header":>
+	} else if header == <:.Index:>|0x80 {
+<:template "unmarshal-varint32":>
+		o.<:.NameTitle:> = int32(^x + 1)
 <:template "unmarshal-header":>
 	}
 <:else if eq .Type "int64":>
-	if header == <:.Index:> || header == <:.Index:>|0x80 {
+	if header == <:.Index:> {
 <:template "unmarshal-varint64":>
-		if header&0x80 != 0 {
-			x = ^x + 1
-		}
 		o.<:.NameTitle:> = int64(x)
+<:template "unmarshal-header":>
+	} else if header == <:.Index:>|0x80 {
+<:template "unmarshal-varint64":>
+		o.<:.NameTitle:> = int64(^x + 1)
 <:template "unmarshal-header":>
 	}
 <:else if eq .Type "float32":>

@@ -67,14 +67,13 @@ func (o *O) MarshalTo(buf []byte) int {
 		i++
 	}
 
-	if x := o.U32; x != 0 {
-		if x >= 1<<21 {
-			buf[i] = 1 | 0x80
-			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-			i += 5
-		} else {
-			buf[i] = 1
-			i++
+	if x := o.U32; x >= 1<<21 {
+		buf[i] = 1 | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 5
+	} else if x != 0 {
+		buf[i] = 1
+		i++
 		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -82,18 +81,16 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		}
 	}
 
-	if x := o.U64; x != 0 {
-		if x >= 1<<49 {
-			buf[i] = 2 | 0x80
-			buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-			buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-			i += 9
-		} else {
-			buf[i] = 2
-			i++
+	if x := o.U64; x >= 1<<49 {
+		buf[i] = 2 | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 9
+	} else if x != 0 {
+		buf[i] = 2
+		i++
 		for n := 0; n < 8 && x >= 0x80; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
@@ -101,7 +98,6 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		}
 	}
 
 	if v := o.I32; v != 0 {
@@ -242,28 +238,24 @@ func (o *O) MarshalLen() (int, error) {
 		l++
 	}
 
-	if x := o.U32; x != 0 {
-		if x >= 1<<21 {
-			l += 5
-		} else {
+	if x := o.U32; x >= 1<<21 {
+		l += 5
+	} else if x != 0 {
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
-		}
 	}
 
-	if x := o.U64; x != 0 {
-		if x >= 1<<49 {
-			l += 9
-		} else {
+	if x := o.U64; x >= 1<<49 {
+		l += 9
+	} else if x != 0 {
 		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
 		l += 2
-		}
 	}
 
 	if v := o.I32; v != 0 {
@@ -459,7 +451,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		i += 9
 	}
 
-	if header == 3 || header == 3|0x80 {
+	if header == 3 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if i == len(data) {
@@ -473,10 +465,28 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			x |= (uint32(b) & 0x7f) << shift
 		}
-		if header&0x80 != 0 {
-			x = ^x + 1
-		}
 		o.I32 = int32(x)
+
+		if i == len(data) {
+			return io.EOF
+		}
+		header = data[i]
+		i++
+	} else if header == 3|0x80 {
+		var x uint32
+		for shift := uint(0); ; shift += 7 {
+			if i == len(data) {
+				return io.EOF
+			}
+			b := data[i]
+			i++
+			if b < 0x80 {
+				x |= uint32(b) << shift
+				break
+			}
+			x |= (uint32(b) & 0x7f) << shift
+		}
+		o.I32 = int32(^x + 1)
 
 		if i == len(data) {
 			return io.EOF
@@ -485,7 +495,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		i++
 	}
 
-	if header == 4 || header == 4|0x80 {
+	if header == 4 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
 			if i == len(data) {
@@ -499,10 +509,28 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			x |= (uint64(b) & 0x7f) << shift
 		}
-		if header&0x80 != 0 {
-			x = ^x + 1
-		}
 		o.I64 = int64(x)
+
+		if i == len(data) {
+			return io.EOF
+		}
+		header = data[i]
+		i++
+	} else if header == 4|0x80 {
+		var x uint64
+		for shift := uint(0); ; shift += 7 {
+			if i == len(data) {
+				return io.EOF
+			}
+			b := data[i]
+			i++
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
+				break
+			}
+			x |= (uint64(b) & 0x7f) << shift
+		}
+		o.I64 = int64(^x + 1)
 
 		if i == len(data) {
 			return io.EOF
