@@ -178,6 +178,22 @@ The following changes are backward compatible.
 
 
 
+## Performance
+
+```
+% go test -bench Reuse
+PASS
+BenchmarkMarshalReuse-4          	30000000	        56.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalProtoBufReuse-4  	20000000	        69.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalFlatBufReuse-4   	 5000000	       398 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse-4        	20000000	        95.8 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalProtoBufReuse-4	10000000	       139 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalFlatBufReuse-4 	10000000	       212 ns/op	      20 B/op	       1 allocs/op
+ok  	github.com/pascaldekloe/colfer	11.508s
+```
+
+
+
 ## Format
 
 Data structures consist of zero or more field *value definitions* followed by a

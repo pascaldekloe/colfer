@@ -407,7 +407,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
@@ -467,7 +467,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
@@ -566,7 +566,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
@@ -590,7 +590,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
@@ -634,7 +634,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}

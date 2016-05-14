@@ -163,7 +163,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is testdata/bench.ColferMax.
+// The error return option is bench.ColferMax.
 func (o *Colfer) MarshalLen() (int, error) {
 	l := 1
 
@@ -239,7 +239,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is testdata/bench.ColferMax.
+// The error return option is bench.ColferMax.
 func (o *Colfer) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -251,7 +251,7 @@ func (o *Colfer) MarshalBinary() (data []byte, err error) {
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, testdata/bench.ColferError, testdata/bench.ColferContinue and testdata/bench.ColferMax.
+// The error return options are io.EOF, bench.ColferError, bench.ColferContinue and bench.ColferMax.
 func (o *Colfer) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
@@ -301,7 +301,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
@@ -325,7 +325,7 @@ func (o *Colfer) UnmarshalBinary(data []byte) error {
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}

@@ -137,7 +137,7 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 <:- range .Fields:><:if .TypeArray:>
 // All nil entries in o.<:.NameTitle:> will be replaced with a new value.
 <:- end:><:end:>
-// The error return option is <:.Pkg.Name:>.ColferMax.
+// The error return option is <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 	l := 1
 <:range .Fields:><:template "marshal-field-len" .:><:end:>
@@ -148,7 +148,7 @@ func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is <:.Pkg.Name:>.ColferMax.
+// The error return option is <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -160,7 +160,7 @@ func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, <:.Pkg.Name:>.ColferError, <:.Pkg.Name:>.ColferContinue and <:.Pkg.Name:>.ColferMax.
+// The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError, <:.Pkg.NameNative:>.ColferContinue and <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 	if len(data) == 0 {
 		return io.EOF
@@ -602,7 +602,7 @@ const goUnmarshalVarint32 = `		var x uint32
 			}
 			b := data[i]
 			i++
-			if shift == 28 || b < 0x80 {
+			if b < 0x80 {
 				x |= uint32(b) << shift
 				break
 			}
