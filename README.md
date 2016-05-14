@@ -181,15 +181,21 @@ The following changes are backward compatible.
 ## Performance
 
 ```
-% go test -bench Reuse
+% go test -bench .
 PASS
-BenchmarkMarshalReuse-4          	30000000	        56.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalProtoBufReuse-4  	20000000	        69.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalFlatBufReuse-4   	 5000000	       398 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse-4        	20000000	        95.8 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalProtoBufReuse-4	10000000	       139 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalFlatBufReuse-4 	10000000	       212 ns/op	      20 B/op	       1 allocs/op
-ok  	github.com/pascaldekloe/colfer	11.508s
+BenchmarkMarshal-4               	10000000	       130 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalProtoBuf-4       	10000000	       137 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalFlatBuf-4        	 1000000	      1344 ns/op	     472 B/op	      12 allocs/op
+BenchmarkUnmarshal-4             	10000000	       162 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalProtoBuf-4     	10000000	       205 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalFlatBuf-4      	 5000000	       266 ns/op	      84 B/op	       2 allocs/op
+BenchmarkMarshalReuse-4          	30000000	        53.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalProtoBufReuse-4  	20000000	        65.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalFlatBufReuse-4   	 5000000	       390 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse-4        	20000000	        97.6 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalProtoBufReuse-4	10000000	       144 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalFlatBufReuse-4 	10000000	       211 ns/op	      20 B/op	       1 allocs/op
+ok  	github.com/pascaldekloe/colfer	21.407s
 ```
 
 

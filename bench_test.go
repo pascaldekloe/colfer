@@ -1,7 +1,6 @@
 package colfer
 
 import (
-	"io/ioutil"
 	"testing"
 
 	flatbuffers "github.com/google/flatbuffers/go"
@@ -41,20 +40,19 @@ func newProtoBufData(tb testing.TB) []*bench.ProtoBuf {
 
 // prevent compiler optimization
 var (
-	holdSerials      [][]byte
-	holdData         []*bench.Colfer
-	holdProtoBufData []*bench.ProtoBuf
+	holdSerial       []byte
+	holdData         *bench.Colfer
+	holdProtoBufData *bench.ProtoBuf
 )
 
 func BenchmarkMarshal(b *testing.B) {
 	testData := newTestData(b)
-	holdSerials = make([][]byte, b.N)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdSerials {
+	for i := b.N; i > 0; i-- {
 		var err error
-		holdSerials[i], err = testData[i%len(testData)].MarshalBinary()
+		holdSerial, err = testData[i%len(testData)].MarshalBinary()
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -63,13 +61,12 @@ func BenchmarkMarshal(b *testing.B) {
 
 func BenchmarkMarshalProtoBuf(b *testing.B) {
 	testData := newProtoBufData(b)
-	holdSerials = make([][]byte, b.N)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdSerials {
+	for i := b.N; i > 0; i-- {
 		var err error
-		holdSerials[i], err = testData[i%len(testData)].Marshal()
+		holdSerial, err = testData[i%len(testData)].Marshal()
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -78,11 +75,10 @@ func BenchmarkMarshalProtoBuf(b *testing.B) {
 
 func BenchmarkMarshalFlatBuf(b *testing.B) {
 	testData := newTestData(b)
-	holdSerials = make([][]byte, b.N)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdSerials {
+	for i := b.N; i > 0; i-- {
 		o := testData[i%len(testData)]
 
 		builder := flatbuffers.NewBuilder(0)
@@ -101,7 +97,7 @@ func BenchmarkMarshalFlatBuf(b *testing.B) {
 		}
 		builder.Finish(bench.FlatBuffersEnd(builder))
 
-		holdSerials[i] = builder.Bytes[builder.Head():]
+		holdSerial = builder.Bytes[builder.Head():]
 	}
 }
 
@@ -109,16 +105,18 @@ func BenchmarkUnmarshal(b *testing.B) {
 	testData := newTestData(b)
 	serials := make([][]byte, len(testData))
 	for i, o := range testData {
-		serials[i], _ = o.MarshalBinary()
+		var err error
+		serials[i], err = o.MarshalBinary()
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
-
-	holdData = make([]*bench.Colfer, b.N)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdData {
+	for i := b.N; i > 0; i-- {
 		o := new(bench.Colfer)
-		holdData[i] = o
+		holdData = o
 
 		err := o.UnmarshalBinary(serials[i%len(serials)])
 		if err != nil {
@@ -138,13 +136,11 @@ func BenchmarkUnmarshalProtoBuf(b *testing.B) {
 		}
 	}
 
-	holdProtoBufData = make([]*bench.ProtoBuf, b.N)
-
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdProtoBufData {
+	for i := b.N; i > 0; i-- {
 		o := new(bench.ProtoBuf)
-		holdProtoBufData[i] = o
+		holdProtoBufData = o
 
 		err := o.Unmarshal(serials[i%len(serials)])
 		if err != nil {
@@ -175,13 +171,12 @@ func BenchmarkUnmarshalFlatBuf(b *testing.B) {
 		serials[i] = builder.FinishedBytes()
 	}
 
-	holdData = make([]*bench.Colfer, b.N)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := range holdData {
+	for i := b.N; i > 0; i-- {
 		o := new(bench.Colfer)
-		holdData[i] = o
+		holdData = o
 
 		bytes := serials[i%len(serials)]
 		buf := new(bench.FlatBuffers)
@@ -214,7 +209,7 @@ func BenchmarkMarshalReuse(b *testing.B) {
 		}
 
 		o.MarshalTo(buf)
-		ioutil.Discard.Write(buf[:l])
+		holdSerial = buf[:l]
 	}
 }
 
@@ -236,7 +231,7 @@ func BenchmarkMarshalProtoBufReuse(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		ioutil.Discard.Write(buf[:l])
+		holdSerial = buf[:l]
 	}
 }
 
@@ -264,8 +259,7 @@ func BenchmarkMarshalFlatBufReuse(b *testing.B) {
 			bench.FlatBuffersAddRoute(builder, 0)
 		}
 		builder.Finish(bench.FlatBuffersEnd(builder))
-
-		ioutil.Discard.Write(builder.Bytes[builder.Head():])
+		holdSerial = builder.Bytes[builder.Head():]
 	}
 }
 
@@ -273,10 +267,15 @@ func BenchmarkUnmarshalReuse(b *testing.B) {
 	testData := newTestData(b)
 	serials := make([][]byte, len(testData))
 	for i, o := range testData {
-		serials[i], _ = o.MarshalBinary()
+		var err error
+		serials[i], err = o.MarshalBinary()
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	o := new(bench.Colfer)
+	holdData = o
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -286,8 +285,6 @@ func BenchmarkUnmarshalReuse(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-
-	holdData = []*bench.Colfer{o}
 }
 
 func BenchmarkUnmarshalProtoBufReuse(b *testing.B) {
@@ -302,6 +299,7 @@ func BenchmarkUnmarshalProtoBufReuse(b *testing.B) {
 	}
 
 	o := new(bench.ProtoBuf)
+	holdProtoBufData = o
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -311,8 +309,6 @@ func BenchmarkUnmarshalProtoBufReuse(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-
-	holdProtoBufData = []*bench.ProtoBuf{o}
 }
 
 func BenchmarkUnmarshalFlatBufReuse(b *testing.B) {
@@ -338,6 +334,7 @@ func BenchmarkUnmarshalFlatBufReuse(b *testing.B) {
 	}
 
 	o := new(bench.Colfer)
+	holdData = o
 	buf := new(bench.FlatBuffers)
 
 	b.ReportAllocs()
@@ -353,5 +350,4 @@ func BenchmarkUnmarshalFlatBufReuse(b *testing.B) {
 		o.Ratio = buf.Ratio()
 		o.Route = buf.Route() == 1
 	}
-	holdData = []*bench.Colfer{o}
 }
