@@ -39,6 +39,7 @@
 	<configuration>
 		<includes>
 			<include>/testdata/test.java</include>
+			<include>/testdata/bench/bench.java</include>
 		</includes>
 	</configuration>
 </plugin>

@@ -198,6 +198,14 @@ BenchmarkUnmarshalFlatBufReuse-4 	10000000	       211 ns/op	      20 B/op	      
 ok  	github.com/pascaldekloe/colfer	21.177s
 ```
 
+For Java the numbers look even better.
+
+```
+Running testdata.bench.bench
+20M unmarshals avg 77ns
+20M marshals avg 60ns
+20M marshals with buffer reuse avg 39ns
+```
 
 
 ## Format

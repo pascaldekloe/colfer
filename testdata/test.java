@@ -5,7 +5,8 @@ import org.junit.Test;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.Instant;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -16,7 +17,7 @@ import static org.junit.Assert.assertNull;
 public class test {
 
 	static Map<String, O> getGoldenCases() {
-		Map<String, O> goldenCases = new HashMap<>();
+		Map<String, O> goldenCases = new LinkedHashMap<>();
 		newCase(goldenCases, "7f");
 		newCase(goldenCases, "007f").b = true;
 		newCase(goldenCases, "01017f").u32 = 1;
@@ -63,12 +64,13 @@ public class test {
 	}
 
 	@Test
-	public void testEncode() {
+	public void testMarshal() {
 		for (Entry<String, O> e : getGoldenCases().entrySet()) {
 			try {
-				ByteBuffer buf = ByteBuffer.allocate(e.getKey().length() / 2);
-				e.getValue().marshal(buf);
-				assertEquals("serial", e.getKey(), toHex(buf.array()));
+				byte[] buf = new byte[e.getKey().length() / 2];
+				int n = e.getValue().marshal(buf, 0);
+				assertEquals("serial", e.getKey(), toHex(buf));
+				assertEquals("write index", n, buf.length);
 			} catch (Exception ex) {
 				assertNull("exception for serial " + e.getKey(), ex);
 			}
@@ -76,12 +78,14 @@ public class test {
 	}
 
 	@Test
-	public void testDecode() {
+	public void testUnmarshal() {
 		for (Entry<String, O> e : getGoldenCases().entrySet()) {
 			try {
 				O o = new O();
-				o.unmarshal(ByteBuffer.wrap(parseHex(e.getKey())));
+				byte[] serial = parseHex(e.getKey());
+				int n = o.unmarshal(serial, 0);
 				assertEquals(e.getKey(), e.getValue(), o);
+				assertEquals("read index", n, serial.length);
 			} catch (Exception ex) {
 				assertNull("exception for serial " + e.getKey(), ex);
 			}
