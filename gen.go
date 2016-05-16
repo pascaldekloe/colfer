@@ -100,18 +100,13 @@ var (
 // ColferMax signals an upper limit breach.
 type ColferMax string
 
+// Error honors the error interface.
 func (m ColferMax) Error() string { return string(m) }
-
-// ColferContinue signals a data continuation as a byte index.
-type ColferContinue int
-
-func (i ColferContinue) Error() string {
-	return fmt.Sprintf("colfer: data continuation at byte %d", i)
-}
 
 // ColferError signals a data mismatch as as a byte index.
 type ColferError int
 
+// Error honors the error interface.
 func (i ColferError) Error() string {
 	return fmt.Sprintf("colfer: unknown header at byte %d", i)
 }
@@ -134,9 +129,6 @@ func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-<:- range .Fields:><:if .TypeArray:>
-// All nil entries in o.<:.NameTitle:> will be replaced with a new value.
-<:- end:><:end:>
 // The error return option is <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 	l := 1
@@ -148,6 +140,9 @@ func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
+<:- range .Fields:><:if .TypeArray:>
+// All nil entries in o.<:.NameTitle:> will be replaced with a new value.
+<:- end:><:end:>
 // The error return option is <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
@@ -159,32 +154,51 @@ func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
 	return data, nil
 }
 
-// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError, <:.Pkg.NameNative:>.ColferContinue and <:.Pkg.NameNative:>.ColferMax.
-func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
-	if len(data) == 0 {
-		return io.EOF
-	}
+// Unmarshal decodes data as Colfer and returns the number of bytes read.
+// The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError and <:.Pkg.NameNative:>.ColferMax.
+func (o *<:.NameTitle:>) Unmarshal(data []byte) (int, error) {
 	if len(data) > ColferSizeMax {
-		err := o.UnmarshalBinary(data[:ColferSizeMax])
+		n, err := o.Unmarshal(data[:ColferSizeMax])
 		if err == io.EOF {
-			return ColferMax(fmt.Sprintf("colfer: struct <:.String:> exceeds %d bytes", ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: struct <:.String:> exceeds %d bytes", ColferSizeMax))
 		}
-		return err
+		return n, err
 	}
 
+	if len(data) == 0 {
+		return 0, io.EOF
+	}
 	header := data[0]
 	i := 1
 <:range .Fields:><:template "unmarshal-field" .:><:end:>
 	if header != 0x7f {
-		return ColferError(i - 1)
+		return 0, ColferError(i - 1)
+	}
+	return i, nil
+}
+
+// ColferTail signals data continuation as a byte index.
+type ColferTail int
+
+// Error honors the error interface.
+func (i ColferTail) Error() string {
+	return fmt.Sprintf("colfer: data continuation at byte %d", i)
+}
+
+// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
+// The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError, <:.Pkg.NameNative:>.ColferTail and <:.Pkg.NameNative:>.ColferMax.
+func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
+	i, err := o.Unmarshal(data)
+	if err != nil {
+		return err
 	}
 	if i != len(data) {
-		return ColferContinue(i)
+		return ColferTail(i)
 	}
 	return nil
 }
 <:end:>`
+
 
 const goMarshalField = `<:if eq .Type "bool":>
 	if o.<:.NameTitle:> {
@@ -357,10 +371,10 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
 		}
 <:template "marshal-varint-len" .:>
-		for vi, v := range o.<:.NameTitle:> {
+		for _, v := range o.<:.NameTitle:> {
 			if v == nil {
-				v = new(<:.TypeNative:>)
-				o.<:.NameTitle:>[vi] = v
+				l++
+				continue
 			}
 			vl, err := v.MarshalLen()
 			if err != nil {
@@ -419,7 +433,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:template "unmarshal-header":>
 	} else if header == <:.Index:>|0x80 {
 		if i+4 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
 		header = data[i+4]
@@ -432,7 +446,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:template "unmarshal-header":>
 	} else if header == <:.Index:>|0x80 {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
 		header = data[i+8]
@@ -461,7 +475,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "float32":>
 	if header == <:.Index:> {
 		if i+4 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
 		o.<:.NameTitle:> = math.Float32frombits(x)
@@ -472,7 +486,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "float64":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -484,7 +498,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "timestamp":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -495,7 +509,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		i += 9
 	} else if header == <:.Index:>|0x80 {
 		if i+12 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -510,7 +524,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:template "unmarshal-varint32":>
 		to := i + int(x)
 		if to >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = string(data[i:to])
 
@@ -523,7 +537,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		l := int(x)
 		to := i + l
 		if to >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		v := make([]byte, l)
 		copy(v, data[i:])
@@ -537,7 +551,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:template "unmarshal-varint32":>
 		l := int(x)
 		if l > ColferListMax {
-			return ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", l, ColferListMax))
 		}
 
 		a := make([]*<:.TypeNative:>, l)
@@ -545,54 +559,48 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			v := new(<:.TypeNative:>)
 			a[ai] = v
 
-			err := v.UnmarshalBinary(data[i:])
-			switch e := err.(type) {
-			case ColferContinue:
-				i += int(e)
-			case nil:
-				return io.EOF
-			default:
-				return err
+			n, err := v.Unmarshal(data[i:])
+			if err != nil {
+				return 0, err
 			}
+			i += n;
 		}
 		o.<:.NameTitle:> = a
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	}
 <:else:>
 	if header == <:.Index:> {
-		v := new(<:.TypeNative:>)
-		err := v.UnmarshalBinary(data[i:])
-		switch e := err.(type) {
-		case ColferContinue:
-			i += int(e)
-		case nil:
-			return io.EOF
-		default:
-			return err
+		o.<:.NameTitle:> = new(<:.TypeNative:>)
+		n, err := o.<:.NameTitle:>.Unmarshal(data[i:])
+		if err != nil {
+			return 0, err
 		}
-		o.<:.NameTitle:> = v
+		i += n;
 
+		if i >= len(data) {
+			return 0, io.EOF
+		}
 		header = data[i]
 		i++
 	}
 <:end:>`
 
 const goUnmarshalHeader = `
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++`
 
 const goUnmarshalVarint32 = `		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -605,8 +613,8 @@ const goUnmarshalVarint32 = `		var x uint32
 
 const goUnmarshalVarint64 = `		var x uint64
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++

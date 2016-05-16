@@ -118,7 +118,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		o := new(bench.Colfer)
 		holdData = o
 
-		err := o.UnmarshalBinary(serials[i%len(serials)])
+		_, err := o.Unmarshal(serials[i%len(serials)])
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -193,7 +193,7 @@ func BenchmarkUnmarshalFlatBuf(b *testing.B) {
 
 func BenchmarkMarshalReuse(b *testing.B) {
 	testData := newTestData(b)
-	var buf []byte
+	buf := make([]byte, bench.ColferSizeMax)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -203,9 +203,6 @@ func BenchmarkMarshalReuse(b *testing.B) {
 		l, err := o.MarshalLen()
 		if err != nil {
 			b.Fatal(err)
-		}
-		if l > len(buf) {
-			buf = make([]byte, l+100)
 		}
 
 		o.MarshalTo(buf)
@@ -280,7 +277,7 @@ func BenchmarkUnmarshalReuse(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := b.N; i > 0; i-- {
-		err := o.UnmarshalBinary(serials[i%len(serials)])
+		_, err := o.Unmarshal(serials[i%len(serials)])
 		if err != nil {
 			b.Fatal(err)
 		}

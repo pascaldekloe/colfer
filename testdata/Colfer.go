@@ -25,18 +25,13 @@ var (
 // ColferMax signals an upper limit breach.
 type ColferMax string
 
+// Error honors the error interface.
 func (m ColferMax) Error() string { return string(m) }
-
-// ColferContinue signals a data continuation as a byte index.
-type ColferContinue int
-
-func (i ColferContinue) Error() string {
-	return fmt.Sprintf("colfer: data continuation at byte %d", i)
-}
 
 // ColferError signals a data mismatch as as a byte index.
 type ColferError int
 
+// Error honors the error interface.
 func (i ColferError) Error() string {
 	return fmt.Sprintf("colfer: unknown header at byte %d", i)
 }
@@ -229,7 +224,6 @@ func (o *O) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// All nil entries in o.Os will be replaced with a new value.
 // The error return option is testdata.ColferMax.
 func (o *O) MarshalLen() (int, error) {
 	l := 1
@@ -333,10 +327,10 @@ func (o *O) MarshalLen() (int, error) {
 			l++
 		}
 		l += 2
-		for vi, v := range o.Os {
+		for _, v := range o.Os {
 			if v == nil {
-				v = new(O)
-				o.Os[vi] = v
+				l++
+				continue
 			}
 			vl, err := v.MarshalLen()
 			if err != nil {
@@ -353,6 +347,7 @@ func (o *O) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
+// All nil entries in o.Os will be replaced with a new value.
 // The error return option is testdata.ColferMax.
 func (o *O) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
@@ -364,28 +359,28 @@ func (o *O) MarshalBinary() (data []byte, err error) {
 	return data, nil
 }
 
-// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, testdata.ColferError, testdata.ColferContinue and testdata.ColferMax.
-func (o *O) UnmarshalBinary(data []byte) error {
-	if len(data) == 0 {
-		return io.EOF
-	}
+// Unmarshal decodes data as Colfer and returns the number of bytes read.
+// The error return options are io.EOF, testdata.ColferError and testdata.ColferMax.
+func (o *O) Unmarshal(data []byte) (int, error) {
 	if len(data) > ColferSizeMax {
-		err := o.UnmarshalBinary(data[:ColferSizeMax])
+		n, err := o.Unmarshal(data[:ColferSizeMax])
 		if err == io.EOF {
-			return ColferMax(fmt.Sprintf("colfer: struct testdata.o exceeds %d bytes", ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: struct testdata.o exceeds %d bytes", ColferSizeMax))
 		}
-		return err
+		return n, err
 	}
 
+	if len(data) == 0 {
+		return 0, io.EOF
+	}
 	header := data[0]
 	i := 1
 
 	if header == 0 {
 		o.B = true
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
@@ -394,8 +389,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 1 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -407,14 +402,14 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.U32 = x
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	} else if header == 1|0x80 {
 		if i+4 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.U32 = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
 		header = data[i+4]
@@ -424,8 +419,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 2 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -437,14 +432,14 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.U64 = x
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	} else if header == 2|0x80 {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.U64 = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
 		header = data[i+8]
@@ -454,8 +449,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 3 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -467,16 +462,16 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.I32 = int32(x)
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	} else if header == 3|0x80 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -488,8 +483,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.I32 = int32(^x + 1)
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
@@ -498,8 +493,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 4 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -511,16 +506,16 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.I64 = int64(x)
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	} else if header == 4|0x80 {
 		var x uint64
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -532,8 +527,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		o.I64 = int64(^x + 1)
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
@@ -541,7 +536,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 
 	if header == 5 {
 		if i+4 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
 		o.F32 = math.Float32frombits(x)
@@ -552,7 +547,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 
 	if header == 6 {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -564,7 +559,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 
 	if header == 7 {
 		if i+8 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -575,7 +570,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		i += 9
 	} else if header == 7|0x80 {
 		if i+12 >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -589,8 +584,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 8 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -602,7 +597,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		to := i + int(x)
 		if to >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		o.S = string(data[i:to])
 
@@ -613,8 +608,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 9 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -627,7 +622,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		l := int(x)
 		to := i + l
 		if to >= len(data) {
-			return io.EOF
+			return 0, io.EOF
 		}
 		v := make([]byte, l)
 		copy(v, data[i:])
@@ -638,18 +633,16 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	}
 
 	if header == 10 {
-		v := new(O)
-		err := v.UnmarshalBinary(data[i:])
-		switch e := err.(type) {
-		case ColferContinue:
-			i += int(e)
-		case nil:
-			return io.EOF
-		default:
-			return err
+		o.O = new(O)
+		n, err := o.O.Unmarshal(data[i:])
+		if err != nil {
+			return 0, err
 		}
-		o.O = v
+		i += n;
 
+		if i >= len(data) {
+			return 0, io.EOF
+		}
 		header = data[i]
 		i++
 	}
@@ -657,8 +650,8 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	if header == 11 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
-			if i == len(data) {
-				return io.EOF
+			if i >= len(data) {
+				return 0, io.EOF
 			}
 			b := data[i]
 			i++
@@ -670,7 +663,7 @@ func (o *O) UnmarshalBinary(data []byte) error {
 		}
 		l := int(x)
 		if l > ColferListMax {
-			return ColferMax(fmt.Sprintf("colfer: field testdata.o.os exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field testdata.o.os length %d exceeds %d elements", l, ColferListMax))
 		}
 
 		a := make([]*O, l)
@@ -678,30 +671,44 @@ func (o *O) UnmarshalBinary(data []byte) error {
 			v := new(O)
 			a[ai] = v
 
-			err := v.UnmarshalBinary(data[i:])
-			switch e := err.(type) {
-			case ColferContinue:
-				i += int(e)
-			case nil:
-				return io.EOF
-			default:
-				return err
+			n, err := v.Unmarshal(data[i:])
+			if err != nil {
+				return 0, err
 			}
+			i += n;
 		}
 		o.Os = a
 
-		if i == len(data) {
-			return io.EOF
+		if i >= len(data) {
+			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	}
 
 	if header != 0x7f {
-		return ColferError(i - 1)
+		return 0, ColferError(i - 1)
+	}
+	return i, nil
+}
+
+// ColferTail signals data continuation as a byte index.
+type ColferTail int
+
+// Error honors the error interface.
+func (i ColferTail) Error() string {
+	return fmt.Sprintf("colfer: data continuation at byte %d", i)
+}
+
+// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
+// The error return options are io.EOF, testdata.ColferError, testdata.ColferTail and testdata.ColferMax.
+func (o *O) UnmarshalBinary(data []byte) error {
+	i, err := o.Unmarshal(data)
+	if err != nil {
+		return err
 	}
 	if i != len(data) {
-		return ColferContinue(i)
+		return ColferTail(i)
 	}
 	return nil
 }
