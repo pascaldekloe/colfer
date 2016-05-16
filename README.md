@@ -60,72 +60,8 @@ SEE ALSO
 
 
 It is recommended to commit the generated source code to the respective version
-control. Fancy developers might want code compilation to be part of the build.
-Here follows a Maven plugin configuration example.
-
-```xml
-<plugins>
-	<plugin>
-		<groupId>org.codehaus.mojo</groupId>
-		<artifactId>exec-maven-plugin</artifactId>
-		<version>1.4.0</version>
-		<executions>
-			<execution>
-				<id>compile-colfer-java</id>
-				<phase>generate-sources</phase>
-				<goals>
-					<goal>exec</goal>
-				</goals>
-				<configuration>
-					<executable>colf</executable>
-					<arguments>
-						<argument>-b=${project.build.directory}/generated-sources/colfer</argument>
-						<argument>-p=com/example</argument>
-						<argument>java</argument>
-						<argument>${project.basedir}/src/main/colfer/my.colf</argument>
-						<argument>${project.basedir}/src/main/colfer/another.colf</argument>
-					</arguments>
-				</configuration>
-			</execution>
-			<execution>
-				<id>compile-colfer-ecmascript</id>
-				<phase>compile</phase>
-				<goals>
-					<goal>exec</goal>
-				</goals>
-				<configuration>
-					<executable>colf</executable>
-					<arguments>
-						<!-- JavaScript in js directory WAR package -->
-						<argument>-b=${project.build.directory}/${project.build.finalName}/js</argument>
-						<argument>ecmascript</argument>
-						<argument>${project.basedir}/src/main/colfer/my.colf</argument>
-					</arguments>
-				</configuration>
-			</execution>
-		</executions>
-	</plugin>
-	<plugin>
-		<groupId>org.codehaus.mojo</groupId>
-		<artifactId>build-helper-maven-plugin</artifactId>
-		<version>1.10</version>
-		<executions>
-			<execution>
-				<id>add-colfer-sources</id>
-				<phase>generate-sources</phase>
-				<goals>
-					<goal>add-source</goal>
-				</goals>
-				<configuration>
-					<sources>
-						<source>${project.build.directory}/generated-sources/colfer</source>
-					</sources>
-				</configuration>
-			</execution>
-		</executions>
-	</plugin>
-</plugins>
-```
+control.
+Maven developers may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java).
 
 
 
