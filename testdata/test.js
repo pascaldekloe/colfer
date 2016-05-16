@@ -1,4 +1,4 @@
-function getGoldenCases() {
+function newGoldenCases() {
 	var date1 = new Date();
 	date1.setTime(1441739050777);
 	var date2 = new Date();
@@ -32,20 +32,21 @@ function getGoldenCases() {
 		'0809c280e0a080f09080807f': {s: '\u0080\u0800\u{10000}'},
 		'0901ff7f': {a: new Uint8Array([0xFF])},
 		'090202007f': {a: new Uint8Array([2, 0])},
-		'0a7f7f': {o: {}},
-		'0a007f7f': {o: {b: true}},
-		'0b01007f7f': {os: [{b: true}]},
-		'0b027f7f7f': {os: [{}, {}]}
+		'0a7f7f': {o: new testdata.O()},
+		'0a007f7f': {o: new testdata.O({b: true})},
+		'0b01007f7f': {os: [new testdata.O({b: true})]},
+		'0b027f7f7f': {os: [new testdata.O(), new testdata.O()]}
 	}
 }
 
 QUnit.test('marshal', function(assert) {
-	var golden = getGoldenCases()
+	var golden = newGoldenCases();
 	for (hex in golden) {
 		var feed = golden[hex];
 		var desc = hex + ': ' + JSON.stringify(feed)
 		try {
-			var got = encodeHex(testdata.marshalO(feed));
+			var o = new testdata.O(feed);
+			var got = encodeHex(o.marshal());
 			assert.equal(got, hex, desc);
 		} catch (err) {
 			assert.equal(err, 'no error', desc);
@@ -54,13 +55,14 @@ QUnit.test('marshal', function(assert) {
 });
 
 QUnit.test('unmarshal', function(assert) {
-	var golden = getGoldenCases()
+	var golden = newGoldenCases();
 	for (hex in golden) {
 		var want = golden[hex];
 		var desc = hex + ': ' + JSON.stringify(want)
 		try {
-			var got = testdata.unmarshalO(decodeHex(hex));
-			assert.deepEqual(got, want, desc);
+			var got = new testdata.O();
+			got.unmarshal(decodeHex(hex));
+			assert.deepEqual(got, new testdata.O(want), desc);
 		} catch (err) {
 			assert.equal(err, 'no error', desc);
 		}

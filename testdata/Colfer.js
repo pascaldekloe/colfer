@@ -9,157 +9,179 @@ var testdata = new function() {
 	// The upper limit for the number of elements in a list.
 	var colferListMax = 64 * 1024;
 
+	// Constructor.
+	this.O = function(init) {
+		this.b = false;
+		this.u32 = 0;
+		this.u64 = 0;
+		this.i32 = 0;
+		this.i64 = 0;
+		this.f32 = 0;
+		this.f64 = 0;
+		this.t = null;
+		this.t_ns = 0;
+		this.s = '';
+		this.a = new Uint8Array(0);
+		this.o = null;
+		this.os = [];
+
+		for (field in init) this[field] = init[field];
+	}
+
 	// Serializes the object into an Uint8Array.
-	// All null entries in o.os will be replaced with an {}.
-	this.marshalO = function(o) {
+	// All null entries in field os will be replaced with a new testdata.O().
+	this.O.prototype.marshal = function() {
 		var segs = [];
 
-		if (o.b) {
+		if (this.b) {
 			segs.push([0]);
 		}
 
-		if (o.u32) {
-			if (o.u32 > 4294967295 || o.u32 < 0)
-				throw 'colfer: field u32 out of reach: ' + o.u32;
-			if (o.u32 < 0x200000) {
+		if (this.u32) {
+			if (this.u32 > 4294967295 || this.u32 < 0)
+				throw 'colfer: testdata/O field u32 out of reach: ' + this.u32;
+			if (this.u32 < 0x200000) {
 				var seg = [1];
-				encodeVarint(seg, o.u32);
+				encodeVarint(seg, this.u32);
 				segs.push(seg);
 			} else {
 				var bytes = new Uint8Array(5);
 				bytes[0] = 1 | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, o.u32);
+				view.setUint32(1, this.u32);
 				segs.push(bytes)
 			}
 		}
 
-		if (o.u64) {
-			if (o.u64 < 0)
-				throw 'colfer: field u64 out of reach: ' + o.u64;
-			if (o.u64 > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
-			if (o.u64 < 0x2000000000000) {
+		if (this.u64) {
+			if (this.u64 < 0)
+				throw 'colfer: testdata/O field u64 out of reach: ' + this.u64;
+			if (this.u64 > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: testdata/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+			if (this.u64 < 0x2000000000000) {
 				var seg = [2];
-				encodeVarint(seg, o.u64);
+				encodeVarint(seg, this.u64);
 				segs.push(seg);
 			} else {
 				var bytes = new Uint8Array(9);
 				bytes[0] = 2 | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, o.u64 / 0x100000000);
-				view.setUint32(5, o.u64 % 0x100000000);
+				view.setUint32(1, this.u64 / 0x100000000);
+				view.setUint32(5, this.u64 % 0x100000000);
 				segs.push(bytes)
 			}
 		}
 
-		if (o.i32) {
+		if (this.i32) {
 			var seg = [3];
-			if (o.i32 < 0) {
+			if (this.i32 < 0) {
 				seg[0] |= 128;
-				if (o.i32 < -2147483648) throw 'colfer: field i32 exceeds 32-bit range';
-				encodeVarint(seg, -o.i32);
+				if (this.i32 < -2147483648)
+					throw 'colfer: testdata/O field i32 exceeds 32-bit range';
+				encodeVarint(seg, -this.i32);
 			} else {
-				if (o.i32 > 2147483647) throw 'colfer: field i32 exceeds 32-bit range';
-				encodeVarint(seg, o.i32);
+				if (this.i32 > 2147483647)
+					throw 'colfer: testdata/O field i32 exceeds 32-bit range';
+				encodeVarint(seg, this.i32);
 			}
 			segs.push(seg);
 		}
 
-		if (o.i64) {
+		if (this.i64) {
 			var seg = [4];
-			if (o.i64 < 0) {
+			if (this.i64 < 0) {
 				seg[0] |= 128;
-				if (o.i64 < -Number.MAX_SAFE_INTEGER) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
-				encodeVarint(seg, -o.i64);
+				if (this.i64 < -Number.MAX_SAFE_INTEGER)
+					throw 'colfer: testdata/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, -this.i64);
 			} else {
-				if (o.i64 > Number.MAX_SAFE_INTEGER) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
-				encodeVarint(seg, o.i64);
+				if (this.i64 > Number.MAX_SAFE_INTEGER)
+					throw 'colfer: testdata/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, this.i64);
 			}
 			segs.push(seg);
 		}
 
-		if (o.f32 || Number.isNaN(o.f32)) {
-			if (o.f32 > 3.4028234663852886E38 || o.f32 < -3.4028234663852886E38)
-				throw 'colfer: field f32 exceeds 32-bit range';
+		if (this.f32 || Number.isNaN(this.f32)) {
+			if (this.f32 > 3.4028234663852886E38 || this.f32 < -3.4028234663852886E38)
+				throw 'colfer: testdata/O field f32 exceeds 32-bit range';
 			var bytes = new Uint8Array(5);
 			bytes[0] = 5;
-			new DataView(bytes.buffer).setFloat32(1, o.f32);
+			new DataView(bytes.buffer).setFloat32(1, this.f32);
 			segs.push(bytes);
 		}
 
-		if (o.f64 || Number.isNaN(o.f64)) {
+		if (this.f64 || Number.isNaN(this.f64)) {
 			var bytes = new Uint8Array(9);
 			bytes[0] = 6;
-			new DataView(bytes.buffer).setFloat64(1, o.f64);
+			new DataView(bytes.buffer).setFloat64(1, this.f64);
 			segs.push(bytes);
 		}
 
-		if (o.t) {
-			var ms = o.t.getTime()
+		if ((this.t && this.t.getTime()) || this.t_ns) {
+			var ms = this.t ? this.t.getTime() : 0;
 			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
-				throw 'colfer: field t millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
+				throw 'colfer: testdata/O field t millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
 			var s = ms / 1E3;
-			var ns = o.t_ns
+			var ns = this.t_ns
 			if (ns) {
 				if ((ns < 0) || (ns >= 1E6))
-					throw 'colfer: field t_ns not in range (0, 1ms>';
+					throw 'colfer: testdata/O field t_ns not in range (0, 1ms>';
 			} else ns = 0;
 			ns += (ms % 1E3) * 1E6;
 
-			if (s != 0 || ns != 0) {
-				if (s > 0xffffffff) {
-					var bytes = new Uint8Array(13);
-					bytes[0] = 7 | 128;
-					var view = new DataView(bytes.buffer);
-					view.setUint32(1, s / 0x100000000);
-					view.setUint32(5, s);
-					view.setUint32(9, ns);
-					segs.push(bytes);
-				} else {
-					var bytes = new Uint8Array(9);
-					bytes[0] = 7;
-					var view = new DataView(bytes.buffer);
-					view.setUint32(1, s);
-					view.setUint32(5, ns);
-					segs.push(bytes);
-				}
+			if (s > 0xffffffff) {
+				var bytes = new Uint8Array(13);
+				bytes[0] = 7 | 128;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, s / 0x100000000);
+				view.setUint32(5, s);
+				view.setUint32(9, ns);
+				segs.push(bytes);
+			} else {
+				var bytes = new Uint8Array(9);
+				bytes[0] = 7;
+				var view = new DataView(bytes.buffer);
+				view.setUint32(1, s);
+				view.setUint32(5, ns);
+				segs.push(bytes);
 			}
 		}
 
-		if (o.s) {
-			var utf = encodeUTF8(o.s);
+		if (this.s) {
+			var utf = encodeUTF8(this.s);
 			var seg = [8];
 			encodeVarint(seg, utf.length);
 			segs.push(seg);
 			segs.push(utf)
 		}
 
-		if (o.a && o.a.length) {
+		if (this.a && this.a.length) {
 			var seg = [9];
-			encodeVarint(seg, o.a.length);
+			encodeVarint(seg, this.a.length);
 			segs.push(seg);
-			segs.push(o.a);
+			segs.push(this.a);
 		}
 
-		if (o.o) {
+		if (this.o) {
 			segs.push([10]);
-			segs.push(testdata.marshalO(o.o));
+			segs.push(this.o.marshal());
 		}
 
-		if (o.os && o.os.length) {
-			var a = o.os;
-			if (a.length > colferListMax) throw 'colfer: field os length exceeds colferListMax';
+		if (this.os && this.os.length) {
+			var a = this.os;
+			if (a.length > colferListMax)
+				throw 'colfer: testdata/O field os length exceeds colferListMax';
 			var seg = [11];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
 			for (var i = 0; i < a.length; i++) {
 				var v = a[i];
 				if (! v) {
-					v = {};
+					v = new testdata.O();
 					a[i] = v;
 				}
-				segs.push(testdata.marshalO(v));
+				segs.push(v.marshal());
 			};
 		}
 
@@ -167,6 +189,8 @@ var testdata = new function() {
 		segs.forEach(function(seg) {
 			size += seg.length;
 		});
+		if (size > colferSizeMax)
+			throw 'colfer: testdata/O serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
 
 		var bytes = new Uint8Array(size);
 		var i = 0;
@@ -178,9 +202,9 @@ var testdata = new function() {
 		return bytes;
 	}
 
-	// Deserializes an object from an Uint8Array.
-	this.unmarshalO = function(data) {
-		if (!data || ! data.length) return null;
+	// Deserializes the object from an Uint8Array and returns the number of bytes read.
+	this.O.prototype.unmarshal = function(data) {
+		if (!data || ! data.length) throw EOF;
 		var header = data[0];
 		var i = 1;
 		var readHeader = function() {
@@ -204,29 +228,27 @@ var testdata = new function() {
 			return -1;
 		}
 
-		var o = {};
-
 		if (header == 0) {
-			o.b = true;
+			this.b = true;
 			readHeader();
 		}
 
 		if (header == 1) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field u32 exceeds Number.MAX_SAFE_INTEGER';
-			o.u32 = x;
+			if (x < 0) throw 'colfer: testdata/O field u32 exceeds Number.MAX_SAFE_INTEGER';
+			this.u32 = x;
 			readHeader();
 		} else if (header == (1 | 128)) {
 			if (i + 4 > data.length) throw EOF;
-			o.u32 = new DataView(data.buffer).getUint32(i);
+			this.u32 = new DataView(data.buffer).getUint32(i);
 			i += 4;
 			readHeader();
 		}
 
 		if (header == 2) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
-			o.u64 = x;
+			if (x < 0) throw 'colfer: testdata/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+			this.u64 = x;
 			readHeader();
 		} else if (header == (2 | 128)) {
 			if (i + 8 > data.length) throw EOF;
@@ -234,46 +256,46 @@ var testdata = new function() {
 			var x = view.getUint32(i) * 0x100000000;
 			x += view.getUint32(i + 4);
 			if (x > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field u64 exceeds Number.MAX_SAFE_INTEGER';
-			o.u64 = x;
+				throw 'colfer: testdata/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+			this.u64 = x;
 			i += 8;
 			readHeader();
 		}
 
 		if (header == 3) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field i32 exceeds Number.MAX_SAFE_INTEGER';
-			o.i32 = x;
+			if (x < 0) throw 'colfer: testdata/O field i32 exceeds Number.MAX_SAFE_INTEGER';
+			this.i32 = x;
 			readHeader();
 		} else if (header == (3 | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field i32 exceeds Number.MAX_SAFE_INTEGER';
-			o.i32 = -1 * x;
+			if (x < 0) throw 'colfer: testdata/O field i32 exceeds Number.MAX_SAFE_INTEGER';
+			this.i32 = -1 * x;
 			readHeader();
 		}
 
 		if (header == 4) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
-			o.i64 = x;
+			if (x < 0) throw 'colfer: testdata/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+			this.i64 = x;
 			readHeader();
 		} else if (header == (4 | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: field i64 exceeds Number.MAX_SAFE_INTEGER';
-			o.i64 = -1 * x;
+			if (x < 0) throw 'colfer: testdata/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+			this.i64 = -1 * x;
 			readHeader();
 		}
 
 		if (header == 5) {
 			if (i + 4 > data.length) throw EOF;
-			o.f32 = new DataView(data.buffer).getFloat32(i);
+			this.f32 = new DataView(data.buffer).getFloat32(i);
 			i += 4;
 			readHeader();
 		}
 
 		if (header == 6) {
 			if (i + 8 > data.length) throw EOF;
-			o.f64 = new DataView(data.buffer).getFloat64(i);
+			this.f64 = new DataView(data.buffer).getFloat64(i);
 			i += 8;
 			readHeader();
 		}
@@ -286,11 +308,11 @@ var testdata = new function() {
 			ms += ns / 1E6;
 			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field t value exceeds Number capacity for ms';
+				throw 'colfer: testdata/O field t value exceeds Number capacity for ms';
 			i += 8;
-			o.t = new Date();
-			o.t.setTime(ms);
-			o.t_ns = ns;
+			this.t = new Date();
+			this.t.setTime(ms);
+			this.t_ns = ns;
 			readHeader();
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
@@ -302,72 +324,68 @@ var testdata = new function() {
 			ms += ns / 1E6;
 			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: field t value exceeds Number capacity for ms';
+				throw 'colfer: testdata/O field t value exceeds Number capacity for ms';
 			i += 12;
-			o.t = new Date();
-			o.t.setTime(ms);
-			o.t_ns = ns;
+			this.t = new Date();
+			this.t.setTime(ms);
+			this.t_ns = ns;
 			readHeader();
 		}
 
 		if (header == 8) {
-			var length = readVarint();
-			if (length < 0) throw 'colfer: field s length exceeds Number.MAX_SAFE_INTEGER';
-			var to = i + length;
+			var size = readVarint();
+			if (size < 0)
+				throw 'colfer: testdata/O field s size exceeds Number.MAX_SAFE_INTEGER';
+			else if (size > colferSizeMax)
+				throw 'colfer: testdata/O field s size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+			var to = i + size;
 			if (to > data.length) throw EOF;
-			o.s = decodeUTF8(data.subarray(i, to));
+			this.s = decodeUTF8(data.subarray(i, to));
 			i = to;
 			readHeader();
 		}
 
 		if (header == 9) {
-			var length = readVarint();
-			if (length < 0) throw 'colfer: field a length exceeds Number.MAX_SAFE_INTEGER';
-			var to = i + length;
+			var size = readVarint();
+			if (size < 0)
+				throw 'colfer: testdata/O field a size exceeds Number.MAX_SAFE_INTEGER';
+			else if (size > colferSizeMax)
+				throw 'colfer: testdata/O field a size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+			var to = i + size;
 			if (to > data.length) throw EOF;
-			o.a = data.subarray(i, to);
+			this.a = data.subarray(i, to);
 			i = to;
 			readHeader();
 		}
 
 		if (header == 10) {
-			try {
-				testdata.unmarshalO(data.subarray(i));
-				throw EOF;
-			} catch (err) {
-				if (! err.continueAt) throw err;
-				i += err.continueAt;
-				o.o = err.o;
-			}
+			var o = new testdata.O();
+			i += o.unmarshal(data.subarray(i));
+			this.o = o;
 			readHeader();
 		}
 
 		if (header == 11) {
 			var length = readVarint();
-			if (length < 0) throw 'colfer: field os length exceeds Number.MAX_SAFE_INTEGER';
-			else if (length > colferListMax) throw 'colfer: field os length exceeds colferListMax';
-			o.os = [];
+			if (length < 0)
+				throw 'colfer: testdata/O field os length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: testdata/O field os length ' + length + ' exceeds ' + colferListMax + ' elements';
 			while (--length >= 0) {
-				try {
-					testdata.unmarshalO(data.subarray(i));
-					throw EOF;
-				} catch (err) {
-					if (! err.continueAt) throw err;
-					i += err.continueAt;
-					o.os.push(err.o);
-				}
+				var o = new testdata.O();
+				i += o.unmarshal(data.subarray(i));
+				this.os.push(o);
 			}
 			readHeader();
 		}
 
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
-		if (i != data.length) throw {
-			msg: 'colfer: data continuation at byte ' + i,
-			continueAt: i,
-			o: o
-		};
-		return o;
+		if (i > colferSizeMax)
+			throw 'colfer: testdata/O serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+		return i;
 	}
+
+	// private section
 
 	var encodeVarint = function(bytes, x) {
 		while (x > 127) {
@@ -378,7 +396,6 @@ var testdata = new function() {
 		return bytes;
 	}
 
-	// Marshals a string to Uint8Array.
 	var encodeUTF8 = function(s) {
 		var i = 0;
 		var bytes = new Uint8Array(s.length * 4);
@@ -408,7 +425,6 @@ var testdata = new function() {
 		return bytes.subarray(0, i);
 	}
 
-	// Unmarshals an Uint8Array to string.
 	var decodeUTF8 = function(bytes) {
 		var s = '';
 		var i = 0;
