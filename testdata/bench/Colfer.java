@@ -5,10 +5,9 @@ package testdata.bench;
 
 
 import static java.lang.String.format;
+import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import javax.xml.bind.TypeConstraintException;
-import javax.xml.bind.DataBindingException;
 
 
 /**
@@ -46,7 +45,6 @@ public class Colfer implements java.io.Serializable {
 	public int marshal(byte[] buf, int offset) {
 		int i = offset;
 		try {
-
 			if (this.key != 0) {
 				long x = this.key;
 				if (x < 0) {
@@ -93,8 +91,8 @@ public class Colfer implements java.io.Serializable {
 
 				int shift = 0;
 				for (int x = size; (x & ~((1 << 7) - 1)) != 0; x >>>= 7) shift++;
-				if (shift != 0) System.arraycopy(buf, start, buf, start + shift, size);
 				i = start + shift + size;
+				if (shift != 0) System.arraycopy(buf, start, buf, start + shift, size);
 
 				start--;
 				while ((size & ~((1 << 7) - 1)) != 0) {
@@ -188,11 +186,10 @@ public class Colfer implements java.io.Serializable {
 	 * @param offset the first byte index.
 	 * @return the index of the first byte after the last byte read.
 	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-	 * @throws TypeConstraintException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
-	 * @throws DataBindingException when the data does not match this object's schema.
+	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws InputMismatchException when the data does not match this object's schema.
 	 */
-	public int unmarshal(byte[] buf, int offset)
-	throws BufferUnderflowException, TypeConstraintException, DataBindingException {
+	public int unmarshal(byte[] buf, int offset) {
 		int i = offset;
 		try {
 			byte header = buf[i++];
@@ -224,16 +221,18 @@ public class Colfer implements java.io.Serializable {
 			}
 
 			if (header == (byte) 1) {
-				int n = 0;
+				int size = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
-					n |= (b & 0x7f) << shift;
+					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (n > colferSizeMax)
-					throw new TypeConstraintException(format("colfer: field testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", n, colferSizeMax));
-				this.host = new String(buf, i, n, this._utf8);
-				i += n;
+				if (size > colferSizeMax)
+					throw new SecurityException(format("colfer: field testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+				int start = i;
+				i += size;
+				this.host = new String(buf, start, size, this._utf8);
 				header = buf[i++];
 			}
 
@@ -314,15 +313,17 @@ public class Colfer implements java.io.Serializable {
 			}
 
 			if (header != (byte) 0x7f)
-				throw new DataBindingException(format("colfer: unknown header at byte %d", i - 1), null);
+				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} catch (IndexOutOfBoundsException e) {
 			if (i - offset > colferSizeMax)
-				throw new TypeConstraintException(format("colfer: serial exceeds %d bytes", colferSizeMax));
+				throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 			if (i >= buf.length)
 				throw new BufferUnderflowException();
 			throw new RuntimeException("colfer: bug", e);
 		}
 
+		if (i - offset > colferSizeMax)
+			throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 		return i;
 	}
 

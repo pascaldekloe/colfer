@@ -74,10 +74,9 @@ const javaCode = `package <:.Pkg.NameNative:>;
 
 
 import static java.lang.String.format;
+import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import javax.xml.bind.TypeConstraintException;
-import javax.xml.bind.DataBindingException;
 
 
 /**
@@ -123,7 +122,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	public int marshal(byte[] buf, int offset) {
 		int i = offset;
 		try {
-<:range .Fields:><:if eq .Type "bool":>
+<:- range .Fields:><:if eq .Type "bool":>
 			if (this.<:.Name:>) {
 				buf[i++] = (byte) <:.Index:>;
 			}
@@ -282,8 +281,8 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 				int shift = 0;
 				for (int x = size; (x & ~((1 << 7) - 1)) != 0; x >>>= 7) shift++;
-				if (shift != 0) System.arraycopy(buf, start, buf, start + shift, size);
 				i = start + shift + size;
+				if (shift != 0) System.arraycopy(buf, start, buf, start + shift, size);
 
 				start--;
 				while ((size & ~((1 << 7) - 1)) != 0) {
@@ -296,17 +295,20 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
 
-				int x = this.<:.Name:>.length;
-				if (x > colferSizeMax)
-					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d bytes", x, colferSizeMax));
+				int size = this.<:.Name:>.length;
+				if (size > colferSizeMax)
+					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d bytes", size, colferSizeMax));
+
+				int x = size;
 				while ((x & ~((1 << 7) - 1)) != 0) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
 				}
 				buf[i++] = (byte) x;
 
-				System.arraycopy(this.<:.Name:>, 0, buf, i, this.<:.Name:>.length);
-				i += this.<:.Name:>.length;
+				int start = i;
+				i += size;
+				System.arraycopy(this.<:.Name:>, 0, buf, start, size);
 			}
 <:else if .TypeArray:>
 			if (this.<:.Name:>.length != 0) {
@@ -354,11 +356,10 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	 * @param offset the first byte index.
 	 * @return the index of the first byte after the last byte read.
 	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-	 * @throws TypeConstraintException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
-	 * @throws DataBindingException when the data does not match this object's schema.
+	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws InputMismatchException when the data does not match this object's schema.
 	 */
-	public int unmarshal(byte[] buf, int offset)
-	throws BufferUnderflowException, TypeConstraintException, DataBindingException {
+	public int unmarshal(byte[] buf, int offset) {
 		int i = offset;
 		try {
 			byte header = buf[i++];
@@ -473,45 +474,50 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			}
 <:else if eq .Type "text":>
 			if (header == (byte) <:.Index:>) {
-				int n = 0;
+				int size = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
-					n |= (b & 0x7f) << shift;
+					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (n > colferSizeMax)
-					throw new TypeConstraintException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", n, colferSizeMax));
-				this.<:.Name:> = new String(buf, i, n, this._utf8);
-				i += n;
+				if (size > colferSizeMax)
+					throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+				int start = i;
+				i += size;
+				this.<:.Name:> = new String(buf, start, size, this._utf8);
 				header = buf[i++];
 			}
 <:else if eq .Type "binary":>
 			if (header == (byte) <:.Index:>) {
-				int n = 0;
+				int size = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
-					n |= (b & 0x7f) << shift;
+					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (n > colferSizeMax)
-					throw new TypeConstraintException(format("colfer: field <:.String:> size %d exceeds %d bytes", n, colferSizeMax));
-				this.<:.Name:> = new byte[n];
-				System.arraycopy(buf, i, this.<:.Name:>, 0, n);
-				i += n;
+				if (size > colferSizeMax)
+					throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d bytes", size, colferSizeMax));
+
+				this.<:.Name:> = new byte[size];
+				int start = i;
+				i += size;
+				System.arraycopy(buf, start, this.<:.Name:>, 0, size);
 				header = buf[i++];
 			}
 <:else if .TypeArray:>
 			if (header == (byte) <:.Index:>) {
-				int n = 0;
+				int length = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
-					n |= (b & 0x7f) << shift;
+					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (n > colferListMax)
-					throw new TypeConstraintException(format("colfer: field <:.String:> length %d exceeds %d elements", n, colferListMax));
-				<:.TypeNative:>[] a = new <:.TypeNative:>[n];
-				for (int ai = 0; ai < n; ai++) {
+				if (length > colferListMax)
+					throw new SecurityException(format("colfer: field <:.String:> length %d exceeds %d elements", length, colferListMax));
+
+				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
+				for (int ai = 0; ai < length; ai++) {
 					<:.TypeNative:> o = new <:.TypeNative:>();
 					i = o.unmarshal(buf, i);
 					a[ai] = o;
@@ -527,15 +533,17 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			}
 <:end:><:end:>
 			if (header != (byte) 0x7f)
-				throw new DataBindingException(format("colfer: unknown header at byte %d", i - 1), null);
+				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} catch (IndexOutOfBoundsException e) {
 			if (i - offset > colferSizeMax)
-				throw new TypeConstraintException(format("colfer: serial exceeds %d bytes", colferSizeMax));
+				throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 			if (i >= buf.length)
 				throw new BufferUnderflowException();
 			throw new RuntimeException("colfer: bug", e);
 		}
 
+		if (i - offset > colferSizeMax)
+			throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 		return i;
 	}
 <:range .Fields:>

@@ -12,11 +12,12 @@ import java.util.Map.Entry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 
 public class test {
 
-	static Map<String, O> getGoldenCases() {
+	static Map<String, O> newGoldenCases() {
 		Map<String, O> goldenCases = new LinkedHashMap<>();
 		newCase(goldenCases, "7f");
 		newCase(goldenCases, "007f").b = true;
@@ -64,8 +65,8 @@ public class test {
 	}
 
 	@Test
-	public void testMarshal() {
-		for (Entry<String, O> e : getGoldenCases().entrySet()) {
+	public void marshal() {
+		for (Entry<String, O> e : newGoldenCases().entrySet()) {
 			try {
 				byte[] buf = new byte[e.getKey().length() / 2];
 				int n = e.getValue().marshal(buf, 0);
@@ -78,8 +79,8 @@ public class test {
 	}
 
 	@Test
-	public void testUnmarshal() {
-		for (Entry<String, O> e : getGoldenCases().entrySet()) {
+	public void unmarshal() {
+		for (Entry<String, O> e : newGoldenCases().entrySet()) {
 			try {
 				O o = new O();
 				byte[] serial = parseHex(e.getKey());
@@ -89,6 +90,131 @@ public class test {
 			} catch (Exception ex) {
 				assertNull("exception for serial " + e.getKey(), ex);
 			}
+		}
+	}
+
+	@Test
+	public void marshalMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 2;
+		try {
+			O o = new O();
+			o.u64 = 1;
+			o.marshal(new byte[O.colferSizeMax], 0);
+			fail("no marshal exception");
+		} catch (IllegalStateException e) {
+			assertEquals("marshal error", "colfer: serial exceeds 2 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void marshalTextMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 2;
+		try {
+			O o = new O();
+			o.s = "AAA";
+			o.marshal(new byte[6], 0);
+			fail("no marshal exception");
+		} catch (IllegalStateException e) {
+			// Field message only when buffer is big enough. Otherwise it's: "serial exceeds 2 bytes".
+			assertEquals("marshal error", "colfer: field testdata.o.s size 3 exceeds 2 UTF-8 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void marshalBinaryMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 2;
+		try {
+			O o = new O();
+			o.a = new byte[]{0, 1, 2};
+			o.marshal(new byte[O.colferSizeMax], 0);
+			fail("no marshal exception");
+		} catch (IllegalStateException e) {
+			assertEquals("marshal error", "colfer: field testdata.o.a size 3 exceeds 2 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void marshalListMax() {
+		int origMax = O.colferListMax;
+		O.colferListMax = 9;
+		try {
+			O o = new O();
+			o.os = new O[10];
+			o.marshal(new byte[O.colferSizeMax], 0);
+			fail("no marshal exception");
+		} catch (IllegalStateException e) {
+			assertEquals("marshal error", "colfer: field testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+		} finally {
+			O.colferListMax = origMax;
+		}
+	}
+
+	@Test
+	public void unmarshalMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 2;
+		try {
+			byte[] serial = parseHex("02017f");
+			new O().unmarshal(serial, 0);
+			fail("no unmarshal exception");
+		} catch (SecurityException e) {
+			assertEquals("unmarshal error", "colfer: serial exceeds 2 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void unmarshalTextMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 9;
+		try {
+			byte[] serial = parseHex("080a414141");
+			new O().unmarshal(serial, 0);
+			fail("no unmarshal exception");
+		} catch (SecurityException e) {
+			assertEquals("unmarshal error", "colfer: field testdata.o.s size 10 exceeds 9 UTF-8 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void unmarshalBinaryMax() {
+		int origMax = O.colferSizeMax;
+		O.colferSizeMax = 9;
+		try {
+			byte[] serial = parseHex("090a414141");
+			new O().unmarshal(serial, 0);
+			fail("no unmarshal exception");
+		} catch (SecurityException e) {
+			assertEquals("unmarshal error", "colfer: field testdata.o.a size 10 exceeds 9 bytes", e.getMessage());
+		} finally {
+			O.colferSizeMax = origMax;
+		}
+	}
+
+	@Test
+	public void unmarshalListMax() {
+		int origMax = O.colferListMax;
+		O.colferListMax = 9;
+		try {
+			byte[] serial = parseHex("0b0a7f7f7f");
+			new O().unmarshal(serial, 0);
+			fail("no unmarshal exception");
+		} catch (SecurityException e) {
+			assertEquals("unmarshal error", "colfer: field testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+		} finally {
+			O.colferListMax = origMax;
 		}
 	}
 
