@@ -30,8 +30,8 @@ The format is inspired by Proto**col** Buf**fer**.
 
 ## Use
 
-Run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to install the latest
-compiler.
+Download a [prebuilt compiler](https://github.com/pascaldekloe/colfer/releases)
+or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
 
 ```
 NAME
@@ -162,8 +162,8 @@ The following table shows how Colfer data types are applied per language.
 | text		| String		| string	| java.lang.String |
 | binary	| Uint8Array		| []byte	| byte[]	|
 
-† range limited to (-2⁵³ + 1, 2⁵³ - 1)
-‡ range limited to (`1970-01-01T00:00:00.000000000Z`, `287396-10-12T08:59:00.991999999`)
+* † range limited to (-2⁵³ + 1, 2⁵³ - 1)
+* ‡ range limited to (`1970-01-01T00:00:00.000000000Z`, `287396-10-12T08:59:00.991999999`)
 
 
 
