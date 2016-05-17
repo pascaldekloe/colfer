@@ -14,7 +14,7 @@ The format is inspired by Proto**col** Buf**fer**.
 * Simple and straightforward in use
 * Support for: Go, Java and ECMAScript/JavaScript
 * No dependencies other than the core library
-* Both Faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
+* Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
 * The generated code is human-readable
 * Compiler runs on [many platforms](https://golang.org/doc/install/source#environment)
 * Configurable data limits with sane defaults (memory protection)
@@ -106,7 +106,7 @@ The following table shows how Colfer data types are applied per language.
 ## Compatibility
 
 Name changes do not affect the serialization format. Deprecated fields can be
-renamed to clearly discourage it's use.
+renamed to clearly discourage its use.
 
 The following changes are backward compatible.
 * Adding new fields to the end of Colfer structs
@@ -152,7 +152,7 @@ value* may be serialized. Fields appear in order as stated by the schema.
 
 The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
 timestamps: `1970-01-01T00:00:00.000000000Z`, text & binary: the empty
-string, nested data structures `null` and an empty list for data structure
+string, nested data structures: `null` and an empty list for data structure
 lists.
 
 Data is represented in a big-endian manner. The format relies on *varints* also
@@ -170,7 +170,7 @@ Boolean occurrences set the value to `true`.
 
 Integers are encoded as varints. The header flag indicates negative for signed
 types and fixed size for unsigned types. The tenth byte for 64-bit integers is
-skipped for encoding since it's value is fixed to `0x01`.
+skipped for encoding since its value is fixed to `0x01`.
 
 Floating points are encoded conform IEEE 754.
 
