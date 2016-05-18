@@ -36,6 +36,14 @@ func (i ColferError) Error() string {
 	return fmt.Sprintf("colfer: unknown header at byte %d", i)
 }
 
+// ColferTail signals data continuation as a byte index.
+type ColferTail int
+
+// Error honors the error interface.
+func (i ColferTail) Error() string {
+	return fmt.Sprintf("colfer: data continuation at byte %d", i)
+}
+
 type O struct {
 	B	bool
 	U32	uint32
@@ -690,14 +698,6 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		return 0, ColferError(i - 1)
 	}
 	return i, nil
-}
-
-// ColferTail signals data continuation as a byte index.
-type ColferTail int
-
-// Error honors the error interface.
-func (i ColferTail) Error() string {
-	return fmt.Sprintf("colfer: data continuation at byte %d", i)
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
