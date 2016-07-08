@@ -16,7 +16,6 @@ The format is inspired by Proto**col** Buf**fer**.
 * No dependencies other than the core library
 * Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
 * The generated code is human-readable
-* Compiler runs on [many platforms](https://golang.org/doc/install/source#environment)
 * Configurable data limits with sane defaults (memory protection)
 * Maximum of 127 fields per data structure
 * No support for enumerations
@@ -61,7 +60,7 @@ SEE ALSO
 
 It is recommended to commit the generated source code to the respective version
 control.
-Maven developers may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java).
+Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java).
 
 
 
@@ -95,11 +94,12 @@ The following table shows how Colfer data types are applied per language.
 | float32	| Number		| float32	| float		|
 | float64	| Number		| float64	| double	|
 | timestamp	| Date + Number	‡	| time.Time	| java.time.Instant |
-| text		| String		| string	| java.lang.String |
+| text		| String ††		| string	| java.lang.String †† |
 | binary	| Uint8Array		| []byte	| byte[]	|
 
-* † range limited to (-2⁵³ + 1, 2⁵³ - 1)
-* ‡ range limited to (`1970-01-01T00:00:00.000000000Z`, `287396-10-12T08:59:00.991999999`)
+* † range limited to (1 - 2⁵³, 2⁵³ - 1)
+* ‡ range limited to (`1970-01-01T00:00:00.000000000Z`, )
+* †† characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
 
 
@@ -119,28 +119,28 @@ The following changes are backward compatible.
 ```
 % go test -bench .
 PASS
-BenchmarkMarshal-4               	10000000	       128 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshalProtoBuf-4       	10000000	       138 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshalFlatBuf-4        	 1000000	      1355 ns/op	     472 B/op	      12 allocs/op
-BenchmarkUnmarshal-4             	10000000	       157 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshalProtoBuf-4     	10000000	       199 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshalFlatBuf-4      	 5000000	       265 ns/op	      84 B/op	       2 allocs/op
-BenchmarkMarshalReuse-4          	30000000	        53.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalProtoBufReuse-4  	20000000	        66.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalFlatBufReuse-4   	 5000000	       390 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse-4        	20000000	        94.3 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalProtoBufReuse-4	10000000	       145 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalFlatBufReuse-4 	10000000	       211 ns/op	      20 B/op	       1 allocs/op
-ok  	github.com/pascaldekloe/colfer	21.177s
+BenchmarkMarshal-8               	20000000	        96.7 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalProtoBuf-8       	20000000	       104 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalFlatBuf-8        	 1000000	      1030 ns/op	     472 B/op	      12 allocs/op
+BenchmarkUnmarshal-8             	10000000	       120 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalProtoBuf-8     	10000000	       151 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalFlatBuf-8      	10000000	       205 ns/op	      84 B/op	       2 allocs/op
+BenchmarkMarshalReuse-8          	30000000	        43.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalProtoBufReuse-8  	30000000	        53.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalFlatBufReuse-8   	 5000000	       312 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse-8        	20000000	        72.5 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalProtoBufReuse-8	20000000	       111 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalFlatBufReuse-8 	10000000	       167 ns/op	      20 B/op	       1 allocs/op
+ok  	github.com/pascaldekloe/colfer	21.206s
 ```
 
 For Java the numbers look even better.
 
 ```
 Running testdata.bench.bench
-20M unmarshals avg 77ns
-20M marshals avg 60ns
-20M marshals with buffer reuse avg 39ns
+20M unmarshals avg 67ns
+20M marshals avg 49ns
+20M marshals with buffer reuse avg 34ns
 ```
 
 

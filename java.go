@@ -114,8 +114,8 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	 * All {@code null} entries in {@link #<:.Name:>} will be replaced with a {@code new} value.
 <:- end:><:end:>
 	 * @param buf the data destination.
-	 * @param offset the first byte index.
-	 * @return the index of the first byte after the last byte written.
+	 * @param offset the initial index for {@code buf}, inclusive.
+	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferOverflowException when {@code buf} is too small.
 	 * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
 	 */
@@ -137,7 +137,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 					buf[i++] = (byte) (x);
 				} else {
 					buf[i++] = (byte) <:.Index:>;
-					while ((x & ~((1 << 7) - 1)) != 0) {
+					while (x > 0x7f) {
 						buf[i++] = (byte) (x | 0x80);
 						x >>>= 7;
 					}
@@ -159,7 +159,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 					buf[i++] = (byte) (x);
 				} else {
 					buf[i++] = (byte) <:.Index:>;
-					for (int n = 0; n < 8 && (x & ~((1L << 7) - 1)) != 0; n++) {
+					while (x > 0x7fL) {
 						buf[i++] = (byte) (x | 0x80);
 						x >>>= 7;
 					}
@@ -174,7 +174,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 					buf[i++] = (byte) (<:.Index:> | 0x80);
 				} else
 					buf[i++] = (byte) <:.Index:>;
-				while ((x & ~((1 << 7) - 1)) != 0) {
+				while ((x & ~0x7f) != 0) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
 				}
@@ -188,7 +188,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 					buf[i++] = (byte) (<:.Index:> | 0x80);
 				} else
 					buf[i++] = (byte) <:.Index:>;
-				for (int n = 0; n < 8 && (x & ~((1L << 7) - 1)) != 0; n++) {
+				for (int n = 0; n < 8 && (x & ~0x7fL) != 0; n++) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
 				}
@@ -251,45 +251,48 @@ public class <:.NameTitle:> implements java.io.Serializable {
 <:else if eq .Type "text":>
 			if (! this.<:.Name:>.isEmpty()) {
 				buf[i++] = (byte) <:.Index:>;
-				String s = this.<:.Name:>;
-				int sLength = s.length();
-
 				int start = ++i;
-				for (int sIndex = 0; sIndex < sLength; sIndex++) {
+
+				String s = this.<:.Name:>;
+				for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
 					char c = s.charAt(sIndex);
-					if (c < 128) {
+					if (c < '\u0080') {
 						buf[i++] = (byte) c;
-					} else if (c < 2048) {
+					} else if (c < '\u0800') {
 						buf[i++] = (byte) (192 | c >>> 6);
 						buf[i++] = (byte) (128 | c & 63);
-					} else if (! Character.isSurrogate(c)) {
+					} else if (c < '\ud800' || c > '\udfff') {
 						buf[i++] = (byte) (224 | c >>> 12);
 						buf[i++] = (byte) (128 | c >>> 6 & 63);
 						buf[i++] = (byte) (128 | c & 63);
-					} else if (++sIndex != sLength) {
-						int cp = Character.toCodePoint(c, s.charAt(sIndex));
-						buf[i++] = (byte) (240 | cp >>> 18);
-						buf[i++] = (byte) (128 | cp >>> 12 & 63);
-						buf[i++] = (byte) (128 | cp >>> 6 & 63);
-						buf[i++] = (byte) (128 | cp & 63);
+					} else {
+						int cp = 0;
+						if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+						if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+							buf[i++] = (byte) (240 | cp >>> 18);
+							buf[i++] = (byte) (128 | cp >>> 12 & 63);
+							buf[i++] = (byte) (128 | cp >>> 6 & 63);
+							buf[i++] = (byte) (128 | cp & 63);
+						} else
+							buf[i++] = (byte) '?';
 					}
 				}
-
 				int size = i - start;
 				if (size > colferSizeMax)
 					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
 
-				int shift = 0;
-				for (int x = size; (x & ~((1 << 7) - 1)) != 0; x >>>= 7) shift++;
-				i = start + shift + size;
-				if (shift != 0) System.arraycopy(buf, start, buf, start + shift, size);
+				int ii = start - 1;
+				if (size > 0x7f) {
+					i++;
+					for (int x = size; x >= 1 << 14; x >>>= 7) i++;
+					System.arraycopy(buf, start, buf, i - size, size);
 
-				start--;
-				while ((size & ~((1 << 7) - 1)) != 0) {
-					buf[start++] = (byte) (size | 0x80);
-					size >>>= 7;
+					do {
+						buf[ii++] = (byte) (size | 0x80);
+						size >>>= 7;
+					} while (size > 0x7f);
 				}
-				buf[start++] = (byte) size;
+				buf[ii] = (byte) size;
 			}
 <:else if eq .Type "binary":>
 			if (this.<:.Name:>.length != 0) {
@@ -300,7 +303,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d bytes", size, colferSizeMax));
 
 				int x = size;
-				while ((x & ~((1 << 7) - 1)) != 0) {
+				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
 				}
@@ -318,7 +321,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				int x = a.length;
 				if (x > colferListMax)
 					throw new IllegalStateException(format("colfer: field <:.String:> length %d exceeds %d elements", x, colferListMax));
-				while ((x & ~((1 << 7) - 1)) != 0) {
+				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
 				}
@@ -346,15 +349,15 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				throw new IllegalStateException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 			if (i >= buf.length)
 				throw new BufferOverflowException();
-			throw new RuntimeException("colfer: bug", e);
+			throw e;
 		}
 	}
 
 	/**
 	 * Deserializes the object.
 	 * @param buf the data source.
-	 * @param offset the first byte index.
-	 * @return the index of the first byte after the last byte read.
+	 * @param offset the initial index for {@code buf}, inclusive.
+	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
 	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
 	 * @throws InputMismatchException when the data does not match this object's schema.
@@ -557,7 +560,27 @@ public class <:.NameTitle:> implements java.io.Serializable {
 <:end:>
 	@Override
 	public final int hashCode() {
-		return java.util.Objects.hash(0x7f<:range .Fields:>, <:.Name:><:end:>);
+		int h = 1;
+<:- range .Fields:>
+<:- if eq .Type "bool":>
+		h = 31 * h + (this.<:.Name:> ? 1231 : 1237);
+<:- else if eq .Type "uint32" "int32":>
+		h = 31 * h + this.<:.Name:>;
+<:- else if eq .Type "uint64" "int64":>
+		h = 31 * h + (int)(this.<:.Name:> ^ this.<:.Name:> >>> 32);
+<:- else if eq .Type "float32":>
+		h = 31 * h + Float.floatToIntBits(this.<:.Name:>);
+<:- else if eq .Type "float64":>
+		long _<:.Name:>Bits = Double.doubleToLongBits(this.<:.Name:>);
+		h = 31 * h + (int) (_<:.Name:>Bits ^ _<:.Name:>Bits >>> 32);
+<:- else if eq .Type "binary":>
+		for (byte b : this.<:.Name:>) h = 31 * h + b;
+<:- else if .TypeArray:>
+		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
+<:- else:>
+		if (this.<:.Name:> != null) h = 31 * h + this.<:.Name:>.hashCode();
+<:- end:><:end:>
+		return h;
 	}
 
 	@Override
@@ -570,6 +593,8 @@ public class <:.NameTitle:> implements java.io.Serializable {
 <:- range .Fields:>
 <:- if eq .Type "bool" "uint32" "uint64" "int32" "int64":>
 			&& this.<:.Name:> == o.<:.Name:>
+<:- else if eq .Type "float32" "float64":>
+			&& (this.<:.Name:> == o.<:.Name:> || (this.<:.Name:> != this.<:.Name:> && o.<:.Name:> != o.<:.Name:>))
 <:- else if eq .Type "binary":>
 			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
 <:- else if .TypeArray:>

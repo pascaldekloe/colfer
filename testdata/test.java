@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -234,6 +235,14 @@ public class test {
 			data[i / 2] = (byte) ((nibble0 << 4) + nibble1);
 		}
 		return data;
+	}
+
+	@Test
+	public void identity() {
+		Object[] a = newGoldenCases().values().toArray();
+		Object[] b = newGoldenCases().values().toArray();
+		assertArrayEquals("golden cases", a, b);
+		assertEquals("golden cases hash", Arrays.hashCode(a), Arrays.hashCode(b));
 	}
 
 }
