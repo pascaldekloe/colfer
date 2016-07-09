@@ -181,12 +181,12 @@ func (o *Colfer) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.Host); x != 0 {
-		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
+		l += x
 	}
 
 	if v := o.Port; v != 0 {

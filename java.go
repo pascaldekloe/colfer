@@ -102,16 +102,16 @@ public class <:.NameTitle:> implements java.io.Serializable {
 <:- end:>
 <:range .Fields:>
 	public <:.TypeNative:><:if .TypeArray:>[]<:end:> <:.Name:>
-<:- if eq .Type "text":> = ""
+<:- if .TypeArray:> = _zero<:.NameTitle:>
 <:- else if eq .Type "binary":> = _zero<:.NameTitle:>
-<:- else if .TypeArray:> = _zero<:.NameTitle:>
+<:- else if eq .Type "text":> = ""
 <:- end:>;<:end:>
 
 
 	/**
 	 * Serializes the object.
 <:- range .Fields:><:if .TypeArray:>
-	 * All {@code null} entries in {@link #<:.Name:>} will be replaced with a {@code new} value.
+	 * All {@code null} entries in {@link #<:.Name:>} will be replaced with a <:if eq .Type "text":>""<:else:>{@code new}<:end:> value.
 <:- end:><:end:>
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
@@ -249,6 +249,71 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				}
 			}
 <:else if eq .Type "text":>
+ <:- if .TypeArray:>
+			if (this.<:.Name:>.length != 0) {
+				buf[i++] = (byte) <:.Index:>;
+				String[] a = this.<:.Name:>;
+
+				int x = a.length;
+				if (x > colferListMax)
+					throw new IllegalStateException(format("colfer: field <:.String:> length %d exceeds %d elements", x, colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					String s = a[ai];
+					if (s == null) {
+						s = "";
+						a[ai] = s;
+					}
+
+					int start = ++i;
+
+					for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+						char c = s.charAt(sIndex);
+						if (c < '\u0080') {
+							buf[i++] = (byte) c;
+						} else if (c < '\u0800') {
+							buf[i++] = (byte) (192 | c >>> 6);
+							buf[i++] = (byte) (128 | c & 63);
+						} else if (c < '\ud800' || c > '\udfff') {
+							buf[i++] = (byte) (224 | c >>> 12);
+							buf[i++] = (byte) (128 | c >>> 6 & 63);
+							buf[i++] = (byte) (128 | c & 63);
+						} else {
+							int cp = 0;
+							if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+							if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+								buf[i++] = (byte) (240 | cp >>> 18);
+								buf[i++] = (byte) (128 | cp >>> 12 & 63);
+								buf[i++] = (byte) (128 | cp >>> 6 & 63);
+								buf[i++] = (byte) (128 | cp & 63);
+							} else
+								buf[i++] = (byte) '?';
+						}
+					}
+					int size = i - start;
+					if (size > colferSizeMax)
+						throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+					int ii = start - 1;
+					if (size > 0x7f) {
+						i++;
+						for (int y = size; y >= 1 << 14; y >>>= 7) i++;
+						System.arraycopy(buf, start, buf, i - size, size);
+
+						do {
+							buf[ii++] = (byte) (size | 0x80);
+							size >>>= 7;
+						} while (size > 0x7f);
+					}
+					buf[ii] = (byte) size;
+				}
+			}
+ <:- else:>
 			if (! this.<:.Name:>.isEmpty()) {
 				buf[i++] = (byte) <:.Index:>;
 				int start = ++i;
@@ -294,6 +359,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				}
 				buf[ii] = (byte) size;
 			}
+ <:- end:>
 <:else if eq .Type "binary":>
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
@@ -477,6 +543,33 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			}
 <:else if eq .Type "text":>
 			if (header == (byte) <:.Index:>) {
+ <:- if .TypeArray:>
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length > colferListMax)
+					throw new SecurityException(format("colfer: field <:.String:> length %d exceeds %d elements", length, colferListMax));
+
+				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
+				for (int ai = 0; ai < length; ai++) {
+					int size = 0;
+					for (int shift = 0; true; shift += 7) {
+						byte b = buf[i++];
+						size |= (b & 0x7f) << shift;
+						if (shift == 28 || b >= 0) break;
+					}
+					if (size > colferSizeMax)
+						throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+					int start = i;
+					i += size;
+					a[ai] = new String(buf, start, size, this._utf8);
+				}
+				this.<:.Name:> = a;
+ <:- else:>
 				int size = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
@@ -489,6 +582,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				int start = i;
 				i += size;
 				this.<:.Name:> = new String(buf, start, size, this._utf8);
+ <:- end:>
 				header = buf[i++];
 			}
 <:else if eq .Type "binary":>
@@ -562,7 +656,9 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	public final int hashCode() {
 		int h = 1;
 <:- range .Fields:>
-<:- if eq .Type "bool":>
+<:- if .TypeArray:>
+		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
+<:- else if eq .Type "bool":>
 		h = 31 * h + (this.<:.Name:> ? 1231 : 1237);
 <:- else if eq .Type "uint32" "int32":>
 		h = 31 * h + this.<:.Name:>;
@@ -575,8 +671,6 @@ public class <:.NameTitle:> implements java.io.Serializable {
 		h = 31 * h + (int) (_<:.Name:>Bits ^ _<:.Name:>Bits >>> 32);
 <:- else if eq .Type "binary":>
 		for (byte b : this.<:.Name:>) h = 31 * h + b;
-<:- else if .TypeArray:>
-		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
 <:- else:>
 		if (this.<:.Name:> != null) h = 31 * h + this.<:.Name:>.hashCode();
 <:- end:><:end:>

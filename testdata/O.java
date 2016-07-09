@@ -26,6 +26,7 @@ public class O implements java.io.Serializable {
 	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
 	private static final byte[] _zeroA = new byte[0];
 	private static final O[] _zeroOs = new O[0];
+	private static final String[] _zeroSs = new String[0];
 
 	public boolean b;
 	public int u32;
@@ -39,11 +40,13 @@ public class O implements java.io.Serializable {
 	public byte[] a = _zeroA;
 	public O o;
 	public O[] os = _zeroOs;
+	public String[] ss = _zeroSs;
 
 
 	/**
 	 * Serializes the object.
 	 * All {@code null} entries in {@link #os} will be replaced with a {@code new} value.
+	 * All {@code null} entries in {@link #ss} will be replaced with a "" value.
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
@@ -272,6 +275,70 @@ public class O implements java.io.Serializable {
 				}
 			}
 
+			if (this.ss.length != 0) {
+				buf[i++] = (byte) 12;
+				String[] a = this.ss;
+
+				int x = a.length;
+				if (x > colferListMax)
+					throw new IllegalStateException(format("colfer: field testdata.o.ss length %d exceeds %d elements", x, colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					String s = a[ai];
+					if (s == null) {
+						s = "";
+						a[ai] = s;
+					}
+
+					int start = ++i;
+
+					for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+						char c = s.charAt(sIndex);
+						if (c < '\u0080') {
+							buf[i++] = (byte) c;
+						} else if (c < '\u0800') {
+							buf[i++] = (byte) (192 | c >>> 6);
+							buf[i++] = (byte) (128 | c & 63);
+						} else if (c < '\ud800' || c > '\udfff') {
+							buf[i++] = (byte) (224 | c >>> 12);
+							buf[i++] = (byte) (128 | c >>> 6 & 63);
+							buf[i++] = (byte) (128 | c & 63);
+						} else {
+							int cp = 0;
+							if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+							if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+								buf[i++] = (byte) (240 | cp >>> 18);
+								buf[i++] = (byte) (128 | cp >>> 12 & 63);
+								buf[i++] = (byte) (128 | cp >>> 6 & 63);
+								buf[i++] = (byte) (128 | cp & 63);
+							} else
+								buf[i++] = (byte) '?';
+						}
+					}
+					int size = i - start;
+					if (size > colferSizeMax)
+						throw new IllegalStateException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+					int ii = start - 1;
+					if (size > 0x7f) {
+						i++;
+						for (int y = size; y >= 1 << 14; y >>>= 7) i++;
+						System.arraycopy(buf, start, buf, i - size, size);
+
+						do {
+							buf[ii++] = (byte) (size | 0x80);
+							size >>>= 7;
+						} while (size > 0x7f);
+					}
+					buf[ii] = (byte) size;
+				}
+			}
+
 			buf[i++] = (byte) 0x7f;
 			return i;
 		} catch (IndexOutOfBoundsException e) {
@@ -465,6 +532,35 @@ public class O implements java.io.Serializable {
 				header = buf[i++];
 			}
 
+			if (header == (byte) 12) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length > colferListMax)
+					throw new SecurityException(format("colfer: field testdata.o.ss length %d exceeds %d elements", length, colferListMax));
+
+				String[] a = new String[length];
+				for (int ai = 0; ai < length; ai++) {
+					int size = 0;
+					for (int shift = 0; true; shift += 7) {
+						byte b = buf[i++];
+						size |= (b & 0x7f) << shift;
+						if (shift == 28 || b >= 0) break;
+					}
+					if (size > colferSizeMax)
+						throw new SecurityException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+
+					int start = i;
+					i += size;
+					a[ai] = new String(buf, start, size, this._utf8);
+				}
+				this.ss = a;
+				header = buf[i++];
+			}
+
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} catch (IndexOutOfBoundsException e) {
@@ -576,6 +672,14 @@ public class O implements java.io.Serializable {
 		this.os = value;
 	}
 
+	public String[] getSs() {
+		return this.ss;
+	}
+
+	public void setSs(String[] value) {
+		this.ss = value;
+	}
+
 	@Override
 	public final int hashCode() {
 		int h = 1;
@@ -592,6 +696,7 @@ public class O implements java.io.Serializable {
 		for (byte b : this.a) h = 31 * h + b;
 		if (this.o != null) h = 31 * h + this.o.hashCode();
 		for (O o : this.os) h = 31 * h + (o == null ? 0 : o.hashCode());
+		for (String o : this.ss) h = 31 * h + (o == null ? 0 : o.hashCode());
 		return h;
 	}
 
@@ -613,7 +718,8 @@ public class O implements java.io.Serializable {
 			&& java.util.Objects.equals(this.s, o.s)
 			&& java.util.Arrays.equals(this.a, o.a)
 			&& java.util.Objects.equals(this.o, o.o)
-			&& java.util.Arrays.equals(this.os, o.os);
+			&& java.util.Arrays.equals(this.os, o.os)
+			&& java.util.Arrays.equals(this.ss, o.ss);
 	}
 
 }

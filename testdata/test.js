@@ -35,7 +35,8 @@ function newGoldenCases() {
 		'0a7f7f': {o: new testdata.O()},
 		'0a007f7f': {o: new testdata.O({b: true})},
 		'0b01007f7f': {os: [new testdata.O({b: true})]},
-		'0b027f7f7f': {os: [new testdata.O(), new testdata.O()]}
+		'0b027f7f7f': {os: [new testdata.O(), new testdata.O()]},
+		'0c0300016101627f': {ss: ["", "a", "b"]}
 	}
 }
 

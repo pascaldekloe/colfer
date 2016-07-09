@@ -56,6 +56,7 @@ public class test {
 		element.b = true;
 		newCase(goldenCases, "0b01007f7f").os = new O[] {element};
 		newCase(goldenCases, "0b027f7f7f").os = new O[] {new O(), new O()};
+		newCase(goldenCases, "0c0300016101627f").ss = new String[] {"", "a", "b"};
 		return goldenCases;
 	}
 

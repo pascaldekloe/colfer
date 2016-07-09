@@ -57,6 +57,7 @@ type O struct {
 	A	[]byte
 	O	*O
 	Os	[]*O
+	Ss	[]string
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -226,6 +227,32 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 	}
 
+	if l := len(o.Ss); l != 0 {
+		buf[i] = 12
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, a := range o.Ss {
+			l = len(a)
+			x = uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+			copy(buf[i:], a)
+			i += l
+		}
+	}
+
 	buf[i] = 0x7f
 	i++
 	return i
@@ -301,21 +328,21 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.S); x != 0 {
-		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
+		l += x
 	}
 
 	if x := len(o.A); x != 0 {
-		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
+		l += x
 	}
 
 	if v := o.O; v != nil {
@@ -345,6 +372,26 @@ func (o *O) MarshalLen() (int, error) {
 				return -1, err
 			}
 			l += vl
+		}
+	}
+
+	if x := len(o.Ss); x != 0 {
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
+		if x > ColferListMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.ss exceeds %d elements", ColferListMax))
+		}
+		for _, a := range o.Ss {
+			x = len(a)
+			for x >= 0x80 {
+				x >>= 7
+				l++
+			}
+			l++
+			l += x
 		}
 	}
 
@@ -690,6 +737,52 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		if i >= len(data) {
 			return 0, io.EOF
 		}
+		header = data[i]
+		i++
+	}
+
+	if header == 12 {
+		var x uint32
+		for shift := uint(0); ; shift += 7 {
+			if i >= len(data) {
+				return 0, io.EOF
+			}
+			b := data[i]
+			i++
+			if b < 0x80 {
+				x |= uint32(b) << shift
+				break
+			}
+			x |= (uint32(b) & 0x7f) << shift
+		}
+		l := int(x)
+		if l > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field testdata.o.ss length %d exceeds %d elements", l, ColferListMax))
+		}
+		a := make([]string, l)
+		o.Ss = a
+		for ai := range a {
+		var x uint32
+		for shift := uint(0); ; shift += 7 {
+			if i >= len(data) {
+				return 0, io.EOF
+			}
+			b := data[i]
+			i++
+			if b < 0x80 {
+				x |= uint32(b) << shift
+				break
+			}
+			x |= (uint32(b) & 0x7f) << shift
+		}
+			to := i + int(x)
+			if to >= len(data) {
+				return 0, io.EOF
+			}
+			a[ai] = string(data[i:to])
+			i = to
+		}
+
 		header = data[i]
 		i++
 	}

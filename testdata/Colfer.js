@@ -24,12 +24,14 @@ var testdata = new function() {
 		this.a = new Uint8Array(0);
 		this.o = null;
 		this.os = [];
+		this.ss = [];
 
 		for (field in init) this[field] = init[field];
 	}
 
 	// Serializes the object into an Uint8Array.
-	// All null entries in field os will be replaced with a new testdata.O().
+	// All null (and undefined) entries in field os will be replaced with a new testdata.O().
+	// All null (and undefined) entries in field ss will be replaced with a new "".
 	this.O.prototype.marshal = function() {
 		var segs = [];
 
@@ -177,12 +179,33 @@ var testdata = new function() {
 			segs.push(seg);
 			for (var i = 0; i < a.length; i++) {
 				var v = a[i];
-				if (! v) {
+				if (v == null) {
 					v = new testdata.O();
 					a[i] = v;
 				}
 				segs.push(v.marshal());
 			};
+		}
+
+		if (this.ss && this.ss.length) {
+			var a = this.ss;
+			if (a.length > colferListMax)
+				throw 'colfer: testdata/O field ss length exceeds colferListMax';
+			var seg = [12];
+			encodeVarint(seg, a.length);
+			segs.push(seg);
+			for (var i = 0; i < a.length; i++) {
+				var s = a[i];
+				if (s == null) {
+					s = "";
+					a[i] = s;
+				}
+				var utf = encodeUTF8(s);
+				seg = [];
+				encodeVarint(seg, utf.length);
+				segs.push(seg);
+				segs.push(utf)
+			}
 		}
 
 		var size = 1;
@@ -375,6 +398,26 @@ var testdata = new function() {
 				var o = new testdata.O();
 				i += o.unmarshal(data.subarray(i));
 				this.os.push(o);
+			}
+			readHeader();
+		}
+
+		if (header == 12) {
+			var length = readVarint();
+			if (length < 0)
+				throw 'colfer: testdata/O field ss length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: testdata/O field ss length ' + length + ' exceeds ' + colferListMax + ' elements';
+			while (--length >= 0) {
+				var size = readVarint();
+				if (size < 0)
+					throw 'colfer: testdata/O field ss element ' + this.ss.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+				else if (size > colferSizeMax)
+					throw 'colfer: testdata/O field ss element ' + this.ss.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				var to = i + size;
+				if (to > data.length) throw EOF;
+				this.ss.push(decodeUTF8(data.subarray(i, to)));
+				i = to;
 			}
 			readHeader();
 		}

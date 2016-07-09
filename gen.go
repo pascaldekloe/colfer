@@ -15,8 +15,9 @@ func Generate(basedir string, packages []*Package) error {
 	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
 	template.Must(t.New("marshal-varint").Parse(goMarshalVarint))
 	template.Must(t.New("marshal-varint64").Parse(goMarshalVarint64))
+	template.Must(t.New("marshal-varint-header-len").Parse(goMarshalVarintHeaderLen))
+	template.Must(t.New("marshal-varint64-header-len").Parse(goMarshalVarint64HeaderLen))
 	template.Must(t.New("marshal-varint-len").Parse(goMarshalVarintLen))
-	template.Must(t.New("marshal-varint64-len").Parse(goMarshalVarint64Len))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-header").Parse(goUnmarshalHeader))
 	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
@@ -125,7 +126,7 @@ type <:.NameTitle:> struct {
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
-<:- range .Fields:><:if .TypeArray:>
+<:- range .Fields:><:if and .TypeArray .TypeRef:>
 // All nil entries in o.<:.NameTitle:> will be replaced with a new value.
 <:- end:><:end:>
 func (o *<:.NameTitle:>) MarshalTo(buf []byte) int {
@@ -148,7 +149,7 @@ func (o *<:.NameTitle:>) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-<:- range .Fields:><:if .TypeArray:>
+<:- range .Fields:><:if and .TypeArray .TypeRef:>
 // All nil entries in o.<:.NameTitle:> will be replaced with a new value.
 <:- end:><:end:>
 // The error return option is <:.Pkg.NameNative:>.ColferMax.
@@ -287,8 +288,18 @@ const goMarshalField = `<:if eq .Type "bool":>
 		i++
 		x := uint(l)
 <:template "marshal-varint":>
+ <:- if .TypeArray:>
+		for _, a := range o.<:.NameTitle:> {
+			l = len(a)
+			x = uint(l)
+<:template "marshal-varint":>
+			copy(buf[i:], a)
+			i += l
+		}
+ <:- else:>
 		copy(buf[i:], o.<:.NameTitle:>)
 		i += l
+ <:- end:>
 	}
 <:else if .TypeArray:>
 	if l := len(o.<:.NameTitle:>); l != 0 {
@@ -320,13 +331,13 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	if x := o.<:.NameTitle:>; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
-<:template "marshal-varint-len" .:>
+<:template "marshal-varint-header-len" .:>
 	}
 <:else if eq .Type "uint64":>
 	if x := o.<:.NameTitle:>; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-<:template "marshal-varint64-len" .:>
+<:template "marshal-varint64-header-len" .:>
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -334,7 +345,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		if v < 0 {
 			x = ^x + 1
 		}
-<:template "marshal-varint-len" .:>
+<:template "marshal-varint-header-len" .:>
 	}
 <:else if eq .Type "int64":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -342,7 +353,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		if v < 0 {
 			x = ^x + 1
 		}
-<:template "marshal-varint64-len" .:>
+<:template "marshal-varint64-header-len" .:>
 	}
 <:else if eq .Type "float32":>
 	if o.<:.NameTitle:> != 0.0 {
@@ -362,15 +373,26 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "text" "binary":>
 	if x := len(o.<:.NameTitle:>); x != 0 {
-		l += x
+<:template "marshal-varint-header-len" .:>
+ <:- if .TypeArray:>
+		if x > ColferListMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
+		}
+		for _, a := range o.<:.NameTitle:> {
+			x = len(a)
 <:template "marshal-varint-len" .:>
+			l += x
+		}
+ <:- else:>
+		l += x
+ <:- end:>
 	}
 <:else if .TypeArray:>
 	if x := len(o.<:.NameTitle:>); x != 0 {
 		if x > ColferListMax {
 			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
 		}
-<:template "marshal-varint-len" .:>
+<:template "marshal-varint-header-len" .:>
 		for _, v := range o.<:.NameTitle:> {
 			if v == nil {
 				l++
@@ -409,17 +431,23 @@ const goMarshalVarint64 = `		for n := 0; n < 8 && x >= 0x80; n++ {
 		buf[i] = byte(x)
 		i++`
 
-const goMarshalVarintLen = `		for x >= 0x80 {
+const goMarshalVarintHeaderLen = `		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2`
 
-const goMarshalVarint64Len = `		for n := 0; n < 8 && x >= 0x80; n++ {
+const goMarshalVarint64HeaderLen = `		for n := 0; n < 8 && x >= 0x80; n++ {
 			x >>= 7
 			l++
 		}
 		l += 2`
+
+const goMarshalVarintLen = `			for x >= 0x80 {
+				x >>= 7
+				l++
+			}
+			l++`
 
 const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
@@ -522,6 +550,27 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "text":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
+ <:- if .TypeArray:>
+		l := int(x)
+		if l > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", l, ColferListMax))
+		}
+		a := make([]string, l)
+		o.<:.NameTitle:> = a
+		for ai := range a {
+<:template "unmarshal-varint32":>
+			to := i + int(x)
+			if to >= len(data) {
+				return 0, io.EOF
+			}
+			a[ai] = string(data[i:to])
+			i = to
+		}
+
+		header = data[i]
+		i++
+	}
+ <:- else:>
 		to := i + int(x)
 		if to >= len(data) {
 			return 0, io.EOF
@@ -531,6 +580,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		header = data[to]
 		i = to + 1
 	}
+ <:- end:>
 <:else if eq .Type "binary":>
 	if header == <:.Index:> {
 <:template "unmarshal-varint32":>
