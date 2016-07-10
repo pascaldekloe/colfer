@@ -225,23 +225,39 @@ const ecmaMarshal = `
 <:else if eq .Type "timestamp":>
 		if ((this.<:.Name:> && this.<:.Name:>.getTime()) || this.<:.Name:>_ns) {
 			var ms = this.<:.Name:> ? this.<:.Name:>.getTime() : 0;
-			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
+			if (ms < -Number.MAX_SAFE_INTEGER || ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var s = ms / 1E3;
-			var ns = this.<:.Name:>_ns
-			if (ns) {
-				if ((ns < 0) || (ns >= 1E6))
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:>_ns not in range (0, 1ms>';
-			} else ns = 0;
-			ns += (ms % 1E3) * 1E6;
 
-			if (s > 0xffffffff) {
+			var ns = this.<:.Name:>_ns || 0;
+			if (ns < 0 || ns >= 1E6)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:>_ns not in range (0, 1ms>';
+			var msf = ms % 1E3;
+			if (ms < 0 && msf) {
+				s--
+				msf = 1E3 + msf;
+			}
+			ns += msf * 1E6;
+
+			if (s > 0xffffffff || s < 0) {
 				var bytes = new Uint8Array(13);
 				bytes[0] = <:.Index:> | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, s / 0x100000000);
-				view.setUint32(5, s);
 				view.setUint32(9, ns);
+				if (s > 0) {
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+				} else {
+					s = -s;
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+					var carry = 1;
+					for (var j = 8; j > 0; j--) {
+						var b = (bytes[j] ^ 255) + carry;
+						bytes[j] = b & 255;
+						carry = b >> 8;
+					}
+				}
 				segs.push(bytes);
 			} else {
 				var bytes = new Uint8Array(9);
@@ -437,7 +453,7 @@ const ecmaUnmarshal = `
 			ms += ns / 1E6;
 			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> value exceeds Number capacity for ms';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			i += 8;
 			this.<:.Name:> = new Date();
 			this.<:.Name:>.setTime(ms);
@@ -445,19 +461,36 @@ const ecmaUnmarshal = `
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 12 > data.length) throw EOF;
-			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * 0x100000000;
-			ms += view.getUint32(i + 4);
-			ms *= 1000;
-			var ns = view.getUint32(i + 8);
-			ms += ns / 1E6;
-			ns %= 1E6;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> value exceeds Number capacity for ms';
-			i += 12;
+
+			var int64 = new Uint8Array(data.subarray(i, i + 8));
+			if (int64[0] > 127) {	// two's complement
+				var carry = 1;
+				for (var j = 7; j >= 0; j--) {
+					var b = (int64[j] ^ 255) + carry;
+					int64[j] = b & 255;
+					carry = b >> 8;
+				}
+			}
+			if (int64[0] != 0 || int64[1] > 31)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> second value exceeds Number.MAX_SAFE_INTEGER';
+			var view = new DataView(int64.buffer);
+			var s = (view.getUint32(0) * 0x100000000) + view.getUint32(4);
+			if (data[i] > 127) s = -s;
+
+			var ns = new DataView(data.buffer).getUint32(i + 8);
+			var ms = (s * 1E3);
+			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
+			var msa = Math.floor(ns / 1E6);
+			if (msa > 0) {
+				if (s < 0) ms = (ms + 1000) - (1000 - msa);
+				else ms += msa;
+			}
 			this.<:.Name:> = new Date();
 			this.<:.Name:>.setTime(ms);
-			this.<:.Name:>_ns = ns;
+			this.<:.Name:>_ns = ns % 1E6;
+
+			i += 12;
 			readHeader();
 		}
 <:else if eq .Type "text":>

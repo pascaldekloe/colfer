@@ -122,23 +122,39 @@ var testdata = new function() {
 
 		if ((this.t && this.t.getTime()) || this.t_ns) {
 			var ms = this.t ? this.t.getTime() : 0;
-			if ((ms < 0) || (ms > Number.MAX_SAFE_INTEGER))
-				throw 'colfer: testdata/O field t millisecond value not in range (0, Number.MAX_SAFE_INTEGER)';
+			if (ms < -Number.MAX_SAFE_INTEGER || ms > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: testdata/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var s = ms / 1E3;
-			var ns = this.t_ns
-			if (ns) {
-				if ((ns < 0) || (ns >= 1E6))
-					throw 'colfer: testdata/O field t_ns not in range (0, 1ms>';
-			} else ns = 0;
-			ns += (ms % 1E3) * 1E6;
 
-			if (s > 0xffffffff) {
+			var ns = this.t_ns || 0;
+			if (ns < 0 || ns >= 1E6)
+				throw 'colfer: testdata/O field t_ns not in range (0, 1ms>';
+			var msf = ms % 1E3;
+			if (ms < 0 && msf) {
+				s--
+				msf = 1E3 + msf;
+			}
+			ns += msf * 1E6;
+
+			if (s > 0xffffffff || s < 0) {
 				var bytes = new Uint8Array(13);
 				bytes[0] = 7 | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, s / 0x100000000);
-				view.setUint32(5, s);
 				view.setUint32(9, ns);
+				if (s > 0) {
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+				} else {
+					s = -s;
+					view.setUint32(1, s / 0x100000000);
+					view.setUint32(5, s);
+					var carry = 1;
+					for (var j = 8; j > 0; j--) {
+						var b = (bytes[j] ^ 255) + carry;
+						bytes[j] = b & 255;
+						carry = b >> 8;
+					}
+				}
 				segs.push(bytes);
 			} else {
 				var bytes = new Uint8Array(9);
@@ -331,7 +347,7 @@ var testdata = new function() {
 			ms += ns / 1E6;
 			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: testdata/O field t value exceeds Number capacity for ms';
+				throw 'colfer: testdata/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			i += 8;
 			this.t = new Date();
 			this.t.setTime(ms);
@@ -339,19 +355,36 @@ var testdata = new function() {
 			readHeader();
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
-			var view = new DataView(data.buffer);
-			var ms = view.getUint32(i) * 0x100000000;
-			ms += view.getUint32(i + 4);
-			ms *= 1000;
-			var ns = view.getUint32(i + 8);
-			ms += ns / 1E6;
-			ns %= 1E6;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: testdata/O field t value exceeds Number capacity for ms';
-			i += 12;
+
+			var int64 = new Uint8Array(data.subarray(i, i + 8));
+			if (int64[0] > 127) {	// two's complement
+				var carry = 1;
+				for (var j = 7; j >= 0; j--) {
+					var b = (int64[j] ^ 255) + carry;
+					int64[j] = b & 255;
+					carry = b >> 8;
+				}
+			}
+			if (int64[0] != 0 || int64[1] > 31)
+				throw 'colfer: testdata/O field t second value exceeds Number.MAX_SAFE_INTEGER';
+			var view = new DataView(int64.buffer);
+			var s = (view.getUint32(0) * 0x100000000) + view.getUint32(4);
+			if (data[i] > 127) s = -s;
+
+			var ns = new DataView(data.buffer).getUint32(i + 8);
+			var ms = (s * 1E3);
+			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: testdata/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
+			var msa = Math.floor(ns / 1E6);
+			if (msa > 0) {
+				if (s < 0) ms = (ms + 1000) - (1000 - msa);
+				else ms += msa;
+			}
 			this.t = new Date();
 			this.t.setTime(ms);
-			this.t_ns = ns;
+			this.t_ns = ns % 1E6;
+
+			i += 12;
 			readHeader();
 		}
 

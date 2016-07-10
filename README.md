@@ -19,11 +19,12 @@ The format is inspired by Proto**col** Buf**fer**.
 * Configurable data limits with sane defaults (memory protection)
 * Maximum of 127 fields per data structure
 * No support for enumerations
+* Framed; suitable for concatenation/streaming
 
 #### TODO's
 
 * RMI
-* Arrays for non structs.
+* Lists for numbers, timestamps and binaries
 
 
 
@@ -84,21 +85,21 @@ type member struct {
 
 The following table shows how Colfer data types are applied per language.
 
-| Colfer	| ECMAScript		| Go		| Java		|
-|:--------------|:----------------------|:--------------|:--------------|
-| bool		| Boolean		| bool		| boolean	|
-| uint32	| Number		| uint32	| int		|
-| uint64	| Number †		| uint64	| long		|
-| int32		| Number		| int32		| int		|
-| int64		| Number †		| int64		| long		|
-| float32	| Number		| float32	| float		|
-| float64	| Number		| float64	| double	|
-| timestamp	| Date + Number	‡	| time.Time	| java.time.Instant |
-| text		| String ††		| string	| java.lang.String †† |
-| binary	| Uint8Array		| []byte	| byte[]	|
+| Colfer	| ECMAScript	| Go		| Java		|
+|:--------------|:--------------|:--------------|:--------------|
+| bool		| Boolean	| bool		| boolean	|
+| uint32	| Number	| uint32	| int †		|
+| uint64	| Number ‡	| uint64	| long †	|
+| int32		| Number	| int32		| int		|
+| int64		| Number ‡	| int64		| long		|
+| float32	| Number	| float32	| float		|
+| float64	| Number	| float64	| double	|
+| timestamp	| Date + Number	| time.Time	| java.time.Instant |
+| text		| String ‡‡	| string	| java.lang.String †† |
+| binary	| Uint8Array	| []byte	| byte[]	|
 
-* † range limited to (1 - 2⁵³, 2⁵³ - 1)
-* ‡ range limited to (`1970-01-01T00:00:00.000000000Z`, )
+* † signed representation of the unsigned data
+* ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)
 * †† characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
 
@@ -184,4 +185,5 @@ as a 64-bit two's complement integer. In both cases the value is followed with
 The data for text and binaries is prefixed with a varint byte size declaration.
 Text is encoded as UTF-8.
 
-Object arrays are also prefixed with a varint size declaration.
+Lists of objects and strings are prefixed with a varint element size
+declaration.
