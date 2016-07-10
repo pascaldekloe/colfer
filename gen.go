@@ -531,7 +531,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
 		v := int64(x)
-		o.<:.NameTitle:> = time.Unix(v>>32, v&(1<<32-1))
+		o.<:.NameTitle:> = time.Unix(v>>32, v&(1<<32-1)).In(time.UTC)
 
 		header = data[i+8]
 		i += 9
@@ -542,7 +542,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
 		sec |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
 		nsec := uint64(data[i+8])<<24 | uint64(data[i+9])<<16 | uint64(data[i+10])<<8 | uint64(data[i+11])
-		o.<:.NameTitle:> = time.Unix(int64(sec), int64(nsec))
+		o.<:.NameTitle:> = time.Unix(int64(sec), int64(nsec)).In(time.UTC)
 
 		header = data[i+12]
 		i += 13
