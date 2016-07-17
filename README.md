@@ -32,6 +32,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 Download a [prebuilt compiler](https://github.com/pascaldekloe/colfer/releases)
 or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
+Without arguments the command prints the manual.
 
 ```
 NAME
@@ -67,21 +68,27 @@ Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java).
 
 ## Schema
 
-Data structures are defined per package in `.colf` files. The format is quite
-self explanatory.
+Data structures are defined in `.colf` files. The format is quite conventional.
 
 ```
 package example
 
-type member struct {
-	id     int64
-	name   text
-	joined timestamp
-	avatar binary
-	allies []member
+type coarse struct {
+	id    uint64
+	name  text
+	holes []hole
+	map   binary
+	tags  []text
+}
+
+type hole struct {
+	par   int32
+	lat   float64
+	lon   float64
+	water bool
+	sand  bool
 }
 ```
-
 
 The following table shows how Colfer data types are applied per language.
 
@@ -94,14 +101,17 @@ The following table shows how Colfer data types are applied per language.
 | int64		| Number ‡	| int64		| long		|
 | float32	| Number	| float32	| float		|
 | float64	| Number	| float64	| double	|
-| timestamp	| Date + Number	| time.Time	| java.time.Instant |
-| text		| String ‡‡	| string	| java.lang.String †† |
+| timestamp	| Date + Number	| time.Time ††	| java.time.Instant |
+| text		| String ‡‡	| string	| java.lang.String ‡‡ |
 | binary	| Uint8Array	| []byte	| byte[]	|
+| list		| Array		| slice		| array		|
 
-* † signed representation of the unsigned data
+* † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)
-* †† characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
+* †† timezone not preserved
+* ‡‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
+Lists may contain text or data structures.
 
 
 ## Compatibility
@@ -110,8 +120,9 @@ Name changes do not affect the serialization format. Deprecated fields can be
 renamed to clearly discourage its use.
 
 The following changes are backward compatible.
-* Adding new fields to the end of Colfer structs
-* Raising the bit size (which is actually just a limit) of signed integers
+* New fields at the end of Colfer structs
+* Change datatype int32 into int64
+* Change datatype text into binary
 
 
 
