@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// Datatypes holds all supported names.
-var Datatypes = map[string]struct{}{
+// datatypes holds all supported names.
+var datatypes = map[string]struct{}{
 	"bool":      {},
 	"uint32":    {},
 	"uint64":    {},
@@ -119,21 +119,12 @@ func ReadDefs(files []string) ([]*Package, error) {
 		}
 	}
 
-	if err := linkStructs(packages); err != nil {
-		return nil, err
-	}
-
-	return packages, nil
-}
-
-func linkStructs(packages []*Package) error {
 	names := make(map[string]*Struct)
-
 	for _, pkg := range packages {
 		for _, s := range pkg.Structs {
 			qname := s.String()
 			if _, ok := names[qname]; ok {
-				return fmt.Errorf("colfer: duplicate struct definition %q", qname)
+				return nil, fmt.Errorf("colfer: duplicate struct definition %q", qname)
 			}
 			names[qname] = s
 		}
@@ -143,8 +134,11 @@ func linkStructs(packages []*Package) error {
 		for _, s := range pkg.Structs {
 			for _, f := range s.Fields {
 				t := f.Type
-				_, ok := Datatypes[t]
+				_, ok := datatypes[t]
 				if ok {
+					if f.TypeArray && t != "text" {
+						return nil, fmt.Errorf("colfer: unsupported lists type %s for field %q", t, f)
+					}
 					continue
 				}
 				if f.TypeRef, ok = names[t]; ok {
@@ -153,12 +147,12 @@ func linkStructs(packages []*Package) error {
 				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
 					continue
 				}
-				return fmt.Errorf("colfer: unknown datatype for field %q", f)
+				return nil, fmt.Errorf("colfer: unknown datatype for field %q", f)
 			}
 		}
 	}
 
-	return nil
+	return packages, nil
 }
 
 func addStruct(pkg *Package, src *ast.TypeSpec) error {
