@@ -130,20 +130,20 @@ The following changes are backward compatible.
 
 ```
 % go test -bench .
+BenchmarkMarshal-8                  	20000000	        68.9 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalProtoBuf-8          	20000000	        83.3 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshalFlatBuf-8           	 2000000	       711 ns/op	     472 B/op	      12 allocs/op
+BenchmarkUnmarshal-8                	20000000	       105 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalProtoBuf-8        	10000000	       130 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshalFlatBuf-8         	10000000	       154 ns/op	      84 B/op	       2 allocs/op
+BenchmarkMarshalReuse-8             	30000000	        38.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalProtoBufReuse-8     	30000000	        50.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalFlatBufReuse-8      	 5000000	       291 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse-8           	20000000	        69.5 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalProtoBufReuse-8   	20000000	        93.9 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalFlatBufReuse-8    	10000000	       120 ns/op	      20 B/op	       1 allocs/op
 PASS
-BenchmarkMarshal-8               	20000000	        96.7 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshalProtoBuf-8       	20000000	       104 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshalFlatBuf-8        	 1000000	      1030 ns/op	     472 B/op	      12 allocs/op
-BenchmarkUnmarshal-8             	10000000	       120 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshalProtoBuf-8     	10000000	       151 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshalFlatBuf-8      	10000000	       205 ns/op	      84 B/op	       2 allocs/op
-BenchmarkMarshalReuse-8          	30000000	        43.2 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalProtoBufReuse-8  	30000000	        53.5 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalFlatBufReuse-8   	 5000000	       312 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse-8        	20000000	        72.5 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalProtoBufReuse-8	20000000	       111 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalFlatBufReuse-8 	10000000	       167 ns/op	      20 B/op	       1 allocs/op
-ok  	github.com/pascaldekloe/colfer	21.206s
+ok  	github.com/pascaldekloe/colfer	20.028s
 ```
 
 For Java the numbers look even better.
