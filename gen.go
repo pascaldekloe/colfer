@@ -13,11 +13,6 @@ func Generate(basedir string, packages []*Package) error {
 	template.Must(t.Parse(goCode))
 	template.Must(t.New("marshal-field").Parse(goMarshalField))
 	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
-	template.Must(t.New("marshal-varint").Parse(goMarshalVarint))
-	template.Must(t.New("marshal-varint64").Parse(goMarshalVarint64))
-	template.Must(t.New("marshal-varint-header-len").Parse(goMarshalVarintHeaderLen))
-	template.Must(t.New("marshal-varint64-header-len").Parse(goMarshalVarint64HeaderLen))
-	template.Must(t.New("marshal-varint-len").Parse(goMarshalVarintLen))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-header").Parse(goUnmarshalHeader))
 	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
@@ -214,7 +209,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 	} else if x != 0 {
 		buf[i] = <:.Index:>
 		i++
-<:template "marshal-varint":>
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
 	}
 <:else if eq .Type "uint64":>
 	if x := o.<:.NameTitle:>; x >= 1<<49 {
@@ -225,7 +226,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 	} else if x != 0 {
 		buf[i] = <:.Index:>
 		i++
-<:template "marshal-varint64":>
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -237,7 +244,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 			buf[i] = <:.Index:> | 0x80
 		}
 		i++
-<:template "marshal-varint":>
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
 	}
 <:else if eq .Type "int64":>
 	if v := o.<:.NameTitle:>; v != 0 {
@@ -249,7 +262,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 			buf[i] = <:.Index:> | 0x80
 		}
 		i++
-<:template "marshal-varint64":>
+		for n := 0; n < 8 && x >= 0x80; n++ {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
 	}
 <:else if eq .Type "float32":>
 	if v := o.<:.NameTitle:>; v != 0.0 {
@@ -287,12 +306,24 @@ const goMarshalField = `<:if eq .Type "bool":>
 		buf[i] = <:.Index:>
 		i++
 		x := uint(l)
-<:template "marshal-varint":>
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
  <:- if .TypeArray:>
 		for _, a := range o.<:.NameTitle:> {
 			l = len(a)
 			x = uint(l)
-<:template "marshal-varint":>
+			for x >= 0x80 {
+				buf[i] = byte(x | 0x80)
+				x >>= 7
+				i++
+			}
+			buf[i] = byte(x)
+			i++
 			copy(buf[i:], a)
 			i += l
 		}
@@ -306,7 +337,13 @@ const goMarshalField = `<:if eq .Type "bool":>
 		buf[i] = <:.Index:>
 		i++
 		x := uint(l)
-<:template "marshal-varint":>
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
 		for vi, v := range o.<:.NameTitle:> {
 			if v == nil {
 				v = new(<:.TypeNative:>)
@@ -331,29 +368,45 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	if x := o.<:.NameTitle:>; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
-<:template "marshal-varint-header-len" .:>
+		l += 2
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
 	}
 <:else if eq .Type "uint64":>
 	if x := o.<:.NameTitle:>; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-<:template "marshal-varint64-header-len" .:>
+		l += 2
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
 	}
 <:else if eq .Type "int32":>
 	if v := o.<:.NameTitle:>; v != 0 {
+		l += 2
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
 		}
-<:template "marshal-varint-header-len" .:>
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
 	}
 <:else if eq .Type "int64":>
 	if v := o.<:.NameTitle:>; v != 0 {
+		l += 2
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
 		}
-<:template "marshal-varint64-header-len" .:>
+		for n := 0; n < 8 && x >= 0x80; n++ {
+			x >>= 7
+			l++
+		}
 	}
 <:else if eq .Type "float32":>
 	if o.<:.NameTitle:> != 0.0 {
@@ -373,18 +426,31 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "text" "binary":>
 	if x := len(o.<:.NameTitle:>); x != 0 {
-<:template "marshal-varint-header-len" .:>
  <:- if .TypeArray:>
 		if x > ColferListMax {
 			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
 		}
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
 		for _, a := range o.<:.NameTitle:> {
 			x = len(a)
-<:template "marshal-varint-len" .:>
 			l += x
+			for x >= 0x80 {
+				x >>= 7
+				l++
+			}
+			l++
 		}
  <:- else:>
 		l += x
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
  <:- end:>
 	}
 <:else if .TypeArray:>
@@ -392,7 +458,11 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		if x > ColferListMax {
 			return -1, ColferMax(fmt.Sprintf("colfer: field <:.String:> exceeds %d elements", ColferListMax))
 		}
-<:template "marshal-varint-header-len" .:>
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
 		for _, v := range o.<:.NameTitle:> {
 			if v == nil {
 				l++
@@ -414,40 +484,6 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		l += vl + 1
 	}
 <:end:>`
-
-const goMarshalVarint = `		for x >= 0x80 {
-			buf[i] = byte(x | 0x80)
-			x >>= 7
-			i++
-		}
-		buf[i] = byte(x)
-		i++`
-
-const goMarshalVarint64 = `		for n := 0; n < 8 && x >= 0x80; n++ {
-			buf[i] = byte(x | 0x80)
-			x >>= 7
-			i++
-		}
-		buf[i] = byte(x)
-		i++`
-
-const goMarshalVarintHeaderLen = `		for x >= 0x80 {
-			x >>= 7
-			l++
-		}
-		l += 2`
-
-const goMarshalVarint64HeaderLen = `		for n := 0; n < 8 && x >= 0x80; n++ {
-			x >>= 7
-			l++
-		}
-		l += 2`
-
-const goMarshalVarintLen = `			for x >= 0x80 {
-				x >>= 7
-				l++
-			}
-			l++`
 
 const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
@@ -613,7 +649,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			if err != nil {
 				return 0, err
 			}
-			i += n;
+			i += n
 		}
 		o.<:.NameTitle:> = a
 
@@ -630,7 +666,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		if err != nil {
 			return 0, err
 		}
-		i += n;
+		i += n
 
 		if i >= len(data) {
 			return 0, io.EOF

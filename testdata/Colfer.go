@@ -95,7 +95,7 @@ func (o *O) MarshalTo(buf []byte) int {
 	} else if x != 0 {
 		buf[i] = 2
 		i++
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -241,13 +241,13 @@ func (o *O) MarshalTo(buf []byte) int {
 		for _, a := range o.Ss {
 			l = len(a)
 			x = uint(l)
-		for x >= 0x80 {
-			buf[i] = byte(x | 0x80)
-			x >>= 7
+			for x >= 0x80 {
+				buf[i] = byte(x | 0x80)
+				x >>= 7
+				i++
+			}
+			buf[i] = byte(x)
 			i++
-		}
-		buf[i] = byte(x)
-		i++
 			copy(buf[i:], a)
 			i += l
 		}
@@ -270,24 +270,25 @@ func (o *O) MarshalLen() (int, error) {
 	if x := o.U32; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
+		l += 2
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if x := o.U64; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		l += 2
+		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if v := o.I32; v != 0 {
+		l += 2
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
@@ -296,10 +297,10 @@ func (o *O) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if v := o.I64; v != 0 {
+		l += 2
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
@@ -308,7 +309,6 @@ func (o *O) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if o.F32 != 0.0 {
@@ -328,21 +328,21 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.S); x != 0 {
+		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
-		l += x
 	}
 
 	if x := len(o.A); x != 0 {
+		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
-		l += x
 	}
 
 	if v := o.O; v != nil {
@@ -376,22 +376,22 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.Ss); x != 0 {
+		if x > ColferListMax {
+			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.ss exceeds %d elements", ColferListMax))
+		}
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
-		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field testdata.o.ss exceeds %d elements", ColferListMax))
-		}
 		for _, a := range o.Ss {
 			x = len(a)
+			l += x
 			for x >= 0x80 {
 				x >>= 7
 				l++
 			}
 			l++
-			l += x
 		}
 	}
 
@@ -693,7 +693,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		i += n;
+		i += n
 
 		if i >= len(data) {
 			return 0, io.EOF
@@ -730,7 +730,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			i += n;
+			i += n
 		}
 		o.Os = a
 

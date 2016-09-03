@@ -136,7 +136,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 	} else if x != 0 {
 		buf[i] = 4
 		i++
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for x >= 0x80 {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -169,6 +169,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 	l := 1
 
 	if v := o.Key; v != 0 {
+		l += 2
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
@@ -177,19 +178,19 @@ func (o *Colfer) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if x := len(o.Host); x != 0 {
+		l += x
 		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
 		l += 2
-		l += x
 	}
 
 	if v := o.Port; v != 0 {
+		l += 2
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
@@ -198,10 +199,10 @@ func (o *Colfer) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if v := o.Size; v != 0 {
+		l += 2
 		x := uint64(v)
 		if v < 0 {
 			x = ^x + 1
@@ -210,17 +211,16 @@ func (o *Colfer) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if x := o.Hash; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		l += 2
+		for x >= 0x80 {
 			x >>= 7
 			l++
 		}
-		l += 2
 	}
 
 	if o.Ratio != 0.0 {
