@@ -6,20 +6,12 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"time"
 )
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ = math.E
-var _ = time.RFC3339
 
 // Colfer configuration attributes
 var (
 	// ColferSizeMax is the upper limit for serial byte sizes.
 	ColferSizeMax = 16 * 1024 * 1024
-
-	// ColferListMax is the upper limit for the number of elements in a list.
-	ColferListMax = 64 * 1024
 )
 
 // ColferMax signals an upper limit breach.

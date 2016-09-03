@@ -37,14 +37,15 @@ var <:.NameNative:> = new function() {
 
 	// The upper limit for serial byte sizes.
 	var colferSizeMax = 16 * 1024 * 1024;
-
+<:- if .HasList:>
 	// The upper limit for the number of elements in a list.
 	var colferListMax = 64 * 1024;
+<:- end:>
 <:range .Structs:>
 	// Constructor.
 	this.<:.NameTitle:> = function(init) {
 <:- range .Fields:>
-		this.<:.Name:> = <:if .TypeArray:>[]
+		this.<:.Name:> = <:if .TypeList:>[]
 <:- else if eq .Type "bool":>false
 <:- else if eq .Type "timestamp":>null;
 		this.<:.Name:>_ns = 0
@@ -132,7 +133,7 @@ var <:.NameNative:> = new function() {
 
 const ecmaMarshal = `
 	// Serializes the object into an Uint8Array.
-<:- range .Fields:><:if .TypeArray:>
+<:- range .Fields:><:if .TypeList:>
 	// All null (and undefined) entries in field <:.Name:> will be replaced with a new <:if eq .Type "text":>""<:else:><:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:>()<:end:>.
 <:- end:><:end:>
 	this.<:.NameTitle:>.prototype.marshal = function() {
@@ -269,7 +270,7 @@ const ecmaMarshal = `
 			}
 		}
 <:else if eq .Type "text":>
- <:- if .TypeArray:>
+ <:- if .TypeList:>
 		if (this.<:.Name:> && this.<:.Name:>.length) {
 			var a = this.<:.Name:>;
 			if (a.length > colferListMax)
@@ -306,7 +307,7 @@ const ecmaMarshal = `
 			segs.push(seg);
 			segs.push(this.<:.Name:>);
 		}
-<:else if .TypeArray:>
+<:else if .TypeList:>
 		if (this.<:.Name:> && this.<:.Name:>.length) {
 			var a = this.<:.Name:>;
 			if (a.length > colferListMax)
@@ -495,7 +496,7 @@ const ecmaUnmarshal = `
 		}
 <:else if eq .Type "text":>
 		if (header == <:.Index:>) {
- <:- if .TypeArray:>
+ <:- if .TypeList:>
 			var length = readVarint();
 			if (length < 0)
 				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
@@ -538,7 +539,7 @@ const ecmaUnmarshal = `
 			i = to;
 			readHeader();
 		}
-<:else if .TypeArray:>
+<:else if .TypeList:>
 		if (header == <:.Index:>) {
 			var length = readVarint();
 			if (length < 0)

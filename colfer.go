@@ -33,6 +33,36 @@ type Package struct {
 	Structs    []*Struct
 }
 
+// HasFloat returns whether p has one or more floating point fields.
+func (p *Package) HasFloat() bool {
+	for _, s := range p.Structs {
+		if s.HasFloat() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasTimestamp returns whether p has one or more timestamp fields.
+func (p *Package) HasTimestamp() bool {
+	for _, s := range p.Structs {
+		if s.HasTimestamp() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasList returns whether p has one or more list fields.
+func (p *Package) HasList() bool {
+	for _, s := range p.Structs {
+		if s.HasList() {
+			return true
+		}
+	}
+	return false
+}
+
 // Struct is a data structure definition.
 type Struct struct {
 	Pkg *Package
@@ -41,13 +71,54 @@ type Struct struct {
 	Fields []*Field
 }
 
-// NameTitle gets the identification token in title case.
+// NameTitle returns the identification token in title case.
 func (s *Struct) NameTitle() string {
 	return strings.Title(s.Name)
 }
 
+// String returns the qualified name.
 func (s *Struct) String() string {
 	return fmt.Sprintf("%s.%s", s.Pkg.Name, s.Name)
+}
+
+// HasFloat returns whether s has one or more floating point fields.
+func (s *Struct) HasFloat() bool {
+	for _, f := range s.Fields {
+		if f.Type == "float32" || f.Type == "float64" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasText returns whether s has one or more text fields.
+func (s *Struct) HasText() bool {
+	for _, f := range s.Fields {
+		if f.Type == "text" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasTimestamp returns whether s has one or more timestamp fields.
+func (s *Struct) HasTimestamp() bool {
+	for _, f := range s.Fields {
+		if f.Type == "timestamp" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasList returns whether s has one or more list fields.
+func (s *Struct) HasList() bool {
+	for _, f := range s.Fields {
+		if f.TypeList {
+			return true
+		}
+	}
+	return false
 }
 
 // Field is a Struct member definition.
@@ -64,8 +135,8 @@ type Field struct {
 	TypeNative string
 	// TypeRef is the Colfer data structure reference.
 	TypeRef *Struct
-	// TypeArray flags whether the datatype is an array.
-	TypeArray bool
+	// TypeList flags whether the datatype is a list.
+	TypeList bool
 }
 
 // NameTitle gets the identification token in title case.
@@ -73,6 +144,7 @@ func (f *Field) NameTitle() string {
 	return strings.Title(f.Name)
 }
 
+// String returns the qualified name.
 func (f *Field) String() string {
 	return fmt.Sprintf("%s.%s", f.Struct, f.Name)
 }
@@ -136,7 +208,7 @@ func ReadDefs(files []string) ([]*Package, error) {
 				t := f.Type
 				_, ok := datatypes[t]
 				if ok {
-					if f.TypeArray && t != "text" {
+					if f.TypeList && t != "text" {
 						return nil, fmt.Errorf("colfer: unsupported lists type %s for field %q", t, f)
 					}
 					continue
@@ -179,7 +251,7 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 		t := f.Type
 		if at, ok := t.(*ast.ArrayType); ok {
 			t = at.Elt
-			field.TypeArray = true
+			field.TypeList = true
 		}
 
 		id, ok := t.(*ast.Ident)

@@ -5,6 +5,7 @@ package testdata;
 
 
 import static java.lang.String.format;
+import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -22,8 +23,6 @@ public class O implements java.io.Serializable {
 
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = 64 * 1024;
-
-	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
 	private static final byte[] _zeroA = new byte[0];
 	private static final O[] _zeroOs = new O[0];
 	private static final String[] _zeroSs = new String[0];
@@ -485,7 +484,7 @@ public class O implements java.io.Serializable {
 
 				int start = i;
 				i += size;
-				this.s = new String(buf, start, size, this._utf8);
+				this.s = new String(buf, start, size, StandardCharsets.UTF_8);
 				header = buf[i++];
 			}
 
@@ -555,7 +554,7 @@ public class O implements java.io.Serializable {
 
 					int start = i;
 					i += size;
-					a[ai] = new String(buf, start, size, this._utf8);
+					a[ai] = new String(buf, start, size, StandardCharsets.UTF_8);
 				}
 				this.ss = a;
 				header = buf[i++];
@@ -714,10 +713,10 @@ public class O implements java.io.Serializable {
 			&& this.i64 == o.i64
 			&& (this.f32 == o.f32 || (this.f32 != this.f32 && o.f32 != o.f32))
 			&& (this.f64 == o.f64 || (this.f64 != this.f64 && o.f64 != o.f64))
-			&& java.util.Objects.equals(this.t, o.t)
-			&& java.util.Objects.equals(this.s, o.s)
+			&& this.t == null ? o.t == null : this.t.equals(o.t)
+			&& this.s == null ? o.s == null : this.s.equals(o.s)
 			&& java.util.Arrays.equals(this.a, o.a)
-			&& java.util.Objects.equals(this.o, o.o)
+			&& this.o == null ? o.o == null : this.o.equals(o.o)
 			&& java.util.Arrays.equals(this.os, o.os)
 			&& java.util.Arrays.equals(this.ss, o.ss);
 	}

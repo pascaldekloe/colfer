@@ -5,6 +5,7 @@ package testdata.bench;
 
 
 import static java.lang.String.format;
+import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -20,10 +21,6 @@ public class Colfer implements java.io.Serializable {
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
 
-	/** The upper limit for the number of elements in a list. */
-	public static int colferListMax = 64 * 1024;
-
-	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
 
 	public long key;
 	public String host = "";
@@ -40,7 +37,7 @@ public class Colfer implements java.io.Serializable {
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferOverflowException when {@code buf} is too small.
-	 * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws IllegalStateException on an upper limit breach defined by {@link #colferSizeMax}.
 	 */
 	public int marshal(byte[] buf, int offset) {
 		int i = offset;
@@ -189,7 +186,7 @@ public class Colfer implements java.io.Serializable {
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
 	 * @throws InputMismatchException when the data does not match this object's schema.
 	 */
 	public int unmarshal(byte[] buf, int offset) {
@@ -235,7 +232,7 @@ public class Colfer implements java.io.Serializable {
 
 				int start = i;
 				i += size;
-				this.host = new String(buf, start, size, this._utf8);
+				this.host = new String(buf, start, size, StandardCharsets.UTF_8);
 				header = buf[i++];
 			}
 
@@ -408,7 +405,7 @@ public class Colfer implements java.io.Serializable {
 	public final boolean equals(Colfer o) {
 		return o != null
 			&& this.key == o.key
-			&& java.util.Objects.equals(this.host, o.host)
+			&& this.host == null ? o.host == null : this.host.equals(o.host)
 			&& this.port == o.port
 			&& this.size == o.size
 			&& this.hash == o.hash

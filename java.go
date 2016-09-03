@@ -74,6 +74,9 @@ const javaCode = `package <:.Pkg.NameNative:>;
 
 
 import static java.lang.String.format;
+<:- if .HasText:>
+import java.nio.charset.StandardCharsets;
+<:- end:>
 import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -88,21 +91,21 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
-
+<:if .HasList:>
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = 64 * 1024;
+<:- end:>
 
-	private static final java.nio.charset.Charset _utf8 = java.nio.charset.Charset.forName("UTF-8");
 <:- range .Fields:>
 <:- if eq .Type "binary":>
 	private static final byte[] _zero<:.NameTitle:> = new byte[0];
-<:- else if .TypeArray:>
+<:- else if .TypeList:>
 	private static final <:.TypeNative:>[] _zero<:.NameTitle:> = new <:.TypeNative:>[0];
 <:- end:>
 <:- end:>
 <:range .Fields:>
-	public <:.TypeNative:><:if .TypeArray:>[]<:end:> <:.Name:>
-<:- if .TypeArray:> = _zero<:.NameTitle:>
+	public <:.TypeNative:><:if .TypeList:>[]<:end:> <:.Name:>
+<:- if .TypeList:> = _zero<:.NameTitle:>
 <:- else if eq .Type "binary":> = _zero<:.NameTitle:>
 <:- else if eq .Type "text":> = ""
 <:- end:>;<:end:>
@@ -110,14 +113,14 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 	/**
 	 * Serializes the object.
-<:- range .Fields:><:if .TypeArray:>
+<:- range .Fields:><:if .TypeList:>
 	 * All {@code null} entries in {@link #<:.Name:>} will be replaced with a <:if eq .Type "text":>""<:else:>{@code new}<:end:> value.
 <:- end:><:end:>
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferOverflowException when {@code buf} is too small.
-	 * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws IllegalStateException on an upper limit breach defined by<:if .HasList:> either<:end:> {@link #colferSizeMax}<:if .HasList:> or {@link #colferListMax}<:end:>.
 	 */
 	public int marshal(byte[] buf, int offset) {
 		int i = offset;
@@ -249,7 +252,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				}
 			}
 <:else if eq .Type "text":>
- <:- if .TypeArray:>
+ <:- if .TypeList:>
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
 				String[] a = this.<:.Name:>;
@@ -379,7 +382,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				i += size;
 				System.arraycopy(this.<:.Name:>, 0, buf, start, size);
 			}
-<:else if .TypeArray:>
+<:else if .TypeList:>
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
 				<:.TypeNative:>[] a = this.<:.Name:>;
@@ -425,7 +428,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
 	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
-	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws SecurityException on an upper limit breach defined by<:if .HasList:> either<:end:> {@link #colferSizeMax}<:if .HasList:> or {@link #colferListMax}<:end:>.
 	 * @throws InputMismatchException when the data does not match this object's schema.
 	 */
 	public int unmarshal(byte[] buf, int offset) {
@@ -543,7 +546,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			}
 <:else if eq .Type "text":>
 			if (header == (byte) <:.Index:>) {
- <:- if .TypeArray:>
+ <:- if .TypeList:>
 				int length = 0;
 				for (int shift = 0; true; shift += 7) {
 					byte b = buf[i++];
@@ -566,7 +569,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 					int start = i;
 					i += size;
-					a[ai] = new String(buf, start, size, this._utf8);
+					a[ai] = new String(buf, start, size, StandardCharsets.UTF_8);
 				}
 				this.<:.Name:> = a;
  <:- else:>
@@ -581,7 +584,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 
 				int start = i;
 				i += size;
-				this.<:.Name:> = new String(buf, start, size, this._utf8);
+				this.<:.Name:> = new String(buf, start, size, StandardCharsets.UTF_8);
  <:- end:>
 				header = buf[i++];
 			}
@@ -602,7 +605,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 				System.arraycopy(buf, start, this.<:.Name:>, 0, size);
 				header = buf[i++];
 			}
-<:else if .TypeArray:>
+<:else if .TypeList:>
 			if (header == (byte) <:.Index:>) {
 				int length = 0;
 				for (int shift = 0; true; shift += 7) {
@@ -644,11 +647,11 @@ public class <:.NameTitle:> implements java.io.Serializable {
 		return i;
 	}
 <:range .Fields:>
-	public <:.TypeNative:><:if .TypeArray:>[]<:end:> get<:.NameTitle:>() {
+	public <:.TypeNative:><:if .TypeList:>[]<:end:> get<:.NameTitle:>() {
 		return this.<:.Name:>;
 	}
 
-	public void set<:.NameTitle:>(<:.TypeNative:><:if .TypeArray:>[]<:end:> value) {
+	public void set<:.NameTitle:>(<:.TypeNative:><:if .TypeList:>[]<:end:> value) {
 		this.<:.Name:> = value;
 	}
 <:end:>
@@ -656,7 +659,7 @@ public class <:.NameTitle:> implements java.io.Serializable {
 	public final int hashCode() {
 		int h = 1;
 <:- range .Fields:>
-<:- if .TypeArray:>
+<:- if .TypeList:>
 		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
 <:- else if eq .Type "bool":>
 		h = 31 * h + (this.<:.Name:> ? 1231 : 1237);
@@ -691,10 +694,10 @@ public class <:.NameTitle:> implements java.io.Serializable {
 			&& (this.<:.Name:> == o.<:.Name:> || (this.<:.Name:> != this.<:.Name:> && o.<:.Name:> != o.<:.Name:>))
 <:- else if eq .Type "binary":>
 			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
-<:- else if .TypeArray:>
+<:- else if .TypeList:>
 			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
 <:- else:>
-			&& java.util.Objects.equals(this.<:.Name:>, o.<:.Name:>)
+			&& this.<:.Name:> == null ? o.<:.Name:> == null : this.<:.Name:>.equals(o.<:.Name:>)
 <:- end:><:end:>;
 	}
 
