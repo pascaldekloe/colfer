@@ -43,6 +43,7 @@ var <:.NameNative:> = new function() {
 <:- end:>
 <:range .Structs:>
 	// Constructor.
+	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
 	this.<:.NameTitle:> = function(init) {
 <:- range .Fields:>
 		this.<:.Name:> = <:if .TypeList:>[]
@@ -55,7 +56,7 @@ var <:.NameNative:> = new function() {
 <:- else:>0
 <:- end:>;<:end:>
 
-		for (field in init) this[field] = init[field];
+		for (var p in init) this[p] = init[p];
 	}
 <:template "marshal" .:>
 <:template "unmarshal" .:>
@@ -134,7 +135,7 @@ var <:.NameNative:> = new function() {
 const ecmaMarshal = `
 	// Serializes the object into an Uint8Array.
 <:- range .Fields:><:if .TypeList:>
-	// All null (and undefined) entries in field <:.Name:> will be replaced with a new <:if eq .Type "text":>""<:else:><:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:>()<:end:>.
+	// All null (and undefined) entries in property <:.Name:> will be replaced with <:if eq .Type "text":>an empty String<:else:>a new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:><:end:>.
 <:- end:><:end:>
 	this.<:.NameTitle:>.prototype.marshal = function() {
 		var segs = [];

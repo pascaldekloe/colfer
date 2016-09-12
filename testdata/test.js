@@ -1,3 +1,10 @@
+QUnit.test('constructor', function(assert) {
+	assert.deepEqual(new testdata.O(), new testdata.O({}), 'absent and empty init');
+
+	var o = new testdata.O({s: 'hello', i32: 42});
+	assert.deepEqual(new testdata.O(o), o, 'clone');
+});
+
 function newGoldenCases() {
 	var date1 = new Date(), date2 = new Date(), date3 = new Date(), date4 = new Date();
 	date1.setTime(1441739050777);

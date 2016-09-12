@@ -9,6 +9,7 @@ var testdata = new function() {
 	var colferListMax = 64 * 1024;
 
 	// Constructor.
+	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
 	this.O = function(init) {
 		this.b = false;
 		this.u32 = 0;
@@ -25,12 +26,12 @@ var testdata = new function() {
 		this.os = [];
 		this.ss = [];
 
-		for (field in init) this[field] = init[field];
+		for (var p in init) this[p] = init[p];
 	}
 
 	// Serializes the object into an Uint8Array.
-	// All null (and undefined) entries in field os will be replaced with a new testdata.O().
-	// All null (and undefined) entries in field ss will be replaced with a new "".
+	// All null (and undefined) entries in property os will be replaced with a new testdata.O.
+	// All null (and undefined) entries in property ss will be replaced with an empty String.
 	this.O.prototype.marshal = function() {
 		var segs = [];
 
