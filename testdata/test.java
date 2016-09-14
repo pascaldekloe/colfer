@@ -2,6 +2,8 @@ package testdata;
 
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -94,6 +96,22 @@ public class test {
 				assertNull("exception for serial " + e.getKey(), ex);
 			}
 		}
+	}
+
+	@Test
+	public void streaming() throws Exception {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+		byte[] buf = new byte[1];
+		for (O o : newGoldenCases().values()) {
+			buf = o.marshal(out, buf);
+		}
+
+		O.Unmarshaller unmarshaller = new O.Unmarshaller(new ByteArrayInputStream(out.toByteArray()), new byte[1]);
+		for (O o : newGoldenCases().values()) {
+			assertEquals(unmarshaller.next(), o);
+		}
+		assertNull(unmarshaller.next());
 	}
 
 	@Test

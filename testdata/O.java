@@ -5,6 +5,9 @@ package testdata;
 
 
 import static java.lang.String.format;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
@@ -43,9 +46,126 @@ public class O implements java.io.Serializable {
 
 
 	/**
+	 * {@link #reset(InputStream) Reusable} deserialization of Colfer streams.
+	 */
+	public static class Unmarshaller {
+
+		/** The data source. */
+		protected InputStream in;
+
+		/** The read buffer. */
+		protected byte[] buf;
+
+		/** The {@link #buf buffer}'s data start index, inclusive. */
+		protected int offset;
+
+		/** The {@link #buf buffer}'s data end index, exclusive. */
+		protected int i;
+
+
+		/**
+		 * @param in the data source or {@code null}.
+		 * @param buf the initial buffer or {@code null}.
+		 */
+		public Unmarshaller(InputStream in, byte[] buf) {
+			if (buf == null || buf.length == 0)
+				buf = new byte[Math.min(O.colferSizeMax, 2048)];
+			this.buf = buf;
+			reset(in);
+		}
+
+		/**
+		 * Reuses the marshaller.
+		 * @param in the data source or {@code null}.
+		 * @throws IllegalStateException on pending data.
+		 */
+		public void reset(InputStream in) {
+			if (this.i != this.offset) throw new IllegalStateException("colfer: pending data");
+			this.in = in;
+			this.offset = 0;
+			this.i = 0;
+		}
+
+		/**
+		 * Deserializes the following object.
+		 * @return the result or {@code null} when EOF.
+		 * @throws IOException from the input stream.
+		 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+		 * @throws InputMismatchException when the data does not match this object's schema.
+		 */
+		public O next() throws IOException {
+			if (in == null) return null;
+
+			while (true) {
+				if (this.i > this.offset) {
+					try {
+						O o = new O();
+						this.offset = o.unmarshal(this.buf, this.offset, this.i);
+						return o;
+					} catch (BufferUnderflowException e) {
+					}
+				}
+				// not enough data
+
+				if (this.i <= this.offset) {
+					this.offset = 0;
+					this.i = 0;
+				} else if (i == buf.length) {
+					byte[] src = this.buf;
+					if (offset == 0) this.buf = new byte[Math.min(O.colferSizeMax, this.buf.length * 4)];
+					System.arraycopy(src, this.offset, this.buf, 0, this.i - this.offset);
+					this.i -= this.offset;
+					this.offset = 0;
+				}
+				assert this.i < this.buf.length;
+
+				int n = in.read(buf, i, buf.length - i);
+				if (n < 0) {
+					if (this.i > this.offset)
+						throw new InputMismatchException("colfer: pending data with EOF");
+					return null;
+				}
+				assert n > 0;
+				i += n;
+			}
+		}
+
+	}
+
+
+	/**
 	 * Serializes the object.
-	 * All {@code null} entries in {@link #os} will be replaced with a {@code new} value.
-	 * All {@code null} entries in {@link #ss} will be replaced with a "" value.
+	 * All {@code null} elements in {@link #os} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #ss} will be replaced with {@code ""}.
+	 * @param out the data destination.
+	 * @param buf the initial buffer or {@code null}.
+	 * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
+	 *  Otherwise the return is a new buffer, large enough to hold the whole serial.
+	 * @throws IOException from {@code out}.
+	 * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 */
+	public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
+		if (buf == null || buf.length == 0)
+			buf = new byte[Math.min(O.colferSizeMax, 2048)];
+
+		while (true) {
+			int i;
+			try {
+				i = marshal(buf, 0);
+			} catch (BufferOverflowException e) {
+				buf = new byte[Math.min(O.colferSizeMax, buf.length * 4)];
+				continue;
+			}
+
+			out.write(buf, 0, i);
+			return buf;
+		}
+	}
+
+	/**
+	 * Serializes the object.
+	 * All {@code null} elements in {@link #os} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #ss} will be replaced with {@code ""}.
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
@@ -54,6 +174,7 @@ public class O implements java.io.Serializable {
 	 */
 	public int marshal(byte[] buf, int offset) {
 		int i = offset;
+
 		try {
 			if (this.b) {
 				buf[i++] = (byte) 0;
@@ -210,8 +331,8 @@ public class O implements java.io.Serializable {
 					}
 				}
 				int size = i - start;
-				if (size > colferSizeMax)
-					throw new IllegalStateException(format("colfer: field testdata.o.s size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+				if (size > O.colferSizeMax)
+					throw new IllegalStateException(format("colfer: field testdata.o.s size %d exceeds %d UTF-8 bytes", size, O.colferSizeMax));
 
 				int ii = start - 1;
 				if (size > 0x7f) {
@@ -231,8 +352,8 @@ public class O implements java.io.Serializable {
 				buf[i++] = (byte) 9;
 
 				int size = this.a.length;
-				if (size > colferSizeMax)
-					throw new IllegalStateException(format("colfer: field testdata.o.a size %d exceeds %d bytes", size, colferSizeMax));
+				if (size > O.colferSizeMax)
+					throw new IllegalStateException(format("colfer: field testdata.o.a size %d exceeds %d bytes", size, O.colferSizeMax));
 
 				int x = size;
 				while (x > 0x7f) {
@@ -256,8 +377,8 @@ public class O implements java.io.Serializable {
 				O[] a = this.os;
 
 				int x = a.length;
-				if (x > colferListMax)
-					throw new IllegalStateException(format("colfer: field testdata.o.os length %d exceeds %d elements", x, colferListMax));
+				if (x > O.colferListMax)
+					throw new IllegalStateException(format("colfer: field testdata.o.os length %d exceeds %d elements", x, O.colferListMax));
 				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
@@ -279,8 +400,8 @@ public class O implements java.io.Serializable {
 				String[] a = this.ss;
 
 				int x = a.length;
-				if (x > colferListMax)
-					throw new IllegalStateException(format("colfer: field testdata.o.ss length %d exceeds %d elements", x, colferListMax));
+				if (x > O.colferListMax)
+					throw new IllegalStateException(format("colfer: field testdata.o.ss length %d exceeds %d elements", x, O.colferListMax));
 				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
@@ -320,8 +441,8 @@ public class O implements java.io.Serializable {
 						}
 					}
 					int size = i - start;
-					if (size > colferSizeMax)
-						throw new IllegalStateException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+					if (size > O.colferSizeMax)
+						throw new IllegalStateException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, O.colferSizeMax));
 
 					int ii = start - 1;
 					if (size > 0x7f) {
@@ -340,11 +461,10 @@ public class O implements java.io.Serializable {
 
 			buf[i++] = (byte) 0x7f;
 			return i;
-		} catch (IndexOutOfBoundsException e) {
-			if (i - offset > colferSizeMax)
-				throw new IllegalStateException(format("colfer: serial exceeds %d bytes", colferSizeMax));
-			if (i >= buf.length)
-				throw new BufferOverflowException();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			if (i - offset > O.colferSizeMax)
+				throw new IllegalStateException(format("colfer: serial exceeds %d bytes", O.colferSizeMax));
+			if (i > buf.length) throw new BufferOverflowException();
 			throw e;
 		}
 	}
@@ -359,7 +479,23 @@ public class O implements java.io.Serializable {
 	 * @throws InputMismatchException when the data does not match this object's schema.
 	 */
 	public int unmarshal(byte[] buf, int offset) {
+		return unmarshal(buf, offset, buf.length);
+	}
+
+	/**
+	 * Deserializes the object.
+	 * @param buf the data source.
+	 * @param offset the initial index for {@code buf}, inclusive.
+	 * @param end the index limit for {@code buf}, exclusive.
+	 * @return the final index for {@code buf}, exclusive.
+	 * @throws BufferUnderflowException when {@code buf} is incomplete. (EOF)
+	 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
+	 * @throws InputMismatchException when the data does not match this object's schema.
+	 */
+	public int unmarshal(byte[] buf, int offset, int end) {
+		if (end > buf.length) end = buf.length;
 		int i = offset;
+
 		try {
 			byte header = buf[i++];
 
@@ -479,8 +615,8 @@ public class O implements java.io.Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > colferSizeMax)
-					throw new SecurityException(format("colfer: field testdata.o.s size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+				if (size > O.colferSizeMax)
+					throw new SecurityException(format("colfer: field testdata.o.s size %d exceeds %d UTF-8 bytes", size, O.colferSizeMax));
 
 				int start = i;
 				i += size;
@@ -495,8 +631,8 @@ public class O implements java.io.Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > colferSizeMax)
-					throw new SecurityException(format("colfer: field testdata.o.a size %d exceeds %d bytes", size, colferSizeMax));
+				if (size > O.colferSizeMax)
+					throw new SecurityException(format("colfer: field testdata.o.a size %d exceeds %d bytes", size, O.colferSizeMax));
 
 				this.a = new byte[size];
 				int start = i;
@@ -507,7 +643,7 @@ public class O implements java.io.Serializable {
 
 			if (header == (byte) 10) {
 				this.o = new O();
-				i = this.o.unmarshal(buf, i);
+				i = this.o.unmarshal(buf, i, end);
 				header = buf[i++];
 			}
 
@@ -518,13 +654,13 @@ public class O implements java.io.Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > colferListMax)
-					throw new SecurityException(format("colfer: field testdata.o.os length %d exceeds %d elements", length, colferListMax));
+				if (length > O.colferListMax)
+					throw new SecurityException(format("colfer: field testdata.o.os length %d exceeds %d elements", length, O.colferListMax));
 
 				O[] a = new O[length];
 				for (int ai = 0; ai < length; ai++) {
 					O o = new O();
-					i = o.unmarshal(buf, i);
+					i = o.unmarshal(buf, i, end);
 					a[ai] = o;
 				}
 				this.os = a;
@@ -538,8 +674,8 @@ public class O implements java.io.Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > colferListMax)
-					throw new SecurityException(format("colfer: field testdata.o.ss length %d exceeds %d elements", length, colferListMax));
+				if (length > O.colferListMax)
+					throw new SecurityException(format("colfer: field testdata.o.ss length %d exceeds %d elements", length, O.colferListMax));
 
 				String[] a = new String[length];
 				for (int ai = 0; ai < length; ai++) {
@@ -549,8 +685,8 @@ public class O implements java.io.Serializable {
 						size |= (b & 0x7f) << shift;
 						if (shift == 28 || b >= 0) break;
 					}
-					if (size > colferSizeMax)
-						throw new SecurityException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, colferSizeMax));
+					if (size > O.colferSizeMax)
+						throw new SecurityException(format("colfer: field testdata.o.ss size %d exceeds %d UTF-8 bytes", size, O.colferSizeMax));
 
 					int start = i;
 					i += size;
@@ -562,16 +698,13 @@ public class O implements java.io.Serializable {
 
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
-		} catch (IndexOutOfBoundsException e) {
-			if (i - offset > colferSizeMax)
-				throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
-			if (i >= buf.length)
-				throw new BufferUnderflowException();
-			throw new RuntimeException("colfer: bug", e);
+		} finally {
+			if (i > end && end - offset < O.colferSizeMax) throw new BufferUnderflowException();
+			if (i - offset > O.colferSizeMax)
+				throw new SecurityException(format("colfer: serial exceeds %d bytes", O.colferSizeMax));
+			if (i > end) throw new BufferUnderflowException();
 		}
 
-		if (i - offset > colferSizeMax)
-			throw new SecurityException(format("colfer: serial exceeds %d bytes", colferSizeMax));
 		return i;
 	}
 
@@ -705,7 +838,7 @@ public class O implements java.io.Serializable {
 	}
 
 	public final boolean equals(O o) {
-		return o != null
+		return o != null && o.getClass() == O.class
 			&& this.b == o.b
 			&& this.u32 == o.u32
 			&& this.u64 == o.u64
