@@ -9,14 +9,15 @@ import (
 
 var errBodyMismatch = errors.New("colfer/rpc: body not a Colfer type")
 
+// colferer covers the encoding methods.
 type colferer interface {
 	MarshalTo([]byte) int
 	MarshalLen() (int, error)
 	Unmarshal([]byte) (int, error)
 }
 
-type conn struct {
-	rwc io.ReadWriteCloser
+type codec struct {
+	conn io.ReadWriteCloser
 
 	// buf is the read buffer.
 	buf []byte
@@ -26,64 +27,67 @@ type conn struct {
 
 	// i is the index of the data end (exclusive) in buf.
 	i int
+
+	// header is a reusable read struct
+	header Header
 }
 
-func NewServerCodec(rwc io.ReadWriteCloser) rpc.ServerCodec {
-	return &conn{
-		rwc: rwc,
+// NewClientCodec returns a new RPC codec.
+func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
+	return &codec{
+		conn: conn,
 		buf: make([]byte, 2048),
 	}
 }
 
-func NewClientCodec(rwc io.ReadWriteCloser) rpc.ClientCodec {
-	return &conn{
-		rwc: rwc,
+// NewServerCodec returns a new RPC codec.
+func NewServerCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
+	return &codec{
+		conn: conn,
 		buf: make([]byte, 2048),
 	}
 }
 
-func (c *conn) ReadResponseHeader(r *rpc.Response) error {
-	// escapes to heap
-	h := new(Header)
-	if err := c.deserialize(h); err != nil {
+func (c *codec) ReadRequestHeader(r *rpc.Request) error {
+	c.header = Header{}	// reset
+	if err := c.decode(&c.header); err != nil {
 		return err
 	}
 
-	r.ServiceMethod = h.Method
-	r.Seq = h.SeqID
-	r.Error = h.Error
+	r.ServiceMethod = c.header.Method
+	r.Seq = c.header.SeqID
 	return nil
 }
 
-func (c *conn) ReadRequestHeader(r *rpc.Request) error {
-	// escapes to heap
-	h := new(Header)
-	if err := c.deserialize(h); err != nil {
+func (c *codec) ReadResponseHeader(r *rpc.Response) error {
+	c.header = Header{}	// reset
+	if err := c.decode(&c.header); err != nil {
 		return err
 	}
 
-	r.ServiceMethod = h.Method
-	r.Seq = h.SeqID
+	r.ServiceMethod = c.header.Method
+	r.Seq = c.header.SeqID
+	r.Error = c.header.Error
 	return nil
 }
 
-func (c *conn) ReadResponseBody(r interface{}) error {
+func (c *codec) ReadRequestBody(r interface{}) error {
 	b, ok := r.(colferer)
 	if !ok {
 		return errBodyMismatch
 	}
-	return c.deserialize(b)
+	return c.decode(b)
 }
 
-func (c *conn) ReadRequestBody(r interface{}) error {
+func (c *codec) ReadResponseBody(r interface{}) error {
 	b, ok := r.(colferer)
 	if !ok {
 		return errBodyMismatch
 	}
-	return c.deserialize(b)
+	return c.decode(b)
 }
 
-func (c *conn) WriteRequest(header *rpc.Request, body interface{}) error {
+func (c *codec) WriteRequest(header *rpc.Request, body interface{}) error {
 	// escapes to heap
 	h := &Header{
 		Method: header.ServiceMethod,
@@ -93,10 +97,10 @@ func (c *conn) WriteRequest(header *rpc.Request, body interface{}) error {
 	if !ok {
 		return errBodyMismatch
 	}
-	return c.serialize(h, b)
+	return c.encode(h, b)
 }
 
-func (c *conn) WriteResponse(header *rpc.Response, body interface{}) error {
+func (c *codec) WriteResponse(header *rpc.Response, body interface{}) error {
 	// escapes to heap
 	h := &Header{
 		Method: header.ServiceMethod,
@@ -107,35 +111,35 @@ func (c *conn) WriteResponse(header *rpc.Response, body interface{}) error {
 	if !ok {
 		return errBodyMismatch
 	}
-	return c.serialize(h, b)
+	return c.encode(h, b)
 }
 
-func (c *conn) Close() error {
-	return c.rwc.Close()
+func (c *codec) Close() error {
+	return c.conn.Close()
 }
 
-func (c *conn) serialize(h *Header, body colferer) error {
-	l, err := h.MarshalLen()
+func (c *codec) encode(h *Header, body colferer) error {
+	l, err := body.MarshalLen()
 	if err != nil {
 		return err
 	}
 
-	if bl, err := body.MarshalLen(); err != nil {
+	if hl, err := h.MarshalLen(); err != nil {
 		return err
-	} else if bl > l {
-		l = bl
+	} else if hl > l {
+		l = hl
 	}
 
 	buf := make([]byte, l)
-	_, err = c.rwc.Write(buf[:h.MarshalTo(buf)])
+	_, err = c.conn.Write(buf[:h.MarshalTo(buf)])
 	if err != nil {
 		return err
 	}
-	_, err = c.rwc.Write(buf[:body.MarshalTo(buf)])
+	_, err = c.conn.Write(buf[:body.MarshalTo(buf)])
 	return err
 }
 
-func (c *conn) deserialize(v colferer) error {
+func (c *codec) decode(v colferer) error {
 	for {
 		if c.offset < c.i {
 			n, err := v.Unmarshal(c.buf[c.offset:c.i])
@@ -166,7 +170,7 @@ func (c *conn) deserialize(v colferer) error {
 			}
 		}
 
-		n, err := c.rwc.Read(c.buf[c.i:])
+		n, err := c.conn.Read(c.buf[c.i:])
 		c.i += n
 		if err != nil {
 			return err

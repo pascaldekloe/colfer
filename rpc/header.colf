@@ -1,7 +1,8 @@
 package rpc
 
+// Header is a prefix for requests and responses.
 type header struct {
-	method text
 	seqID  uint64
+	method text
 	error  text
 }

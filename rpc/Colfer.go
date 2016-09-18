@@ -36,9 +36,9 @@ func (i ColferTail) Error() string {
 }
 
 type Header struct {
-	Method string
-	SeqID  uint64
-	Error  string
+	SeqID	uint64
+	Method	string
+	Error	string
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -46,8 +46,25 @@ type Header struct {
 func (o *Header) MarshalTo(buf []byte) int {
 	var i int
 
-	if l := len(o.Method); l != 0 {
+	if x := o.SeqID; x >= 1<<49 {
+		buf[i] = 0 | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 9
+	} else if x != 0 {
 		buf[i] = 0
+		i++
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+
+	if l := len(o.Method); l != 0 {
+		buf[i] = 1
 		i++
 		x := uint(l)
 		for x >= 0x80 {
@@ -59,23 +76,6 @@ func (o *Header) MarshalTo(buf []byte) int {
 		i++
 		copy(buf[i:], o.Method)
 		i += l
-	}
-
-	if x := o.SeqID; x >= 1<<49 {
-		buf[i] = 1 | 0x80
-		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
-		i += 9
-	} else if x != 0 {
-		buf[i] = 1
-		i++
-		for x >= 0x80 {
-			buf[i] = byte(x | 0x80)
-			x >>= 7
-			i++
-		}
-		buf[i] = byte(x)
-		i++
 	}
 
 	if l := len(o.Error); l != 0 {
@@ -103,15 +103,6 @@ func (o *Header) MarshalTo(buf []byte) int {
 func (o *Header) MarshalLen() (int, error) {
 	l := 1
 
-	if x := len(o.Method); x != 0 {
-		l += x
-		for x >= 0x80 {
-			x >>= 7
-			l++
-		}
-		l += 2
-	}
-
 	if x := o.SeqID; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
@@ -120,6 +111,15 @@ func (o *Header) MarshalLen() (int, error) {
 			x >>= 7
 			l++
 		}
+	}
+
+	if x := len(o.Method); x != 0 {
+		l += x
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+		l += 2
 	}
 
 	if x := len(o.Error); x != 0 {
@@ -167,6 +167,36 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 	i := 1
 
 	if header == 0 {
+		var x uint64
+		for shift := uint(0); ; shift += 7 {
+			if i >= len(data) {
+				return 0, io.EOF
+			}
+			b := data[i]
+			i++
+			if shift == 56 || b < 0x80 {
+				x |= uint64(b) << shift
+				break
+			}
+			x |= (uint64(b) & 0x7f) << shift
+		}
+		o.SeqID = x
+
+		if i >= len(data) {
+			return 0, io.EOF
+		}
+		header = data[i]
+		i++
+	} else if header == 0|0x80 {
+		if i+8 >= len(data) {
+			return 0, io.EOF
+		}
+		o.SeqID = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
+		header = data[i+8]
+		i += 9
+	}
+
+	if header == 1 {
 		var x uint32
 		for shift := uint(0); ; shift += 7 {
 			if i >= len(data) {
@@ -188,36 +218,6 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 
 		header = data[to]
 		i = to + 1
-	}
-
-	if header == 1 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
-			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
-			}
-			x |= (uint64(b) & 0x7f) << shift
-		}
-		o.SeqID = x
-
-		if i >= len(data) {
-			return 0, io.EOF
-		}
-		header = data[i]
-		i++
-	} else if header == 1|0x80 {
-		if i+8 >= len(data) {
-			return 0, io.EOF
-		}
-		o.SeqID = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		header = data[i+8]
-		i += 9
 	}
 
 	if header == 2 {
