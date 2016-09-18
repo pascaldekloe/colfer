@@ -778,6 +778,9 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			i = to
 		}
 
+		if i >= len(data) {
+			return 0, io.EOF
+		}
 		header = data[i]
 		i++
 	}

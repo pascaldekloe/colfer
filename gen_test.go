@@ -3,6 +3,7 @@ package colfer
 import (
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"testing"
 	"time"
@@ -83,5 +84,18 @@ func TestUnmarshal(t *testing.T) {
 			continue
 		}
 		verify.Values(t, fmt.Sprintf("0x%s", gold.serial), got, gold.object)
+	}
+}
+
+// TestFuzzSeed updates the initial input corpus for fuzz testing.
+func TestFuzzSeed(t *testing.T) {
+	for _, gold := range newGoldenCases() {
+		data, err := gold.object.MarshalBinary()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ioutil.WriteFile("testdata/corpus/seed" + gold.serial, data, 0644); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

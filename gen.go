@@ -604,6 +604,9 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			i = to
 		}
 
+		if i >= len(data) {
+			return 0, io.EOF
+		}
 		header = data[i]
 		i++
 	}
