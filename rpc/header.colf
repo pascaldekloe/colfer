@@ -1,0 +1,7 @@
+package rpc
+
+type header struct {
+	method text
+	seqID  uint64
+	error  text
+}

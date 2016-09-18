@@ -1,11 +1,13 @@
 # Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
-Colfer is a schema-based binary data format optimized for speed and size.
+Colfer is a schema-based binary serialization format optimized for speed and
+size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
 to marshal and unmarshall data structures.
 
-This is free and unencumbered software released into the [public domain](http://creativecommons.org/publicdomain/zero/1.0).
+This is free and unencumbered software released into the
+[public domain](http://creativecommons.org/publicdomain/zero/1.0).
 The format is inspired by Proto**col** Buf**fer**.
 
 
@@ -23,7 +25,9 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### TODO's
 
-* RMI
+* RMI (WIP
+[![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
+)
 * Lists for numbers, timestamps and binaries
 
 
@@ -32,7 +36,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 Download a [prebuilt compiler](https://github.com/pascaldekloe/colfer/releases)
 or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
-Without arguments the command prints the manual.
+Without arguments the command prints its manual.
 
 ```
 NAME
@@ -62,7 +66,7 @@ SEE ALSO
 
 It is recommended to commit the generated source code to the respective version
 control.
-Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java).
+Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
 
 
 
