@@ -36,7 +36,7 @@ type codec struct {
 func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
 	return &codec{
 		conn: conn,
-		buf: make([]byte, 2048),
+		buf:  make([]byte, 32*1024),
 	}
 }
 
@@ -44,12 +44,12 @@ func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
 func NewServerCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
 	return &codec{
 		conn: conn,
-		buf: make([]byte, 2048),
+		buf:  make([]byte, 32*1024),
 	}
 }
 
 func (c *codec) ReadRequestHeader(r *rpc.Request) error {
-	c.header = Header{}	// reset
+	c.header = Header{} // reset
 	if err := c.decode(&c.header); err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (c *codec) ReadRequestHeader(r *rpc.Request) error {
 }
 
 func (c *codec) ReadResponseHeader(r *rpc.Response) error {
-	c.header = Header{}	// reset
+	c.header = Header{} // reset
 	if err := c.decode(&c.header); err != nil {
 		return err
 	}
@@ -119,23 +119,21 @@ func (c *codec) Close() error {
 }
 
 func (c *codec) encode(h *Header, body colferer) error {
-	l, err := body.MarshalLen()
+	hl, err := h.MarshalLen()
 	if err != nil {
 		return err
 	}
 
-	if hl, err := h.MarshalLen(); err != nil {
-		return err
-	} else if hl > l {
-		l = hl
-	}
-
-	buf := make([]byte, l)
-	_, err = c.conn.Write(buf[:h.MarshalTo(buf)])
+	bl, err := body.MarshalLen()
 	if err != nil {
 		return err
 	}
-	_, err = c.conn.Write(buf[:body.MarshalTo(buf)])
+
+	buf := make([]byte, hl+bl)
+	h.MarshalTo(buf)
+	body.MarshalTo(buf[hl:])
+
+	_, err = c.conn.Write(buf)
 	return err
 }
 
