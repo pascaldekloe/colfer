@@ -1,4 +1,4 @@
-package rpc
+package internal
 
 // Header is a prefix for requests and responses.
 type header struct {

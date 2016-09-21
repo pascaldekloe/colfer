@@ -1,7 +1,7 @@
 // Package colfer provides the schema interpretation.
 package colfer
 
-//go:generate go run ./cmd/colf/main.go go rpc/header.colf
+//go:generate go run ./cmd/colf/main.go -b rpc go rpc/header.colf
 
 import (
 	"fmt"

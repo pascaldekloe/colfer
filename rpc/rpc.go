@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/rpc"
+
+	"github.com/pascaldekloe/colfer/rpc/internal"
 )
 
 // colferer covers the encoding methods.
@@ -27,7 +29,7 @@ type codec struct {
 	i int
 
 	// header holds the last received header. (reusable)
-	header Header
+	header internal.Header
 }
 
 // NewClientCodec returns a new RPC codec.
@@ -47,7 +49,7 @@ func NewServerCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
 }
 
 func (c *codec) ReadRequestHeader(r *rpc.Request) error {
-	c.header = Header{} // reset
+	c.header = internal.Header{} // reset
 	if err := c.decode(&c.header); err != nil {
 		return err
 	}
@@ -58,7 +60,7 @@ func (c *codec) ReadRequestHeader(r *rpc.Request) error {
 }
 
 func (c *codec) ReadResponseHeader(r *rpc.Response) error {
-	c.header = Header{} // reset
+	c.header = internal.Header{} // reset
 	if err := c.decode(&c.header); err != nil {
 		return err
 	}
@@ -97,7 +99,7 @@ func (c *codec) ReadResponseBody(body interface{}) error {
 
 func (c *codec) WriteRequest(header *rpc.Request, body interface{}) error {
 	// escapes to heap
-	h := &Header{
+	h := &internal.Header{
 		Method: header.ServiceMethod,
 		SeqID:  header.Seq,
 	}
@@ -110,7 +112,7 @@ func (c *codec) WriteRequest(header *rpc.Request, body interface{}) error {
 
 func (c *codec) WriteResponse(header *rpc.Response, body interface{}) error {
 	// escapes to heap
-	h := &Header{
+	h := &internal.Header{
 		Method: header.ServiceMethod,
 		SeqID:  header.Seq,
 		Error:  header.Error,
@@ -126,7 +128,7 @@ func (c *codec) Close() error {
 	return c.conn.Close()
 }
 
-func (c *codec) encode(h *Header, body colferer) error {
+func (c *codec) encode(h *internal.Header, body colferer) error {
 	bl, err := body.MarshalLen()
 	if err != nil {
 		return err
