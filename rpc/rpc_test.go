@@ -3,6 +3,7 @@ package rpc
 import (
 	"bytes"
 	"io"
+	"net"
 	"net/rpc"
 	"strings"
 	"testing"
@@ -33,9 +34,7 @@ func TestRequest(t *testing.T) {
 	c := NewClientCodec(conn)
 
 	h := &rpc.Request{Seq: 42}
-	// body can be any Colfer struct
 	b := &testdata.O{S: "body " + strings.Repeat("A", 64*1024)}
-
 	if err := c.WriteRequest(h, b); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
@@ -63,7 +62,6 @@ func TestResponse(t *testing.T) {
 
 	h := &rpc.Response{Seq: 42}
 	b := &testdata.O{S: "body " + strings.Repeat("A", 64*1024)}
-
 	if err := s.WriteResponse(h, b); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
@@ -80,6 +78,78 @@ func TestResponse(t *testing.T) {
 		t.Fatalf("read body error: %s", err)
 	} else if gotB.S != b.S {
 		t.Errorf("got body %q, want %q", gotB.S, b.S)
+	}
+}
+
+// TestRequestBodySkip calls ReadRequestBody with nil.
+func TestRequestBodySkip(t *testing.T) {
+	conn := new(mockConn)
+	s := NewServerCodec(conn)
+	c := NewClientCodec(conn)
+
+	if err := c.WriteRequest(&rpc.Request{Seq: 1}, &testdata.O{S: "body 1"}); err != nil {
+		t.Fatalf("write error: %s", err)
+	}
+	if err := c.WriteRequest(&rpc.Request{Seq: 2}, &testdata.O{S: "body 2"}); err != nil {
+		t.Fatalf("write error: %s", err)
+	}
+
+	// skip first body
+	if err := s.ReadRequestHeader(new(rpc.Request)); err != nil {
+		t.Fatalf("read header error: %s", err)
+	}
+	if err := s.ReadRequestBody(nil); err != nil {
+		t.Fatalf("read body error: %s", err)
+	}
+
+	gotH := new(rpc.Request)
+	if err := s.ReadRequestHeader(gotH); err != nil {
+		t.Fatalf("read header error: %s", err)
+	} else if want := uint64(2); gotH.Seq != want {
+		t.Errorf("got sequence ID %d, want %d", gotH.Seq, want)
+	}
+
+	gotB := new(testdata.O)
+	if err := s.ReadRequestBody(gotB); err != nil {
+		t.Fatalf("read body error: %s", err)
+	} else if want := "body 2"; gotB.S != want {
+		t.Errorf("got body %q, want %q", gotB.S, want)
+	}
+}
+
+// TestResponseBodySkip calls ReadResponseBody with nil.
+func TestResponseBodySkip(t *testing.T) {
+	conn := new(mockConn)
+	s := NewServerCodec(conn)
+	c := NewClientCodec(conn)
+
+	if err := s.WriteResponse(&rpc.Response{Seq: 1}, &testdata.O{S: "body 1"}); err != nil {
+		t.Fatalf("write error: %s", err)
+	}
+	if err := s.WriteResponse(&rpc.Response{Seq: 2}, &testdata.O{S: "body 2"}); err != nil {
+		t.Fatalf("write error: %s", err)
+	}
+
+	// skip first body
+	if err := c.ReadResponseHeader(new(rpc.Response)); err != nil {
+		t.Fatalf("read header error: %s", err)
+	}
+	if err := c.ReadResponseBody(nil); err != nil {
+		t.Fatalf("read body error: %s", err)
+	}
+
+	gotH := new(rpc.Response)
+	if err := c.ReadResponseHeader(gotH); err != nil {
+		t.Fatalf("read header error: %s", err)
+	} else if want := uint64(2); gotH.Seq != want {
+		t.Errorf("got sequence ID %d, want %d", gotH.Seq, want)
+	}
+
+	gotB := new(testdata.O)
+	if err := c.ReadResponseBody(gotB); err != nil {
+		t.Fatalf("read body error: %s", err)
+	} else if want := "body 2"; gotB.S != want {
+		t.Errorf("got body %q, want %q", gotB.S, want)
 	}
 }
 
@@ -102,10 +172,9 @@ func (c *pipeConn) Close() error {
 }
 
 func BenchmarkCodec(b *testing.B) {
-	sr, cw := io.Pipe()
-	cr, sw := io.Pipe()
-	c := NewClientCodec(&pipeConn{cr, cw})
-	s := NewServerCodec(&pipeConn{sr, sw})
+	cc, sc := net.Pipe()
+	c := NewClientCodec(cc)
+	s := NewServerCodec(sc)
 
 	b.ReportAllocs()
 	b.ResetTimer()

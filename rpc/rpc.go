@@ -2,12 +2,10 @@
 package rpc
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"net/rpc"
 )
-
-var errBodyMismatch = errors.New("colfer/rpc: body not a Colfer type")
 
 // colferer covers the encoding methods.
 type colferer interface {
@@ -28,7 +26,7 @@ type codec struct {
 	// i is the index of the data end (exclusive) in buf.
 	i int
 
-	// header is a reusable read struct
+	// header holds the last received header. (reusable)
 	header Header
 }
 
@@ -71,18 +69,28 @@ func (c *codec) ReadResponseHeader(r *rpc.Response) error {
 	return nil
 }
 
-func (c *codec) ReadRequestBody(r interface{}) error {
-	b, ok := r.(colferer)
+func (c *codec) ReadRequestBody(body interface{}) error {
+	if body == nil {
+		c.skip(int(c.header.BodySize))
+		return nil
+	}
+
+	b, ok := body.(colferer)
 	if !ok {
-		return errBodyMismatch
+		return fmt.Errorf("colfer/rpc: body type %T not a Colfer type", body)
 	}
 	return c.decode(b)
 }
 
-func (c *codec) ReadResponseBody(r interface{}) error {
-	b, ok := r.(colferer)
+func (c *codec) ReadResponseBody(body interface{}) error {
+	if body == nil {
+		c.skip(int(c.header.BodySize))
+		return nil
+	}
+
+	b, ok := body.(colferer)
 	if !ok {
-		return errBodyMismatch
+		return fmt.Errorf("colfer/rpc: body type %T not a Colfer type", body)
 	}
 	return c.decode(b)
 }
@@ -95,7 +103,7 @@ func (c *codec) WriteRequest(header *rpc.Request, body interface{}) error {
 	}
 	b, ok := body.(colferer)
 	if !ok {
-		return errBodyMismatch
+		return fmt.Errorf("colfer/rpc: body type %T not a Colfer type", body)
 	}
 	return c.encode(h, b)
 }
@@ -109,7 +117,7 @@ func (c *codec) WriteResponse(header *rpc.Response, body interface{}) error {
 	}
 	b, ok := body.(colferer)
 	if !ok {
-		return errBodyMismatch
+		return fmt.Errorf("colfer/rpc: body type %T not a Colfer type", body)
 	}
 	return c.encode(h, b)
 }
@@ -119,12 +127,14 @@ func (c *codec) Close() error {
 }
 
 func (c *codec) encode(h *Header, body colferer) error {
-	hl, err := h.MarshalLen()
+	bl, err := body.MarshalLen()
 	if err != nil {
 		return err
 	}
 
-	bl, err := body.MarshalLen()
+	h.BodySize = uint32(bl)
+
+	hl, err := h.MarshalLen()
 	if err != nil {
 		return err
 	}
@@ -170,6 +180,26 @@ func (c *codec) decode(v colferer) error {
 
 		n, err := c.conn.Read(c.buf[c.i:])
 		c.i += n
+		if err != nil {
+			return err
+		}
+	}
+}
+
+// skip advances n bytes in the stream.
+func (c *codec) skip(n int) error {
+	for {
+		pending := c.i - c.offset
+		if n <= pending {
+			c.offset += n
+			return nil
+		}
+
+		n -= pending
+		c.offset = 0
+
+		var err error
+		c.i, err = c.conn.Read(c.buf)
 		if err != nil {
 			return err
 		}

@@ -39,6 +39,7 @@ type Header struct {
 	SeqID	uint64
 	Method	string
 	Error	string
+	BodySize	uint32
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -93,6 +94,22 @@ func (o *Header) MarshalTo(buf []byte) int {
 		i += l
 	}
 
+	if x := o.BodySize; x >= 1<<21 {
+		buf[i] = 3 | 0x80
+		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		i += 5
+	} else if x != 0 {
+		buf[i] = 3
+		i++
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+
 	buf[i] = 0x7f
 	i++
 	return i
@@ -129,6 +146,16 @@ func (o *Header) MarshalLen() (int, error) {
 			l++
 		}
 		l += 2
+	}
+
+	if x := o.BodySize; x >= 1<<21 {
+		l += 5
+	} else if x != 0 {
+		l += 2
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
 	}
 
 	if l > ColferSizeMax {
@@ -242,6 +269,36 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 
 		header = data[to]
 		i = to + 1
+	}
+
+	if header == 3 {
+		var x uint32
+		for shift := uint(0); ; shift += 7 {
+			if i >= len(data) {
+				return 0, io.EOF
+			}
+			b := data[i]
+			i++
+			if b < 0x80 {
+				x |= uint32(b) << shift
+				break
+			}
+			x |= (uint32(b) & 0x7f) << shift
+		}
+		o.BodySize = x
+
+		if i >= len(data) {
+			return 0, io.EOF
+		}
+		header = data[i]
+		i++
+	} else if header == 3|0x80 {
+		if i+4 >= len(data) {
+			return 0, io.EOF
+		}
+		o.BodySize = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
+		header = data[i+4]
+		i += 5
 	}
 
 	if header != 0x7f {
