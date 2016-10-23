@@ -60,7 +60,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 			buf[i] = 0 | 0x80
 		}
 		i++
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -80,8 +80,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 		}
 		buf[i] = byte(x)
 		i++
-		copy(buf[i:], o.Host)
-		i += l
+		i += copy(buf[i:], o.Host)
 	}
 
 	if v := o.Port; v != 0 {
@@ -111,7 +110,7 @@ func (o *Colfer) MarshalTo(buf []byte) int {
 			buf[i] = 3 | 0x80
 		}
 		i++
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -166,7 +165,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 		if v < 0 {
 			x = ^x + 1
 		}
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			x >>= 7
 			l++
 		}
@@ -199,7 +198,7 @@ func (o *Colfer) MarshalLen() (int, error) {
 		if v < 0 {
 			x = ^x + 1
 		}
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			x >>= 7
 			l++
 		}
@@ -244,14 +243,6 @@ func (o *Colfer) MarshalBinary() (data []byte, err error) {
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
 // The error return options are io.EOF, bench.ColferError and bench.ColferMax.
 func (o *Colfer) Unmarshal(data []byte) (int, error) {
-	if len(data) > ColferSizeMax {
-		n, err := o.Unmarshal(data[:ColferSizeMax])
-		if err == io.EOF {
-			return 0, ColferMax(fmt.Sprintf("colfer: struct testdata/bench.Colfer exceeds %d bytes", ColferSizeMax))
-		}
-		return n, err
-	}
-
 	if len(data) == 0 {
 		return 0, io.EOF
 	}
@@ -259,65 +250,110 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 	i := 1
 
 	if header == 0 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint64(b) & 0x7f) << shift
 		}
 		o.Key = int64(x)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	} else if header == 0|0x80 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint64(b) & 0x7f) << shift
 		}
 		o.Key = int64(^x + 1)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	}
 
 	if header == 1 {
-		var x uint32
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if b < 0x80 {
-				x |= uint32(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint32(b) & 0x7f) << shift
+		}
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.host size %d exceeds %d bytes", x, ColferSizeMax))
 		}
 		to := i + int(x)
 		if to >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		o.Host = string(data[i:to])
@@ -327,116 +363,179 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 	}
 
 	if header == 2 {
-		var x uint32
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if b < 0x80 {
-				x |= uint32(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint32(b) & 0x7f) << shift
 		}
 		o.Port = int32(x)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	} else if header == 2|0x80 {
-		var x uint32
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if b < 0x80 {
-				x |= uint32(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint32(b) & 0x7f) << shift
 		}
 		o.Port = int32(^x + 1)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	}
 
 	if header == 3 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint64(b) & 0x7f) << shift
 		}
 		o.Size = int64(x)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	} else if header == 3|0x80 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint64(b) & 0x7f) << shift
 		}
 		o.Size = int64(^x + 1)
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	}
 
 	if header == 4 {
-		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
 			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
 			}
-			x |= (uint64(b) & 0x7f) << shift
 		}
 		o.Hash = x
 
-		if i >= len(data) {
-			return 0, io.EOF
-		}
 		header = data[i]
 		i++
 	} else if header == 4|0x80 {
 		if i+8 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		o.Hash = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -446,6 +545,9 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 
 	if header == 5 {
 		if i+8 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
@@ -458,8 +560,10 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 
 	if header == 6 {
 		o.Route = true
-
 		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		header = data[i]
@@ -469,6 +573,9 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 	if header != 0x7f {
 		return 0, ColferError(i - 1)
 	}
+	if i >= ColferSizeMax {
+		return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer exceeds %d bytes", i, ColferSizeMax))
+	}
 	return i, nil
 }
 
@@ -476,11 +583,8 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 // The error return options are io.EOF, bench.ColferError, bench.ColferTail and bench.ColferMax.
 func (o *Colfer) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
-	if err != nil {
-		return err
-	}
-	if i != len(data) {
+	if i < len(data) && err == nil {
 		return ColferTail(i)
 	}
-	return nil
+	return err
 }

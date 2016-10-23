@@ -14,9 +14,6 @@ func Generate(basedir string, packages []*Package) error {
 	template.Must(t.New("marshal-field").Parse(goMarshalField))
 	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
-	template.Must(t.New("unmarshal-header").Parse(goUnmarshalHeader))
-	template.Must(t.New("unmarshal-varint32").Parse(goUnmarshalVarint32))
-	template.Must(t.New("unmarshal-varint64").Parse(goUnmarshalVarint64))
 
 	for _, p := range packages {
 		p.NameNative = p.Name[strings.LastIndexByte(p.Name, '/')+1:]
@@ -163,14 +160,6 @@ func (o *<:.NameTitle:>) MarshalBinary() (data []byte, err error) {
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
 // The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError and <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) Unmarshal(data []byte) (int, error) {
-	if len(data) > ColferSizeMax {
-		n, err := o.Unmarshal(data[:ColferSizeMax])
-		if err == io.EOF {
-			return 0, ColferMax(fmt.Sprintf("colfer: struct <:.String:> exceeds %d bytes", ColferSizeMax))
-		}
-		return n, err
-	}
-
 	if len(data) == 0 {
 		return 0, io.EOF
 	}
@@ -180,6 +169,9 @@ func (o *<:.NameTitle:>) Unmarshal(data []byte) (int, error) {
 	if header != 0x7f {
 		return 0, ColferError(i - 1)
 	}
+	if i >= ColferSizeMax {
+		return 0, ColferMax(fmt.Sprintf("colfer: <:.String:> exceeds %d bytes", i, ColferSizeMax))
+	}
 	return i, nil
 }
 
@@ -187,13 +179,10 @@ func (o *<:.NameTitle:>) Unmarshal(data []byte) (int, error) {
 // The error return options are io.EOF, <:.Pkg.NameNative:>.ColferError, <:.Pkg.NameNative:>.ColferTail and <:.Pkg.NameNative:>.ColferMax.
 func (o *<:.NameTitle:>) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
-	if err != nil {
-		return err
-	}
-	if i != len(data) {
+	if i < len(data) && err == nil {
 		return ColferTail(i)
 	}
-	return nil
+	return err
 }
 <:end:>`
 
@@ -263,7 +252,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 			buf[i] = <:.Index:> | 0x80
 		}
 		i++
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			buf[i] = byte(x | 0x80)
 			x >>= 7
 			i++
@@ -316,8 +305,7 @@ const goMarshalField = `<:if eq .Type "bool":>
 		i++
  <:- if .TypeList:>
 		for _, a := range o.<:.NameTitle:> {
-			l = len(a)
-			x = uint(l)
+			x = uint(len(a))
 			for x >= 0x80 {
 				buf[i] = byte(x | 0x80)
 				x >>= 7
@@ -325,12 +313,10 @@ const goMarshalField = `<:if eq .Type "bool":>
 			}
 			buf[i] = byte(x)
 			i++
-			copy(buf[i:], a)
-			i += l
+			i += copy(buf[i:], a)
 		}
  <:- else:>
-		copy(buf[i:], o.<:.NameTitle:>)
-		i += l
+		i += copy(buf[i:], o.<:.NameTitle:>)
  <:- end:>
 	}
 <:else if .TypeList:>
@@ -404,7 +390,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 		if v < 0 {
 			x = ^x + 1
 		}
-		for n := 0; n < 8 && x >= 0x80; n++ {
+		for n := 0; x >= 0x80 && n < 8; n++ {
 			x >>= 7
 			l++
 		}
@@ -419,7 +405,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.NameTitle:>; !v.IsZero() {
-		if s := v.Unix(); s >= 0 && s < 1<<32 {
+		if s := uint(v.Unix()); s < 1<<32 {
 			l += 9
 		} else {
 			l += 13
@@ -489,15 +475,54 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		o.<:.NameTitle:> = true
-<:template "unmarshal-header":>
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		header = data[i]
+		i++
 	}
 <:else if eq .Type "uint32":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint32":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = x
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	} else if header == <:.Index:>|0x80 {
 		if i+4 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
@@ -506,11 +531,43 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "uint64":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint64":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = x
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	} else if header == <:.Index:>|0x80 {
 		if i+8 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
@@ -519,27 +576,146 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "int32":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint32":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = int32(x)
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	} else if header == <:.Index:>|0x80 {
-<:template "unmarshal-varint32":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = int32(^x + 1)
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	}
 <:else if eq .Type "int64":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint64":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = int64(x)
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	} else if header == <:.Index:>|0x80 {
-<:template "unmarshal-varint64":>
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
 		o.<:.NameTitle:> = int64(^x + 1)
-<:template "unmarshal-header":>
+
+		header = data[i]
+		i++
 	}
 <:else if eq .Type "float32":>
 	if header == <:.Index:> {
 		if i+4 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		x := uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
@@ -551,6 +727,9 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "float64":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
@@ -563,6 +742,9 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 <:else if eq .Type "timestamp":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
@@ -574,6 +756,9 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		i += 9
 	} else if header == <:.Index:>|0x80 {
 		if i+12 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		sec := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
@@ -586,18 +771,77 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "text":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint32":>
- <:- if .TypeList:>
-		l := int(x)
-		if l > ColferListMax {
-			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", l, ColferListMax))
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
 		}
-		a := make([]string, l)
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+ <:- if .TypeList:>
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", x, ColferListMax))
+		}
+		a := make([]string, int(x))
 		o.<:.NameTitle:> = a
 		for ai := range a {
-<:template "unmarshal-varint32":>
+			if i >= len(data) {
+				if i >= ColferSizeMax {
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				}
+				return 0, io.EOF
+			}
+			x := uint(data[i])
+			i++
+
+			if x >= 0x80 {
+				x &= 0x7f
+				for shift := uint(7); ; shift += 7 {
+					if i >= len(data) {
+						if i >= ColferSizeMax {
+							return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						}
+						return 0, io.EOF
+					}
+					b := uint(data[i])
+					i++
+
+					if b < 0x80 {
+						x |= b << shift
+						break
+					}
+					x |= (b & 0x7f) << shift
+				}
+			}
+			if x > uint(ColferSizeMax) {
+				return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> element %d size %d exceeds %d bytes", ai, x, ColferSizeMax))
+			}
 			to := i + int(x)
 			if to >= len(data) {
+				if i >= ColferSizeMax {
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				}
 				return 0, io.EOF
 			}
 			a[ai] = string(data[i:to])
@@ -611,8 +855,14 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		i++
 	}
  <:- else:>
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> size %d exceeds %d bytes", x, ColferSizeMax))
+		}
 		to := i + int(x)
 		if to >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		o.<:.NameTitle:> = string(data[i:to])
@@ -623,30 +873,88 @@ const goUnmarshalField = `<:if eq .Type "bool":>
  <:- end:>
 <:else if eq .Type "binary":>
 	if header == <:.Index:> {
-<:template "unmarshal-varint32":>
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> size %d exceeds %d bytes", x, ColferSizeMax))
+		}
 		l := int(x)
-		to := i + l
-		if to >= len(data) {
+		if i + l >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		v := make([]byte, l)
-		copy(v, data[i:])
+		i += copy(v, data[i:])
 		o.<:.NameTitle:> = v
 
-		header = data[to]
-		i = to + 1
+		header = data[i]
+		i++
 	}
 <:else if .TypeList:>
 	if header == <:.Index:> {
-<:template "unmarshal-varint32":>
-		l := int(x)
-		if l > ColferListMax {
-			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", l, ColferListMax))
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: field <:.String:> length %d exceeds %d elements", x, ColferListMax))
 		}
 
+		l := int(x)
 		a := make([]*<:.TypeNative:>, l)
+		malloc := make([]<:.TypeNative:>, l)
 		for ai, _ := range a {
-			v := new(<:.TypeNative:>)
+			v := &malloc[ai]
 			a[ai] = v
 
 			n, err := v.Unmarshal(data[i:])
@@ -658,6 +966,9 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		o.<:.NameTitle:> = a
 
 		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		header = data[i]
@@ -673,44 +984,12 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		i += n
 
 		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+			}
 			return 0, io.EOF
 		}
 		header = data[i]
 		i++
 	}
 <:end:>`
-
-const goUnmarshalHeader = `
-		if i >= len(data) {
-			return 0, io.EOF
-		}
-		header = data[i]
-		i++`
-
-const goUnmarshalVarint32 = `		var x uint32
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
-			}
-			b := data[i]
-			i++
-			if b < 0x80 {
-				x |= uint32(b) << shift
-				break
-			}
-			x |= (uint32(b) & 0x7f) << shift
-		}`
-
-const goUnmarshalVarint64 = `		var x uint64
-		for shift := uint(0); ; shift += 7 {
-			if i >= len(data) {
-				return 0, io.EOF
-			}
-			b := data[i]
-			i++
-			if shift == 56 || b < 0x80 {
-				x |= uint64(b) << shift
-				break
-			}
-			x |= (uint64(b) & 0x7f) << shift
-		}`

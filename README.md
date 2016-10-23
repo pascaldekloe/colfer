@@ -133,21 +133,21 @@ The following changes are backward compatible.
 ## Performance
 
 ```
-% go test -bench .
-BenchmarkMarshal/colfer-8   	20000000	        68.6 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshal/protobuf-8 	20000000	        83.8 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshal/flatbuf-8  	 2000000	       720 ns/op	     472 B/op	      12 allocs/op
-BenchmarkUnmarshal/colfer-8 	20000000	       102 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/protobuf-8         	10000000	       131 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/flatbuf-8          	10000000	       155 ns/op	      84 B/op	       2 allocs/op
-BenchmarkMarshalReuse/colfer-8        	30000000	        39.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/protobuf-8      	30000000	        51.0 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/flatbuf-8       	 5000000	       306 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse/colfer-8      	20000000	        67.7 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/protobuf-8    	20000000	        94.3 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/flatbuf-8     	10000000	       126 ns/op	      20 B/op	       1 allocs/op
+% go generate && go test -bench .
+BenchmarkMarshal/colfer-8   	20000000	        67.2 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshal/protobuf-8 	20000000	        78.7 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshal/flatbuf-8  	 2000000	       689 ns/op	     472 B/op	      12 allocs/op
+BenchmarkUnmarshal/colfer-8 	20000000	        96.6 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshal/protobuf-8         	10000000	       126 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshal/flatbuf-8          	10000000	       144 ns/op	      84 B/op	       2 allocs/op
+BenchmarkMarshalReuse/colfer-8        	50000000	        38.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalReuse/protobuf-8      	30000000	        48.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalReuse/flatbuf-8       	 5000000	       290 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse/colfer-8      	20000000	        63.0 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalReuse/protobuf-8    	20000000	        94.0 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalReuse/flatbuf-8     	20000000	       111 ns/op	      20 B/op	       1 allocs/op
 PASS
-ok  	github.com/pascaldekloe/colfer	20.184s
+ok  	github.com/pascaldekloe/colfer	21.110s
 ```
 
 For Java the numbers look even better.
