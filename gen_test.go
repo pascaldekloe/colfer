@@ -74,6 +74,7 @@ func newGoldenCases() []*golden {
 		{"0b01007f7f", testdata.O{Os: []*testdata.O{{B: true}}}},
 		{"0b027f7f7f", testdata.O{Os: []*testdata.O{{}, {}}}},
 		{"0c0300016101627f", testdata.O{Ss: []string{"", "a", "b"}}},
+		{"0d0201000201027f", testdata.O{As: [][]byte{[]byte{0}, []byte{1, 2}}}},
 	}
 }
 

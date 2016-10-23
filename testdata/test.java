@@ -78,6 +78,7 @@ public class test {
 		newCase(goldenCases, "0b01007f7f").os = new O[] {element};
 		newCase(goldenCases, "0b027f7f7f").os = new O[] {new O(), new O()};
 		newCase(goldenCases, "0c0300016101627f").ss = new String[] {"", "a", "b"};
+		newCase(goldenCases, "0d0201000201027f").as = new byte[][]{new byte[]{0}, new byte[]{1, 2}};
 		return goldenCases;
 	}
 
@@ -144,7 +145,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: serial exceeds 2 bytes", e.getMessage());
+			assertEquals("marshal error", "colfer: testdata.o exceeds 2 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -161,7 +162,7 @@ public class test {
 			fail("no marshal exception");
 		} catch (IllegalStateException e) {
 			// Field message only when buffer is big enough. Otherwise it's: "serial exceeds 2 bytes".
-			assertEquals("marshal error", "colfer: field testdata.o.s size 3 exceeds 2 UTF-8 bytes", e.getMessage());
+			assertEquals("marshal error", "colfer: testdata.o.s size 3 exceeds 2 UTF-8 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -177,7 +178,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: field testdata.o.a size 3 exceeds 2 bytes", e.getMessage());
+			assertEquals("marshal error", "colfer: testdata.o.a size 3 exceeds 2 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -193,7 +194,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: field testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+			assertEquals("marshal error", "colfer: testdata.o.os length 10 exceeds 9 elements", e.getMessage());
 		} finally {
 			O.colferListMax = origMax;
 		}
@@ -208,7 +209,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: serial exceeds 2 bytes", e.getMessage());
+			assertEquals("unmarshal error", "colfer: testdata.o exceeds 2 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -223,7 +224,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: field testdata.o.s size 10 exceeds 9 UTF-8 bytes", e.getMessage());
+			assertEquals("unmarshal error", "colfer: testdata.o.s size 10 exceeds 9 UTF-8 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -238,7 +239,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: field testdata.o.a size 10 exceeds 9 bytes", e.getMessage());
+			assertEquals("unmarshal error", "colfer: testdata.o.a size 10 exceeds 9 bytes", e.getMessage());
 		} finally {
 			O.colferSizeMax = origMax;
 		}
@@ -253,7 +254,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: field testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+			assertEquals("unmarshal error", "colfer: testdata.o.os length 10 exceeds 9 elements", e.getMessage());
 		} finally {
 			O.colferListMax = origMax;
 		}

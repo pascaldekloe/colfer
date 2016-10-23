@@ -205,7 +205,7 @@ public class Colfer implements java.io.Serializable {
 				}
 				int size = i - start;
 				if (size > Colfer.colferSizeMax)
-					throw new IllegalStateException(format("colfer: field testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, Colfer.colferSizeMax));
+					throw new IllegalStateException(format("colfer: testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, Colfer.colferSizeMax));
 
 				int ii = start - 1;
 				if (size > 0x7f) {
@@ -292,7 +292,7 @@ public class Colfer implements java.io.Serializable {
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
 			if (i - offset > Colfer.colferSizeMax)
-				throw new IllegalStateException(format("colfer: serial exceeds %d bytes", Colfer.colferSizeMax));
+				throw new IllegalStateException(format("colfer: testdata/bench.Colfer exceeds %d bytes", Colfer.colferSizeMax));
 			if (i > buf.length) throw new BufferOverflowException();
 			throw e;
 		}
@@ -362,7 +362,7 @@ public class Colfer implements java.io.Serializable {
 					if (shift == 28 || b >= 0) break;
 				}
 				if (size > Colfer.colferSizeMax)
-					throw new SecurityException(format("colfer: field testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, Colfer.colferSizeMax));
+					throw new SecurityException(format("colfer: testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, Colfer.colferSizeMax));
 
 				int start = i;
 				i += size;
@@ -451,7 +451,7 @@ public class Colfer implements java.io.Serializable {
 		} finally {
 			if (i > end && end - offset < Colfer.colferSizeMax) throw new BufferUnderflowException();
 			if (i - offset > Colfer.colferSizeMax)
-				throw new SecurityException(format("colfer: serial exceeds %d bytes", Colfer.colferSizeMax));
+				throw new SecurityException(format("colfer: testdata/bench.Colfer exceeds %d bytes", Colfer.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}
 

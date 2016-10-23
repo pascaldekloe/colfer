@@ -103,6 +103,26 @@ func (s *Struct) HasText() bool {
 	return false
 }
 
+// HasBinary returns whether s has one or more binary fields.
+func (s *Struct) HasBinary() bool {
+	for _, f := range s.Fields {
+		if f.Type == "binary" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasBinaryList returns whether s has one or more binary list fields.
+func (s *Struct) HasBinaryList() bool {
+	for _, f := range s.Fields {
+		if f.Type == "binary" && f.TypeList {
+			return true
+		}
+	}
+	return false
+}
+
 // HasTimestamp returns whether s has one or more timestamp fields.
 func (s *Struct) HasTimestamp() bool {
 	for _, f := range s.Fields {
@@ -210,7 +230,7 @@ func ReadDefs(files []string) ([]*Package, error) {
 				t := f.Type
 				_, ok := datatypes[t]
 				if ok {
-					if f.TypeList && t != "text" {
+					if f.TypeList && t != "text" && t != "binary" {
 						return nil, fmt.Errorf("colfer: unsupported lists type %s for field %q", t, f)
 					}
 					continue

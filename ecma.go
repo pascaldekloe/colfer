@@ -135,7 +135,7 @@ var <:.NameNative:> = new function() {
 const ecmaMarshal = `
 	// Serializes the object into an Uint8Array.
 <:- range .Fields:><:if .TypeList:>
-	// All null (and undefined) entries in property <:.Name:> will be replaced with <:if eq .Type "text":>an empty String<:else:>a new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:><:end:>.
+	// All null entries in property <:.Name:> will be replaced with <:if eq .Type "text":>an empty String<:else if eq .Type "binary":>an empty Array<:else:>a new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:><:end:>.
 <:- end:><:end:>
 	this.<:.NameTitle:>.prototype.marshal = function() {
 		var segs = [];
@@ -275,7 +275,7 @@ const ecmaMarshal = `
 		if (this.<:.Name:> && this.<:.Name:>.length) {
 			var a = this.<:.Name:>;
 			if (a.length > colferListMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length exceeds colferListMax';
+				throw 'colfer: <:.String:> length exceeds colferListMax';
 			var seg = [<:.Index:>];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -302,17 +302,39 @@ const ecmaMarshal = `
 		}
  <:- end:>
 <:else if eq .Type "binary":>
+ <:- if .TypeList:>
+		if (this.<:.Name:> && this.<:.Name:>.length) {
+			var a = this.<:.Name:>;
+			if (a.length > colferListMax)
+				throw 'colfer: <:.String:> length exceeds colferListMax';
+			var seg = [<:.Index:>];
+			encodeVarint(seg, a.length);
+			segs.push(seg);
+			for (var i = 0; i < a.length; i++) {
+				var b = a[i];
+				if (b == null) {
+					b = new Uint8Array(0);
+					a[i] = b;
+				}
+				seg = [];
+				encodeVarint(seg, b.length);
+				segs.push(seg);
+				segs.push(b)
+			}
+		}
+ <:- else:>
 		if (this.<:.Name:> && this.<:.Name:>.length) {
 			var seg = [<:.Index:>];
 			encodeVarint(seg, this.<:.Name:>.length);
 			segs.push(seg);
 			segs.push(this.<:.Name:>);
 		}
+ <:- end:>
 <:else if .TypeList:>
 		if (this.<:.Name:> && this.<:.Name:>.length) {
 			var a = this.<:.Name:>;
 			if (a.length > colferListMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length exceeds colferListMax';
+				throw 'colfer: <:.String:> length exceeds colferListMax';
 			var seg = [<:.Index:>];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -336,7 +358,7 @@ const ecmaMarshal = `
 			size += seg.length;
 		});
 		if (size > colferSizeMax)
-			throw 'colfer: <:.Pkg.NameNative:>/<:.NameTitle:> serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
+			throw 'colfer: <:.String:> serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
 
 		var bytes = new Uint8Array(size);
 		var i = 0;
@@ -500,15 +522,15 @@ const ecmaUnmarshal = `
  <:- if .TypeList:>
 			var length = readVarint();
 			if (length < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.String:> length exceeds Number.MAX_SAFE_INTEGER';
 			if (length > colferListMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length ' + length + ' exceeds ' + colferListMax + ' elements';
+				throw 'colfer: <:.String:> length ' + length + ' exceeds ' + colferListMax + ' elements';
 			while (--length >= 0) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> element ' + this.<:.Name:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> element ' + this.<:.Name:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 				var to = i + size;
 				if (to > data.length) throw EOF;
 				this.<:.Name:>.push(decodeUTF8(data.subarray(i, to)));
@@ -517,9 +539,9 @@ const ecmaUnmarshal = `
  <:- else:>
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> size exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.String:> size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				throw 'colfer: <:.String:> size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
 			this.<:.Name:> = decodeUTF8(data.subarray(i, to));
@@ -529,24 +551,43 @@ const ecmaUnmarshal = `
 		}
 <:else if eq .Type "binary":>
 		if (header == <:.Index:>) {
+ <:- if .TypeList:>
+			var length = readVarint();
+			if (length < 0)
+				throw 'colfer: <:.String:> length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: <:.String:> length ' + length + ' exceeds ' + colferListMax + ' elements';
+			while (--length >= 0) {
+				var size = readVarint();
+				if (size < 0)
+					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+				else if (size > colferSizeMax)
+					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				var to = i + size;
+				if (to > data.length) throw EOF;
+				this.<:.Name:>.push(data.subarray(i, to));
+				i = to;
+			}
+ <:- else:>
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> size exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.String:> size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+				throw 'colfer: <:.String:> size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
 			this.<:.Name:> = data.subarray(i, to);
 			i = to;
+ <:- end:>
 			readHeader();
 		}
 <:else if .TypeList:>
 		if (header == <:.Index:>) {
 			var length = readVarint();
 			if (length < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.String:> length exceeds Number.MAX_SAFE_INTEGER';
 			if (length > colferListMax)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> length ' + length + ' exceeds ' + colferListMax + ' elements';
+				throw 'colfer: <:.String:> length ' + length + ' exceeds ' + colferListMax + ' elements';
 			while (--length >= 0) {
 				var o = new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:>();
 				i += o.unmarshal(data.subarray(i));
@@ -564,6 +605,6 @@ const ecmaUnmarshal = `
 <:end:><:end:>
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
 		if (i > colferSizeMax)
-			throw 'colfer: <:.Pkg.NameNative:>/<:.NameTitle:> serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+			throw 'colfer: <:.String:> serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
 		return i;
 	}`

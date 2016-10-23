@@ -347,7 +347,7 @@ func (o *Colfer) Unmarshal(data []byte) (int, error) {
 			}
 		}
 		if x > uint(ColferSizeMax) {
-			return 0, ColferMax(fmt.Sprintf("colfer: field testdata/bench.Colfer.host size %d exceeds %d bytes", x, ColferSizeMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: testdata/bench.Colfer.host size %d exceeds %d bytes", x, ColferSizeMax))
 		}
 		to := i + int(x)
 		if to >= len(data) {

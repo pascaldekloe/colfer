@@ -25,13 +25,15 @@ var testdata = new function() {
 		this.o = null;
 		this.os = [];
 		this.ss = [];
+		this.as = [];
 
 		for (var p in init) this[p] = init[p];
 	}
 
 	// Serializes the object into an Uint8Array.
-	// All null (and undefined) entries in property os will be replaced with a new testdata.O.
-	// All null (and undefined) entries in property ss will be replaced with an empty String.
+	// All null entries in property os will be replaced with a new testdata.O.
+	// All null entries in property ss will be replaced with an empty String.
+	// All null entries in property as will be replaced with an empty Array.
 	this.O.prototype.marshal = function() {
 		var segs = [];
 
@@ -189,7 +191,7 @@ var testdata = new function() {
 		if (this.os && this.os.length) {
 			var a = this.os;
 			if (a.length > colferListMax)
-				throw 'colfer: testdata/O field os length exceeds colferListMax';
+				throw 'colfer: testdata.o.os length exceeds colferListMax';
 			var seg = [11];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -206,7 +208,7 @@ var testdata = new function() {
 		if (this.ss && this.ss.length) {
 			var a = this.ss;
 			if (a.length > colferListMax)
-				throw 'colfer: testdata/O field ss length exceeds colferListMax';
+				throw 'colfer: testdata.o.ss length exceeds colferListMax';
 			var seg = [12];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -224,12 +226,32 @@ var testdata = new function() {
 			}
 		}
 
+		if (this.as && this.as.length) {
+			var a = this.as;
+			if (a.length > colferListMax)
+				throw 'colfer: testdata.o.as length exceeds colferListMax';
+			var seg = [13];
+			encodeVarint(seg, a.length);
+			segs.push(seg);
+			for (var i = 0; i < a.length; i++) {
+				var b = a[i];
+				if (b == null) {
+					b = new Uint8Array(0);
+					a[i] = b;
+				}
+				seg = [];
+				encodeVarint(seg, b.length);
+				segs.push(seg);
+				segs.push(b)
+			}
+		}
+
 		var size = 1;
 		segs.forEach(function(seg) {
 			size += seg.length;
 		});
 		if (size > colferSizeMax)
-			throw 'colfer: testdata/O serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
+			throw 'colfer: testdata.o serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
 
 		var bytes = new Uint8Array(size);
 		var i = 0;
@@ -391,9 +413,9 @@ var testdata = new function() {
 		if (header == 8) {
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: testdata/O field s size exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: testdata.o.s size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
-				throw 'colfer: testdata/O field s size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				throw 'colfer: testdata.o.s size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
 			this.s = decodeUTF8(data.subarray(i, to));
@@ -404,9 +426,9 @@ var testdata = new function() {
 		if (header == 9) {
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: testdata/O field a size exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: testdata.o.a size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
-				throw 'colfer: testdata/O field a size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+				throw 'colfer: testdata.o.a size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
 			this.a = data.subarray(i, to);
@@ -424,9 +446,9 @@ var testdata = new function() {
 		if (header == 11) {
 			var length = readVarint();
 			if (length < 0)
-				throw 'colfer: testdata/O field os length exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: testdata.o.os length exceeds Number.MAX_SAFE_INTEGER';
 			if (length > colferListMax)
-				throw 'colfer: testdata/O field os length ' + length + ' exceeds ' + colferListMax + ' elements';
+				throw 'colfer: testdata.o.os length ' + length + ' exceeds ' + colferListMax + ' elements';
 			while (--length >= 0) {
 				var o = new testdata.O();
 				i += o.unmarshal(data.subarray(i));
@@ -438,15 +460,15 @@ var testdata = new function() {
 		if (header == 12) {
 			var length = readVarint();
 			if (length < 0)
-				throw 'colfer: testdata/O field ss length exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: testdata.o.ss length exceeds Number.MAX_SAFE_INTEGER';
 			if (length > colferListMax)
-				throw 'colfer: testdata/O field ss length ' + length + ' exceeds ' + colferListMax + ' elements';
+				throw 'colfer: testdata.o.ss length ' + length + ' exceeds ' + colferListMax + ' elements';
 			while (--length >= 0) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: testdata/O field ss element ' + this.ss.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					throw 'colfer: testdata.o.ss element ' + this.ss.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
-					throw 'colfer: testdata/O field ss element ' + this.ss.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					throw 'colfer: testdata.o.ss element ' + this.ss.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 				var to = i + size;
 				if (to > data.length) throw EOF;
 				this.ss.push(decodeUTF8(data.subarray(i, to)));
@@ -455,9 +477,29 @@ var testdata = new function() {
 			readHeader();
 		}
 
+		if (header == 13) {
+			var length = readVarint();
+			if (length < 0)
+				throw 'colfer: testdata.o.as length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: testdata.o.as length ' + length + ' exceeds ' + colferListMax + ' elements';
+			while (--length >= 0) {
+				var size = readVarint();
+				if (size < 0)
+					throw 'colfer: testdata.o.as element ' + this.as.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+				else if (size > colferSizeMax)
+					throw 'colfer: testdata.o.as element ' + this.as.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				var to = i + size;
+				if (to > data.length) throw EOF;
+				this.as.push(data.subarray(i, to));
+				i = to;
+			}
+			readHeader();
+		}
+
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
 		if (i > colferSizeMax)
-			throw 'colfer: testdata/O serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+			throw 'colfer: testdata.o serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
 		return i;
 	}
 

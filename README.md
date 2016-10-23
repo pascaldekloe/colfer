@@ -28,7 +28,7 @@ The format is inspired by Proto**col** Buf**fer**.
 * RMI (WIP
 [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
 )
-* Lists for numbers, timestamps and binaries
+* Lists for numbers and timestamps
 
 
 

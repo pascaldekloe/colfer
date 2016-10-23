@@ -97,19 +97,24 @@ import java.nio.BufferUnderflowException;
 <:if .HasList:>
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = 64 * 1024;
+<:end:>
+<:- if .HasBinary:>
+	private static final byte[] _zeroBytes = new byte[0];
 <:- end:>
-
+<:- if .HasBinaryList:>
+	private static final byte[][] _zeroBinaries = new byte[0][];
+<:- end:>
 <:- range .Fields:>
-<:- if eq .Type "binary":>
-	private static final byte[] _zero<:.NameTitle:> = new byte[0];
-<:- else if .TypeList:>
+<:- if .TypeList:>
+ <:- if ne .Type "binary":>
 	private static final <:.TypeNative:>[] _zero<:.NameTitle:> = new <:.TypeNative:>[0];
+ <:- end:>
 <:- end:>
 <:- end:>
 <:range .Fields:>
 	public <:.TypeNative:><:if .TypeList:>[]<:end:> <:.Name:>
-<:- if .TypeList:> = _zero<:.NameTitle:>
-<:- else if eq .Type "binary":> = _zero<:.NameTitle:>
+<:- if eq .Type "binary":><:if .TypeList:> = _zeroBinaries<:else:> = _zeroBytes<:end:>
+<:- else if .TypeList:> = _zero<:.NameTitle:>
 <:- else if eq .Type "text":> = ""
 <:- end:>;<:end:>
 
@@ -205,7 +210,7 @@ import java.nio.BufferUnderflowException;
 	/**
 	 * Serializes the object.
 <:- range .Fields:><:if .TypeList:>
-	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else:>a {@code new} value<:end:>.
+	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
 <:- end:><:end:>
 	 * @param out the data destination.
 	 * @param buf the initial buffer or {@code null}.
@@ -235,7 +240,7 @@ import java.nio.BufferUnderflowException;
 	/**
 	 * Serializes the object.
 <:- range .Fields:><:if .TypeList:>
-	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else:>a {@code new} value<:end:>.
+	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
 <:- end:><:end:>
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
@@ -381,7 +386,7 @@ import java.nio.BufferUnderflowException;
 
 				int x = a.length;
 				if (x > <:$class:>.colferListMax)
-					throw new IllegalStateException(format("colfer: field <:.String:> length %d exceeds %d elements", x, <:$class:>.colferListMax));
+					throw new IllegalStateException(format("colfer: <:.String:> length %d exceeds %d elements", x, <:$class:>.colferListMax));
 				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
@@ -422,7 +427,7 @@ import java.nio.BufferUnderflowException;
 					}
 					int size = i - start;
 					if (size > <:$class:>.colferSizeMax)
-						throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
+						throw new IllegalStateException(format("colfer: <:.String:>[%d] size %d exceeds %d UTF-8 bytes", ai, size, <:$class:>.colferSizeMax));
 
 					int ii = start - 1;
 					if (size > 0x7f) {
@@ -469,7 +474,7 @@ import java.nio.BufferUnderflowException;
 				}
 				int size = i - start;
 				if (size > <:$class:>.colferSizeMax)
-					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
+					throw new IllegalStateException(format("colfer: <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
 
 				int ii = start - 1;
 				if (size > 0x7f) {
@@ -486,12 +491,48 @@ import java.nio.BufferUnderflowException;
 			}
  <:- end:>
 <:else if eq .Type "binary":>
+ <:- if .TypeList:>
+			if (this.<:.Name:>.length != 0) {
+				buf[i++] = (byte) <:.Index:>;
+				byte[][] a = this.<:.Name:>;
+
+				int x = a.length;
+				if (x > <:$class:>.colferListMax)
+					throw new IllegalStateException(format("colfer: <:.String:> length %d exceeds %d elements", x, <:$class:>.colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					byte[] b = a[ai];
+					if (b == null) {
+						b = _zeroBytes;
+						a[ai] = b;
+					}
+					if (b.length > <:$class:>.colferSizeMax)
+						throw new IllegalStateException(format("colfer: <:.String:>[%d] size %d exceeds %d bytes", ai, b.length, <:$class:>.colferSizeMax));
+
+					x = b.length;
+					while (x > 0x7f) {
+						buf[i++] = (byte) (x | 0x80);
+						x >>>= 7;
+					}
+					buf[i++] = (byte) x;
+
+					int start = i;
+					i += b.length;
+					System.arraycopy(b, 0, buf, start, b.length);
+				}
+			}
+ <:- else:>
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
 
 				int size = this.<:.Name:>.length;
 				if (size > <:$class:>.colferSizeMax)
-					throw new IllegalStateException(format("colfer: field <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
+					throw new IllegalStateException(format("colfer: <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
 
 				int x = size;
 				while (x > 0x7f) {
@@ -504,6 +545,7 @@ import java.nio.BufferUnderflowException;
 				i += size;
 				System.arraycopy(this.<:.Name:>, 0, buf, start, size);
 			}
+ <:- end:>
 <:else if .TypeList:>
 			if (this.<:.Name:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
@@ -511,7 +553,7 @@ import java.nio.BufferUnderflowException;
 
 				int x = a.length;
 				if (x > <:$class:>.colferListMax)
-					throw new IllegalStateException(format("colfer: field <:.String:> length %d exceeds %d elements", x, <:$class:>.colferListMax));
+					throw new IllegalStateException(format("colfer: <:.String:> length %d exceeds %d elements", x, <:$class:>.colferListMax));
 				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
@@ -537,7 +579,7 @@ import java.nio.BufferUnderflowException;
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
 			if (i - offset > <:$class:>.colferSizeMax)
-				throw new IllegalStateException(format("colfer: serial exceeds %d bytes", <:$class:>.colferSizeMax));
+				throw new IllegalStateException(format("colfer: <:.String:> exceeds %d bytes", <:$class:>.colferSizeMax));
 			if (i > buf.length) throw new BufferOverflowException();
 			throw e;
 		}
@@ -691,7 +733,7 @@ import java.nio.BufferUnderflowException;
 					if (shift == 28 || b >= 0) break;
 				}
 				if (length > <:$class:>.colferListMax)
-					throw new SecurityException(format("colfer: field <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
+					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
 
 				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
 				for (int ai = 0; ai < length; ai++) {
@@ -702,7 +744,7 @@ import java.nio.BufferUnderflowException;
 						if (shift == 28 || b >= 0) break;
 					}
 					if (size > <:$class:>.colferSizeMax)
-						throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
+						throw new SecurityException(format("colfer: <:.String:>[%d] size %d exceeds %d UTF-8 bytes", ai, size, <:$class:>.colferSizeMax));
 
 					int start = i;
 					i += size;
@@ -717,7 +759,7 @@ import java.nio.BufferUnderflowException;
 					if (shift == 28 || b >= 0) break;
 				}
 				if (size > <:$class:>.colferSizeMax)
-					throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
+					throw new SecurityException(format("colfer: <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
 
 				int start = i;
 				i += size;
@@ -726,6 +768,38 @@ import java.nio.BufferUnderflowException;
 				header = buf[i++];
 			}
 <:else if eq .Type "binary":>
+ <:- if .TypeList:>
+			if (header == (byte) <:.Index:>) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length > <:$class:>.colferListMax)
+					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
+
+				byte[][] a = new byte[length][];
+				for (int ai = 0; ai < length; ai++) {
+					int size = 0;
+					for (int shift = 0; true; shift += 7) {
+						byte b = buf[i++];
+						size |= (b & 0x7f) << shift;
+						if (shift == 28 || b >= 0) break;
+					}
+					if (size > <:$class:>.colferSizeMax)
+						throw new SecurityException(format("colfer: <:.String:>[%d] size %d exceeds %d bytes", ai, size, <:$class:>.colferSizeMax));
+
+					byte[] e = new byte[size];
+					int start = i;
+					i += size;
+					System.arraycopy(buf, start, e, 0, size);
+					a[ai] = e;
+				}
+
+				header = buf[i++];
+			}
+ <:- else:>
 			if (header == (byte) <:.Index:>) {
 				int size = 0;
 				for (int shift = 0; true; shift += 7) {
@@ -734,14 +808,16 @@ import java.nio.BufferUnderflowException;
 					if (shift == 28 || b >= 0) break;
 				}
 				if (size > <:$class:>.colferSizeMax)
-					throw new SecurityException(format("colfer: field <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
+					throw new SecurityException(format("colfer: <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
 
 				this.<:.Name:> = new byte[size];
 				int start = i;
 				i += size;
 				System.arraycopy(buf, start, this.<:.Name:>, 0, size);
+
 				header = buf[i++];
 			}
+ <:- end:>
 <:else if .TypeList:>
 			if (header == (byte) <:.Index:>) {
 				int length = 0;
@@ -751,7 +827,7 @@ import java.nio.BufferUnderflowException;
 					if (shift == 28 || b >= 0) break;
 				}
 				if (length > <:$class:>.colferListMax)
-					throw new SecurityException(format("colfer: field <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
+					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
 
 				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
 				for (int ai = 0; ai < length; ai++) {
@@ -774,7 +850,7 @@ import java.nio.BufferUnderflowException;
 		} finally {
 			if (i > end && end - offset < <:$class:>.colferSizeMax) throw new BufferUnderflowException();
 			if (i - offset > <:$class:>.colferSizeMax)
-				throw new SecurityException(format("colfer: serial exceeds %d bytes", <:$class:>.colferSizeMax));
+				throw new SecurityException(format("colfer: <:.String:> exceeds %d bytes", <:$class:>.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}
 
@@ -793,9 +869,7 @@ import java.nio.BufferUnderflowException;
 	public final int hashCode() {
 		int h = 1;
 <:- range .Fields:>
-<:- if .TypeList:>
-		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
-<:- else if eq .Type "bool":>
+<:- if eq .Type "bool":>
 		h = 31 * h + (this.<:.Name:> ? 1231 : 1237);
 <:- else if eq .Type "uint32" "int32":>
 		h = 31 * h + this.<:.Name:>;
@@ -807,7 +881,13 @@ import java.nio.BufferUnderflowException;
 		long _<:.Name:>Bits = Double.doubleToLongBits(this.<:.Name:>);
 		h = 31 * h + (int) (_<:.Name:>Bits ^ _<:.Name:>Bits >>> 32);
 <:- else if eq .Type "binary":>
+ <:- if .TypeList:>
+		for (byte[] b : this.<:.Name:>) h = 31 * h + java.util.Arrays.hashCode(b);
+ <:- else:>
 		for (byte b : this.<:.Name:>) h = 31 * h + b;
+ <:- end:>
+<:- else if .TypeList:>
+		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
 <:- else:>
 		if (this.<:.Name:> != null) h = 31 * h + this.<:.Name:>.hashCode();
 <:- end:><:end:>
@@ -827,13 +907,28 @@ import java.nio.BufferUnderflowException;
 <:- else if eq .Type "float32" "float64":>
 			&& (this.<:.Name:> == o.<:.Name:> || (this.<:.Name:> != this.<:.Name:> && o.<:.Name:> != o.<:.Name:>))
 <:- else if eq .Type "binary":>
+ <:- if .TypeList:>
+			&& _equals(this.<:.Name:>, o.<:.Name:>)
+ <:- else:>
 			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
+ <:- end:>
 <:- else if .TypeList:>
 			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
 <:- else:>
 			&& this.<:.Name:> == null ? o.<:.Name:> == null : this.<:.Name:>.equals(o.<:.Name:>)
 <:- end:><:end:>;
 	}
+<:if .HasBinaryList:>
+	private static boolean _equals(byte[][] a, byte[][] b) {
+		if (a == b) return true;
+		if (a == null || b == null) return false;
 
+		int i = a.length;
+		if (i != b.length) return false;
+
+		while (--i >= 0) if (! java.util.Arrays.equals(a[i], b[i])) return false;
+		return true;
+	}
+<:end:>
 }
 `

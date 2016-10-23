@@ -15,4 +15,5 @@ type o struct {
 	o   o
 	os  []o
 	ss  []text
+	as  []binary
 }
