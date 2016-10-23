@@ -200,7 +200,7 @@ public class O implements java.io.Serializable {
 
 			if (this.u64 != 0) {
 				long x = this.u64;
-				if ((x & ~((1 << 49) - 1)) != 0) {
+				if ((x & ~((1L << 49) - 1)) != 0) {
 					buf[i++] = (byte) (2 | 0x80);
 					buf[i++] = (byte) (x >>> 56);
 					buf[i++] = (byte) (x >>> 48);

@@ -251,7 +251,7 @@ public class Colfer implements java.io.Serializable {
 
 			if (this.hash != 0) {
 				long x = this.hash;
-				if ((x & ~((1 << 49) - 1)) != 0) {
+				if ((x & ~((1L << 49) - 1)) != 0) {
 					buf[i++] = (byte) (4 | 0x80);
 					buf[i++] = (byte) (x >>> 56);
 					buf[i++] = (byte) (x >>> 48);

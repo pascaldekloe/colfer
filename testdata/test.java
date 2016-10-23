@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -25,15 +26,30 @@ public class test {
 		newCase(goldenCases, "7f");
 		newCase(goldenCases, "007f").b = true;
 		newCase(goldenCases, "01017f").u32 = 1;
+		newCase(goldenCases, "01ff017f").u32 = 255;
+		newCase(goldenCases, "01ffff037f").u32 = 65535;
 		newCase(goldenCases, "81ffffffff7f").u32 = -1;
-		newCase(goldenCases, "02017f").u64 = 1;
-		newCase(goldenCases, "82ffffffffffffffff7f").u64 = -1;
+		newCase(goldenCases, "02017f").u64 = 1L;
+		newCase(goldenCases, "02ff017f").u64 = 255L;
+		newCase(goldenCases, "02ffff037f").u64 = 65535L;
+		newCase(goldenCases, "02ffffffff0f7f").u64 = 4294967295L;
+		newCase(goldenCases, "82ffffffffffffffff7f").u64 = -1L;
 		newCase(goldenCases, "03017f").i32 = 1;
 		newCase(goldenCases, "83017f").i32 = -1;
+		newCase(goldenCases, "037f7f").i32 = Byte.MAX_VALUE;
+		newCase(goldenCases, "8380017f").i32 = Byte.MIN_VALUE;
+		newCase(goldenCases, "03ffff017f").i32 = Short.MAX_VALUE;
+		newCase(goldenCases, "838080027f").i32 = Short.MIN_VALUE;
 		newCase(goldenCases, "03ffffffff077f").i32 = Integer.MAX_VALUE;
 		newCase(goldenCases, "8380808080087f").i32 = Integer.MIN_VALUE;
 		newCase(goldenCases, "04017f").i64 = 1;
 		newCase(goldenCases, "84017f").i64 = -1;
+		newCase(goldenCases, "047f7f").i64 = Byte.MAX_VALUE;
+		newCase(goldenCases, "8480017f").i64 = Byte.MIN_VALUE;
+		newCase(goldenCases, "04ffff017f").i64 = Short.MAX_VALUE;
+		newCase(goldenCases, "848080027f").i64 = Short.MIN_VALUE;
+		newCase(goldenCases, "04ffffffff077f").i64 = Integer.MAX_VALUE;
+		newCase(goldenCases, "8480808080087f").i64 = Integer.MIN_VALUE;
 		newCase(goldenCases, "04ffffffffffffffff7f7f").i64 = Long.MAX_VALUE;
 		newCase(goldenCases, "848080808080808080807f").i64 = Long.MIN_VALUE;
 		newCase(goldenCases, "05000000017f").f32 = Float.MIN_VALUE;
@@ -49,8 +65,10 @@ public class test {
 		newCase(goldenCases, "0801417f").s = "A";
 		newCase(goldenCases, "080261007f").s = "a\0";
 		newCase(goldenCases, "0809c280e0a080f09080807f").s = "\u0080\u0800\ud800\udc00";
+		newCase(goldenCases, "08800120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020207f").s = "                                                                                                                                ";
 		newCase(goldenCases, "0901ff7f").a = new byte[]{-1};
 		newCase(goldenCases, "090202007f").a = new byte[]{2, 0};
+		newCase(goldenCases, "09c0010909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909097f").a = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t".getBytes(UTF_8);
 		newCase(goldenCases, "0a7f7f").o = new O();
 		O inner = new O();
 		inner.b = true;
@@ -78,7 +96,8 @@ public class test {
 				assertEquals("serial", e.getKey(), toHex(buf));
 				assertEquals("write index", n, buf.length);
 			} catch (Exception ex) {
-				assertNull("exception for serial " + e.getKey(), ex);
+				ex.printStackTrace();
+				fail("exception for serial " + e.getKey());
 			}
 		}
 	}
@@ -93,7 +112,8 @@ public class test {
 				assertEquals(e.getKey(), e.getValue(), o);
 				assertEquals("read index", n, serial.length);
 			} catch (Exception ex) {
-				assertNull("exception for serial " + e.getKey(), ex);
+				ex.printStackTrace();
+				fail("exception for serial " + e.getKey());
 			}
 		}
 	}

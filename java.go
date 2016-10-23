@@ -272,7 +272,7 @@ import java.nio.BufferUnderflowException;
 <:else if eq .Type "uint64":>
 			if (this.<:.Name:> != 0) {
 				long x = this.<:.Name:>;
-				if ((x & ~((1 << 49) - 1)) != 0) {
+				if ((x & ~((1L << 49) - 1)) != 0) {
 					buf[i++] = (byte) (<:.Index:> | 0x80);
 					buf[i++] = (byte) (x >>> 56);
 					buf[i++] = (byte) (x >>> 48);
