@@ -278,7 +278,7 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 
 		id, ok := t.(*ast.Ident)
 		if !ok {
-			return fmt.Errorf("colfer: unknown datatype declaration for field %q: %#v", field, t)
+			return fmt.Errorf("colfer: unknown datatype declaration for field %s: %#q", field.String(), t)
 		}
 		field.Type = id.Name
 	}
