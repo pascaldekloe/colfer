@@ -463,7 +463,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		o.B = true
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -474,7 +474,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 1 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -488,7 +488,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -507,7 +507,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	} else if header == 1|0x80 {
 		if i+4 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -519,7 +519,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 2 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -533,7 +533,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -552,7 +552,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	} else if header == 2|0x80 {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -564,7 +564,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 3 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -578,7 +578,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -597,7 +597,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	} else if header == 3|0x80 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -611,7 +611,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -632,7 +632,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 4 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -646,7 +646,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -665,7 +665,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	} else if header == 4|0x80 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -679,7 +679,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -700,7 +700,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 5 {
 		if i+4 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -714,7 +714,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 6 {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -729,7 +729,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 7 {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -743,7 +743,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	} else if header == 7|0x80 {
 		if i+12 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -759,7 +759,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 8 {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -771,7 +771,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -791,7 +791,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		to := i + int(x)
 		if to >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -804,7 +804,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 9 {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -816,7 +816,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -836,7 +836,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		l := int(x)
 		if i + l >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -858,7 +858,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -869,7 +869,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 11 {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -913,7 +913,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -924,7 +924,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 12 {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -936,7 +936,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -958,7 +958,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		for ai := range a {
 			if i >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -970,7 +970,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				for shift := uint(7); ; shift += 7 {
 					if i >= len(data) {
 						if i >= ColferSizeMax {
-							return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+							return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 						}
 						return 0, io.EOF
 					}
@@ -990,7 +990,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			to := i + int(x)
 			if to >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -1008,7 +1008,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	if header == 13 {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -1020,7 +1020,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -1042,7 +1042,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		for ai := range a {
 			if i >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -1054,7 +1054,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 				for shift := uint(7); ; shift += 7 {
 					if i >= len(data) {
 						if i >= ColferSizeMax {
-							return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+							return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 						}
 						return 0, io.EOF
 					}
@@ -1075,7 +1075,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 
 			if i + len(v) >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -1086,7 +1086,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -1098,7 +1098,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		return 0, ColferError(i - 1)
 	}
 	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: testdata.o exceeds %d bytes", i, ColferSizeMax))
+		return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 	}
 	return i, nil
 }
