@@ -655,7 +655,7 @@ public class O implements java.io.Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > O.colferSizeMax)
+				if (size < 0 || size > O.colferSizeMax)
 					throw new SecurityException(format("colfer: testdata.o.s size %d exceeds %d UTF-8 bytes", size, O.colferSizeMax));
 
 				int start = i;
@@ -671,7 +671,7 @@ public class O implements java.io.Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > O.colferSizeMax)
+				if (size < 0 || size > O.colferSizeMax)
 					throw new SecurityException(format("colfer: testdata.o.a size %d exceeds %d bytes", size, O.colferSizeMax));
 
 				this.a = new byte[size];
@@ -695,7 +695,7 @@ public class O implements java.io.Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > O.colferListMax)
+				if (length < 0 || length > O.colferListMax)
 					throw new SecurityException(format("colfer: testdata.o.os length %d exceeds %d elements", length, O.colferListMax));
 
 				O[] a = new O[length];
@@ -715,7 +715,7 @@ public class O implements java.io.Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > O.colferListMax)
+				if (length < 0 || length > O.colferListMax)
 					throw new SecurityException(format("colfer: testdata.o.ss length %d exceeds %d elements", length, O.colferListMax));
 
 				String[] a = new String[length];
@@ -726,7 +726,7 @@ public class O implements java.io.Serializable {
 						size |= (b & 0x7f) << shift;
 						if (shift == 28 || b >= 0) break;
 					}
-					if (size > O.colferSizeMax)
+					if (size < 0 || size > O.colferSizeMax)
 						throw new SecurityException(format("colfer: testdata.o.ss[%d] size %d exceeds %d UTF-8 bytes", ai, size, O.colferSizeMax));
 
 					int start = i;
@@ -744,7 +744,7 @@ public class O implements java.io.Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > O.colferListMax)
+				if (length < 0 || length > O.colferListMax)
 					throw new SecurityException(format("colfer: testdata.o.as length %d exceeds %d elements", length, O.colferListMax));
 
 				byte[][] a = new byte[length][];
@@ -755,7 +755,7 @@ public class O implements java.io.Serializable {
 						size |= (b & 0x7f) << shift;
 						if (shift == 28 || b >= 0) break;
 					}
-					if (size > O.colferSizeMax)
+					if (size < 0 || size > O.colferSizeMax)
 						throw new SecurityException(format("colfer: testdata.o.as[%d] size %d exceeds %d bytes", ai, size, O.colferSizeMax));
 
 					byte[] e = new byte[size];
@@ -772,7 +772,7 @@ public class O implements java.io.Serializable {
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
 			if (i > end && end - offset < O.colferSizeMax) throw new BufferUnderflowException();
-			if (i - offset > O.colferSizeMax)
+			if (i < 0 || i - offset > O.colferSizeMax)
 				throw new SecurityException(format("colfer: testdata.o exceeds %d bytes", O.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}

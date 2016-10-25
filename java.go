@@ -732,7 +732,7 @@ import java.nio.BufferUnderflowException;
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > <:$class:>.colferListMax)
+				if (length < 0 || length > <:$class:>.colferListMax)
 					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
 
 				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
@@ -743,7 +743,7 @@ import java.nio.BufferUnderflowException;
 						size |= (b & 0x7f) << shift;
 						if (shift == 28 || b >= 0) break;
 					}
-					if (size > <:$class:>.colferSizeMax)
+					if (size < 0 || size > <:$class:>.colferSizeMax)
 						throw new SecurityException(format("colfer: <:.String:>[%d] size %d exceeds %d UTF-8 bytes", ai, size, <:$class:>.colferSizeMax));
 
 					int start = i;
@@ -758,7 +758,7 @@ import java.nio.BufferUnderflowException;
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > <:$class:>.colferSizeMax)
+				if (size < 0 || size > <:$class:>.colferSizeMax)
 					throw new SecurityException(format("colfer: <:.String:> size %d exceeds %d UTF-8 bytes", size, <:$class:>.colferSizeMax));
 
 				int start = i;
@@ -776,7 +776,7 @@ import java.nio.BufferUnderflowException;
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > <:$class:>.colferListMax)
+				if (length < 0 || length > <:$class:>.colferListMax)
 					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
 
 				byte[][] a = new byte[length][];
@@ -787,7 +787,7 @@ import java.nio.BufferUnderflowException;
 						size |= (b & 0x7f) << shift;
 						if (shift == 28 || b >= 0) break;
 					}
-					if (size > <:$class:>.colferSizeMax)
+					if (size < 0 || size > <:$class:>.colferSizeMax)
 						throw new SecurityException(format("colfer: <:.String:>[%d] size %d exceeds %d bytes", ai, size, <:$class:>.colferSizeMax));
 
 					byte[] e = new byte[size];
@@ -807,7 +807,7 @@ import java.nio.BufferUnderflowException;
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > <:$class:>.colferSizeMax)
+				if (size < 0 || size > <:$class:>.colferSizeMax)
 					throw new SecurityException(format("colfer: <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
 
 				this.<:.Name:> = new byte[size];
@@ -826,7 +826,7 @@ import java.nio.BufferUnderflowException;
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length > <:$class:>.colferListMax)
+				if (length < 0 || length > <:$class:>.colferListMax)
 					throw new SecurityException(format("colfer: <:.String:> length %d exceeds %d elements", length, <:$class:>.colferListMax));
 
 				<:.TypeNative:>[] a = new <:.TypeNative:>[length];
@@ -849,7 +849,7 @@ import java.nio.BufferUnderflowException;
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
 			if (i > end && end - offset < <:$class:>.colferSizeMax) throw new BufferUnderflowException();
-			if (i - offset > <:$class:>.colferSizeMax)
+			if (i < 0 || i - offset > <:$class:>.colferSizeMax)
 				throw new SecurityException(format("colfer: <:.String:> exceeds %d bytes", <:$class:>.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}

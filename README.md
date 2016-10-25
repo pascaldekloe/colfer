@@ -18,7 +18,7 @@ The format is inspired by Proto**col** Buf**fer**.
 * No dependencies other than the core library
 * Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
 * The generated code is human-readable
-* Configurable data limits with sane defaults (memory protection)
+* Robust including size protection
 * Maximum of 127 fields per data structure
 * No support for enumerations
 * Framed; suitable for concatenation/streaming
@@ -115,7 +115,7 @@ The following table shows how Colfer data types are applied per language.
 * †† timezone not preserved
 * ‡‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
-Lists may contain text or data structures.
+Lists may contain text, binaries or data structures.
 
 
 ## Compatibility
@@ -200,5 +200,5 @@ as a 64-bit two's complement integer. In both cases the value is followed with
 The data for text and binaries is prefixed with a varint byte size declaration.
 Text is encoded as UTF-8.
 
-Lists of objects and strings are prefixed with a varint element size
-declaration.
+Lists of text, binaries and data structures are prefixed with a varint element
+size declaration.

@@ -361,7 +361,7 @@ public class Colfer implements java.io.Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size > Colfer.colferSizeMax)
+				if (size < 0 || size > Colfer.colferSizeMax)
 					throw new SecurityException(format("colfer: testdata/bench.Colfer.host size %d exceeds %d UTF-8 bytes", size, Colfer.colferSizeMax));
 
 				int start = i;
@@ -450,7 +450,7 @@ public class Colfer implements java.io.Serializable {
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
 			if (i > end && end - offset < Colfer.colferSizeMax) throw new BufferUnderflowException();
-			if (i - offset > Colfer.colferSizeMax)
+			if (i < 0 || i - offset > Colfer.colferSizeMax)
 				throw new SecurityException(format("colfer: testdata/bench.Colfer exceeds %d bytes", Colfer.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}
