@@ -2,6 +2,7 @@ clean:
 	go clean ./...
 	rm -f cmd/colf/colf
 	rm -f testdata/*.class testdata/bench/*.class
+	rm -f testdata/*-fuzz.zip
 
 build:
 	go generate
@@ -19,3 +20,9 @@ bench:
 
 dist: test clean
 	go fmt
+
+fuzzing:
+	rm testdata/corpus/seed*
+	go test -run FuzzSeed
+	go-fuzz-build -o testdata/go-fuzz.zip github.com/pascaldekloe/colfer/testdata
+	go-fuzz -bin testdata/go-fuzz.zip -workdir testdata
