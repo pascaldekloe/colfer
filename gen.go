@@ -170,7 +170,7 @@ func (o *<:.NameTitle:>) Unmarshal(data []byte) (int, error) {
 		return 0, ColferError(i - 1)
 	}
 	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: <:.String:> exceeds %d bytes", i, ColferSizeMax))
+		return 0, ColferMax(fmt.Sprintf("colfer: <:.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 	}
 	return i, nil
 }
@@ -477,7 +477,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		o.<:.NameTitle:> = true
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -488,7 +488,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -502,7 +502,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -521,7 +521,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	} else if header == <:.Index:>|0x80 {
 		if i+4 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -533,7 +533,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -547,7 +547,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -566,7 +566,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	} else if header == <:.Index:>|0x80 {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -578,7 +578,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -592,7 +592,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -611,7 +611,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	} else if header == <:.Index:>|0x80 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -625,7 +625,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -646,7 +646,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -660,7 +660,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -679,7 +679,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	} else if header == <:.Index:>|0x80 {
 		if i+1 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -693,7 +693,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				i++
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -714,7 +714,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+4 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -728,7 +728,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -743,7 +743,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i+8 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -757,7 +757,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	} else if header == <:.Index:>|0x80 {
 		if i+12 >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -773,7 +773,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -785,7 +785,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -808,7 +808,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		for ai := range a {
 			if i >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -820,7 +820,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				for shift := uint(7); ; shift += 7 {
 					if i >= len(data) {
 						if i >= ColferSizeMax {
-							return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+							return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 						}
 						return 0, io.EOF
 					}
@@ -840,7 +840,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			to := i + int(x)
 			if to >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -861,7 +861,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		to := i + int(x)
 		if to >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -875,7 +875,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -887,7 +887,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
 					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+						return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 					}
 					return 0, io.EOF
 				}
@@ -908,7 +908,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		l := int(x)
 		if i + l >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -927,7 +927,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 		for ai := range a {
 			if i >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -939,7 +939,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 				for shift := uint(7); ; shift += 7 {
 					if i >= len(data) {
 						if i >= ColferSizeMax {
-							return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+							return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 						}
 						return 0, io.EOF
 					}
@@ -960,7 +960,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 
 			if i + len(v) >= len(data) {
 				if i >= ColferSizeMax {
-					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+					return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 				}
 				return 0, io.EOF
 			}
@@ -971,7 +971,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -983,7 +983,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 	if header == <:.Index:> {
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -1027,7 +1027,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
@@ -1045,7 +1045,7 @@ const goUnmarshalField = `<:if eq .Type "bool":>
 
 		if i >= len(data) {
 			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> exceeds %d bytes", i, ColferSizeMax))
+				return 0, ColferMax(fmt.Sprintf("colfer: <:.Struct.String:> size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
