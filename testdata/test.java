@@ -1,7 +1,5 @@
 package testdata;
 
-import org.junit.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
@@ -13,13 +11,44 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 
 public class test {
+
+	static boolean testSuccess = true;
+
+
+	public static void main(String[] args) {
+		try {
+			identity();
+
+			marshal();
+			unmarshal();
+			stream();
+
+			marshalMax();
+			marshalTextMax();
+			marshalBinaryMax();
+			marshalListMax();
+
+			unmarshalMax();
+			unmarshalTextMax();
+			unmarshalBinaryMax();
+			unmarshalListMax();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+		if (! testSuccess) System.exit(2);
+	}
+
+	static void fail(String format, Object... args) {
+		format += "\n";
+		System.err.printf(format, args);
+
+		testSuccess = false;
+	}
 
 	static Map<String, O> newGoldenCases() {
 		Map<String, O> goldenCases = new LinkedHashMap<>();
@@ -82,45 +111,48 @@ public class test {
 		return goldenCases;
 	}
 
-	private static O newCase(Map<String, O> cases, String hex) {
+	static O newCase(Map<String, O> cases, String hex) {
 		O o = new O();
 		cases.put(hex, o);
 		return o;
 	}
 
-	@Test
-	public void marshal() {
+
+	static void identity() {
+		Object[] a = newGoldenCases().values().toArray();
+		Object[] b = newGoldenCases().values().toArray();
+		if (! Arrays.equals(a, b))
+			fail("golden cases not equal");
+		if (Arrays.hashCode(a) != Arrays.hashCode(b))
+			fail("golden cases hash not equal");
+	}
+
+	static void marshal() throws Exception {
 		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			try {
-				byte[] buf = new byte[e.getKey().length() / 2];
-				int n = e.getValue().marshal(buf, 0);
-				assertEquals("serial", e.getKey(), toHex(buf));
-				assertEquals("write index", n, buf.length);
-			} catch (Exception ex) {
-				ex.printStackTrace();
-				fail("exception for serial " + e.getKey());
-			}
+			byte[] buf = new byte[e.getKey().length() / 2];
+			int i = e.getValue().marshal(buf, 0);
+			if (i != buf.length)
+				fail("marshal: got write index %d for serial 0x%s", i, e.getKey());
+			String got = toHex(buf);
+			if (! got.equals(e.getKey()))
+				fail("marshal: got serial 0x%s, want %s", got, e.getKey());
 		}
 	}
 
-	@Test
-	public void unmarshal() {
+	static void unmarshal() {
 		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			try {
-				O o = new O();
-				byte[] serial = parseHex(e.getKey());
-				int n = o.unmarshal(serial, 0);
-				assertEquals(e.getKey(), e.getValue(), o);
-				assertEquals("read index", n, serial.length);
-			} catch (Exception ex) {
-				ex.printStackTrace();
-				fail("exception for serial " + e.getKey());
-			}
+			O o = new O();
+			byte[] serial = parseHex(e.getKey());
+			int i = o.unmarshal(serial, 0);
+
+			if (i != serial.length)
+				fail("unmarshal: 0x%s: got read index %d for serial 0x%s", i, e.getKey());
+			if (! e.getValue().equals(o))
+				fail("unmarshal: mismatch for serial 0x%s", e.getKey());
 		}
 	}
 
-	@Test
-	public void streaming() throws Exception {
+	static void stream() throws Exception {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 		byte[] buf = new byte[1];
@@ -129,132 +161,146 @@ public class test {
 		}
 
 		O.Unmarshaller unmarshaller = new O.Unmarshaller(new ByteArrayInputStream(out.toByteArray()), new byte[1]);
-		for (O o : newGoldenCases().values()) {
-			assertEquals(unmarshaller.next(), o);
+		for (Entry<String, O> e : newGoldenCases().entrySet()) {
+			O got = unmarshaller.next();
+			if (got == null) {
+				fail("stream: missing as of serial 0x%s", e.getKey());
+				return;
+			}
+			if (! e.getValue().equals(got))
+				fail("stream: mismatch for serial 0x%s", e.getKey());
 		}
-		assertNull(unmarshaller.next());
+		if (unmarshaller.next() != null)
+			fail("stream: data tail");
 	}
 
-	@Test
-	public void marshalMax() {
+	static void marshalMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 2;
 		try {
 			O o = new O();
 			o.u64 = 1;
 			o.marshal(new byte[O.colferSizeMax], 0);
-			fail("no marshal exception");
+			fail("no marshal max exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: testdata.o exceeds 2 bytes", e.getMessage());
+			String want = "colfer: testdata.o exceeds 2 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("marshal max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void marshalTextMax() {
+	static void marshalTextMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 2;
 		try {
 			O o = new O();
 			o.s = "AAA";
 			o.marshal(new byte[6], 0);
-			fail("no marshal exception");
+			fail("no marshal text max exception");
 		} catch (IllegalStateException e) {
-			// Field message only when buffer is big enough. Otherwise it's: "serial exceeds 2 bytes".
-			assertEquals("marshal error", "colfer: testdata.o.s size 3 exceeds 2 UTF-8 bytes", e.getMessage());
+			String want = "colfer: testdata.o.s size 3 exceeds 2 UTF-8 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("marshal text max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void marshalBinaryMax() {
+	static void marshalBinaryMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 2;
 		try {
 			O o = new O();
 			o.a = new byte[]{0, 1, 2};
 			o.marshal(new byte[O.colferSizeMax], 0);
-			fail("no marshal exception");
+			fail("no marshal binary max exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: testdata.o.a size 3 exceeds 2 bytes", e.getMessage());
+			String want = "colfer: testdata.o.a size 3 exceeds 2 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("marshal binary max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void marshalListMax() {
+	static void marshalListMax() {
 		int origMax = O.colferListMax;
 		O.colferListMax = 9;
 		try {
 			O o = new O();
 			o.os = new O[10];
 			o.marshal(new byte[O.colferSizeMax], 0);
-			fail("no marshal exception");
+			fail("no marshal list max exception");
 		} catch (IllegalStateException e) {
-			assertEquals("marshal error", "colfer: testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+			String want = "colfer: testdata.o.os length 10 exceeds 9 elements";
+			if (! want.equals(e.getMessage()))
+				fail("marshal list max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferListMax = origMax;
 		}
 	}
 
-	@Test
-	public void unmarshalMax() {
+	static void unmarshalMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 2;
 		try {
 			byte[] serial = parseHex("02017f");
 			new O().unmarshal(serial, 0);
-			fail("no unmarshal exception");
+			fail("no unmarshal max exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: testdata.o exceeds 2 bytes", e.getMessage());
+			String want = "colfer: testdata.o exceeds 2 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("unmarshal max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void unmarshalTextMax() {
+	static void unmarshalTextMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 9;
 		try {
 			byte[] serial = parseHex("080a414141");
 			new O().unmarshal(serial, 0);
-			fail("no unmarshal exception");
+			fail("no unmarshal text max exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: testdata.o.s size 10 exceeds 9 UTF-8 bytes", e.getMessage());
+			String want = "colfer: testdata.o.s size 10 exceeds 9 UTF-8 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("unmarshal text max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void unmarshalBinaryMax() {
+	static void unmarshalBinaryMax() {
 		int origMax = O.colferSizeMax;
 		O.colferSizeMax = 9;
 		try {
 			byte[] serial = parseHex("090a414141");
 			new O().unmarshal(serial, 0);
-			fail("no unmarshal exception");
+			fail("no unmarshal binary max exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: testdata.o.a size 10 exceeds 9 bytes", e.getMessage());
+			String want = "colfer: testdata.o.a size 10 exceeds 9 bytes";
+			if (! want.equals(e.getMessage()))
+				fail("unmarshal binary max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferSizeMax = origMax;
 		}
 	}
 
-	@Test
-	public void unmarshalListMax() {
+	static void unmarshalListMax() {
 		int origMax = O.colferListMax;
 		O.colferListMax = 9;
 		try {
 			byte[] serial = parseHex("0b0a7f7f7f");
 			new O().unmarshal(serial, 0);
-			fail("no unmarshal exception");
+			fail("no unmarshal list max exception");
 		} catch (SecurityException e) {
-			assertEquals("unmarshal error", "colfer: testdata.o.os length 10 exceeds 9 elements", e.getMessage());
+			String want = "colfer: testdata.o.os length 10 exceeds 9 elements";
+			if (! want.equals(e.getMessage()))
+				fail("unmarshal list max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferListMax = origMax;
 		}
@@ -276,14 +322,6 @@ public class test {
 			data[i / 2] = (byte) ((nibble0 << 4) + nibble1);
 		}
 		return data;
-	}
-
-	@Test
-	public void identity() {
-		Object[] a = newGoldenCases().values().toArray();
-		Object[] b = newGoldenCases().values().toArray();
-		assertArrayEquals("golden cases", a, b);
-		assertEquals("golden cases hash", Arrays.hashCode(a), Arrays.hashCode(b));
 	}
 
 }

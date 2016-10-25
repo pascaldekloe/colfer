@@ -1,11 +1,15 @@
 package testdata.bench;
 
-import org.junit.Test;
-
 import java.util.Arrays;
 
 
 public class bench {
+
+	public static void main(String[] args) {
+		benchMarshal();
+		benchMarshalReuse();
+		benchUnmarshal();
+	}
 
 	private static Colfer[] newTestData() {
 		Colfer c1 = new Colfer();
@@ -51,8 +55,7 @@ public class bench {
 	public static byte[] holdSerial;
 	public static Colfer holdData;
 
-	@Test
-	public void benchMarshal() {
+	static void benchMarshal() {
 		Colfer[] testData = newTestData();
 		final int n = 20000000;
 
@@ -66,8 +69,7 @@ public class bench {
 		System.err.printf("%dM marshals avg %dns\n", n / 1000000, (end - start) / n);
 	}
 
-	@Test
-	public void benchMarshalReuse() {
+	static void benchMarshalReuse() {
 		Colfer[] testData = newTestData();
 		holdSerial = new byte[Colfer.colferSizeMax];
 		final int n = 20000000;
@@ -81,8 +83,7 @@ public class bench {
 		System.err.printf("%dM marshals with buffer reuse avg %dns\n", n / 1000000, (end - start) / n);
 	}
 
-	@Test
-	public void benchUnmarshal() {
+	static void benchUnmarshal() {
 		Colfer[] testData = newTestData();
 		byte[][] serials = new byte[testData.length][];
 		for (int i = 0; i < serials.length; i++) {
