@@ -57,7 +57,7 @@ public class O implements java.io.Serializable {
 		protected InputStream in;
 
 		/** The read buffer. */
-		protected byte[] buf;
+		public byte[] buf;
 
 		/** The {@link #buf buffer}'s data start index, inclusive. */
 		protected int offset;
