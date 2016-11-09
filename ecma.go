@@ -7,8 +7,40 @@ import (
 	"text/template"
 )
 
+const ecmaKeywords = "break case catch class const continue debugger default delete do else enum export extends finally for function if import in instanceof new return super switch this throw try typeof var void while with yield"
+
+func IsECMAKeyword(s string) bool {
+	for _, k := range strings.Fields(ecmaKeywords) {
+		if k == s {
+			return true
+		}
+	}
+	return false
+}
+
 // GenerateECMA writes the code into file "Colfer.js".
 func GenerateECMA(basedir string, packages []*Package) error {
+	for _, p := range packages {
+		p.NameNative = strings.Replace(p.Name, "/", "_", -1)
+		if IsECMAKeyword(p.NameNative) {
+			p.NameNative += "_"
+		}
+
+		for _, s := range p.Structs {
+			for _, f := range s.Fields {
+				f.NameNative = f.name
+				if IsECMAKeyword(f.NameNative) {
+					f.NameNative += "_"
+				}
+			}
+		}
+	}
+
+	t := template.New("ecma-code").Delims("<:", ":>")
+	template.Must(t.Parse(ecmaCode))
+	template.Must(t.New("marshal").Parse(ecmaMarshal))
+	template.Must(t.New("unmarshal").Parse(ecmaUnmarshal))
+
 	if err := os.MkdirAll(basedir, os.ModeDir|os.ModePerm); err != nil {
 		return err
 	}
@@ -17,16 +49,6 @@ func GenerateECMA(basedir string, packages []*Package) error {
 		return err
 	}
 	defer f.Close()
-
-	for _, p := range packages {
-		p.NameNative = strings.Replace(p.Name, "/", "_", -1)
-	}
-
-	t := template.New("ecma-code").Delims("<:", ":>")
-	template.Must(t.Parse(ecmaCode))
-	template.Must(t.New("marshal").Parse(ecmaMarshal))
-	template.Must(t.New("unmarshal").Parse(ecmaUnmarshal))
-
 	return t.Execute(f, packages)
 }
 
@@ -46,10 +68,10 @@ var <:.NameNative:> = new function() {
 	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
 	this.<:.NameTitle:> = function(init) {
 <:- range .Fields:>
-		this.<:.Name:> = <:if .TypeList:>[]
+		this.<:.NameNative:> = <:if .TypeList:>[]
 <:- else if eq .Type "bool":>false
 <:- else if eq .Type "timestamp":>null;
-		this.<:.Name:>_ns = 0
+		this.<:.NameNative:>_ns = 0
 <:- else if eq .Type "text":>''
 <:- else if eq .Type "binary":>new Uint8Array(0)
 <:- else if .TypeRef:>null
@@ -135,105 +157,105 @@ var <:.NameNative:> = new function() {
 const ecmaMarshal = `
 	// Serializes the object into an Uint8Array.
 <:- range .Fields:><:if .TypeList:>
-	// All null entries in property <:.Name:> will be replaced with <:if eq .Type "text":>an empty String<:else if eq .Type "binary":>an empty Array<:else:>a new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:><:end:>.
+	// All null entries in property <:.NameNative:> will be replaced with <:if eq .Type "text":>an empty String<:else if eq .Type "binary":>an empty Array<:else:>a new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:><:end:>.
 <:- end:><:end:>
 	this.<:.NameTitle:>.prototype.marshal = function() {
 		var segs = [];
 <:range .Fields:><:if eq .Type "bool":>
-		if (this.<:.Name:>) {
+		if (this.<:.NameNative:>) {
 			segs.push([<:.Index:>]);
 		}
 <:else if eq .Type "uint32":>
-		if (this.<:.Name:>) {
-			if (this.<:.Name:> > 4294967295 || this.<:.Name:> < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> out of reach: ' + this.<:.Name:>;
-			if (this.<:.Name:> < 0x200000) {
+		if (this.<:.NameNative:>) {
+			if (this.<:.NameNative:> > 4294967295 || this.<:.NameNative:> < 0)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> out of reach: ' + this.<:.NameNative:>;
+			if (this.<:.NameNative:> < 0x200000) {
 				var seg = [<:.Index:>];
-				encodeVarint(seg, this.<:.Name:>);
+				encodeVarint(seg, this.<:.NameNative:>);
 				segs.push(seg);
 			} else {
 				var bytes = new Uint8Array(5);
 				bytes[0] = <:.Index:> | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.<:.Name:>);
+				view.setUint32(1, this.<:.NameNative:>);
 				segs.push(bytes)
 			}
 		}
 <:else if eq .Type "uint64":>
-		if (this.<:.Name:>) {
-			if (this.<:.Name:> < 0)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> out of reach: ' + this.<:.Name:>;
-			if (this.<:.Name:> > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			if (this.<:.Name:> < 0x2000000000000) {
+		if (this.<:.NameNative:>) {
+			if (this.<:.NameNative:> < 0)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> out of reach: ' + this.<:.NameNative:>;
+			if (this.<:.NameNative:> > Number.MAX_SAFE_INTEGER)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			if (this.<:.NameNative:> < 0x2000000000000) {
 				var seg = [<:.Index:>];
-				encodeVarint(seg, this.<:.Name:>);
+				encodeVarint(seg, this.<:.NameNative:>);
 				segs.push(seg);
 			} else {
 				var bytes = new Uint8Array(9);
 				bytes[0] = <:.Index:> | 128;
 				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.<:.Name:> / 0x100000000);
-				view.setUint32(5, this.<:.Name:> % 0x100000000);
+				view.setUint32(1, this.<:.NameNative:> / 0x100000000);
+				view.setUint32(5, this.<:.NameNative:> % 0x100000000);
 				segs.push(bytes)
 			}
 		}
 <:else if eq .Type "int32":>
-		if (this.<:.Name:>) {
+		if (this.<:.NameNative:>) {
 			var seg = [<:.Index:>];
-			if (this.<:.Name:> < 0) {
+			if (this.<:.NameNative:> < 0) {
 				seg[0] |= 128;
-				if (this.<:.Name:> < -2147483648)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds 32-bit range';
-				encodeVarint(seg, -this.<:.Name:>);
+				if (this.<:.NameNative:> < -2147483648)
+					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds 32-bit range';
+				encodeVarint(seg, -this.<:.NameNative:>);
 			} else {
-				if (this.<:.Name:> > 2147483647)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds 32-bit range';
-				encodeVarint(seg, this.<:.Name:>);
+				if (this.<:.NameNative:> > 2147483647)
+					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds 32-bit range';
+				encodeVarint(seg, this.<:.NameNative:>);
 			}
 			segs.push(seg);
 		}
 <:else if eq .Type "int64":>
-		if (this.<:.Name:>) {
+		if (this.<:.NameNative:>) {
 			var seg = [4];
-			if (this.<:.Name:> < 0) {
+			if (this.<:.NameNative:> < 0) {
 				seg[0] |= 128;
-				if (this.<:.Name:> < -Number.MAX_SAFE_INTEGER)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-				encodeVarint(seg, -this.<:.Name:>);
+				if (this.<:.NameNative:> < -Number.MAX_SAFE_INTEGER)
+					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, -this.<:.NameNative:>);
 			} else {
-				if (this.<:.Name:> > Number.MAX_SAFE_INTEGER)
-					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-				encodeVarint(seg, this.<:.Name:>);
+				if (this.<:.NameNative:> > Number.MAX_SAFE_INTEGER)
+					throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+				encodeVarint(seg, this.<:.NameNative:>);
 			}
 			segs.push(seg);
 		}
 <:else if eq .Type "float32":>
-		if (this.<:.Name:> || Number.isNaN(this.<:.Name:>)) {
-			if (this.<:.Name:> > 3.4028234663852886E38 || this.<:.Name:> < -3.4028234663852886E38)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds 32-bit range';
+		if (this.<:.NameNative:> || Number.isNaN(this.<:.NameNative:>)) {
+			if (this.<:.NameNative:> > 3.4028234663852886E38 || this.<:.NameNative:> < -3.4028234663852886E38)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds 32-bit range';
 			var bytes = new Uint8Array(5);
 			bytes[0] = <:.Index:>;
-			new DataView(bytes.buffer).setFloat32(1, this.<:.Name:>);
+			new DataView(bytes.buffer).setFloat32(1, this.<:.NameNative:>);
 			segs.push(bytes);
 		}
 <:else if eq .Type "float64":>
-		if (this.<:.Name:> || Number.isNaN(this.<:.Name:>)) {
+		if (this.<:.NameNative:> || Number.isNaN(this.<:.NameNative:>)) {
 			var bytes = new Uint8Array(9);
 			bytes[0] = <:.Index:>;
-			new DataView(bytes.buffer).setFloat64(1, this.<:.Name:>);
+			new DataView(bytes.buffer).setFloat64(1, this.<:.NameNative:>);
 			segs.push(bytes);
 		}
 <:else if eq .Type "timestamp":>
-		if ((this.<:.Name:> && this.<:.Name:>.getTime()) || this.<:.Name:>_ns) {
-			var ms = this.<:.Name:> ? this.<:.Name:>.getTime() : 0;
+		if ((this.<:.NameNative:> && this.<:.NameNative:>.getTime()) || this.<:.NameNative:>_ns) {
+			var ms = this.<:.NameNative:> ? this.<:.NameNative:>.getTime() : 0;
 			if (ms < -Number.MAX_SAFE_INTEGER || ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var s = ms / 1E3;
 
-			var ns = this.<:.Name:>_ns || 0;
+			var ns = this.<:.NameNative:>_ns || 0;
 			if (ns < 0 || ns >= 1E6)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:>_ns not in range (0, 1ms>';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:>_ns not in range (0, 1ms>';
 			var msf = ms % 1E3;
 			if (ms < 0 && msf) {
 				s--
@@ -272,8 +294,8 @@ const ecmaMarshal = `
 		}
 <:else if eq .Type "text":>
  <:- if .TypeList:>
-		if (this.<:.Name:> && this.<:.Name:>.length) {
-			var a = this.<:.Name:>;
+		if (this.<:.NameNative:> && this.<:.NameNative:>.length) {
+			var a = this.<:.NameNative:>;
 			if (a.length > colferListMax)
 				throw 'colfer: <:.String:> length exceeds colferListMax';
 			var seg = [<:.Index:>];
@@ -293,8 +315,8 @@ const ecmaMarshal = `
 			}
 		}
  <:- else:>
-		if (this.<:.Name:>) {
-			var utf = encodeUTF8(this.<:.Name:>);
+		if (this.<:.NameNative:>) {
+			var utf = encodeUTF8(this.<:.NameNative:>);
 			var seg = [<:.Index:>];
 			encodeVarint(seg, utf.length);
 			segs.push(seg);
@@ -303,8 +325,8 @@ const ecmaMarshal = `
  <:- end:>
 <:else if eq .Type "binary":>
  <:- if .TypeList:>
-		if (this.<:.Name:> && this.<:.Name:>.length) {
-			var a = this.<:.Name:>;
+		if (this.<:.NameNative:> && this.<:.NameNative:>.length) {
+			var a = this.<:.NameNative:>;
 			if (a.length > colferListMax)
 				throw 'colfer: <:.String:> length exceeds colferListMax';
 			var seg = [<:.Index:>];
@@ -323,16 +345,16 @@ const ecmaMarshal = `
 			}
 		}
  <:- else:>
-		if (this.<:.Name:> && this.<:.Name:>.length) {
+		if (this.<:.NameNative:> && this.<:.NameNative:>.length) {
 			var seg = [<:.Index:>];
-			encodeVarint(seg, this.<:.Name:>.length);
+			encodeVarint(seg, this.<:.NameNative:>.length);
 			segs.push(seg);
-			segs.push(this.<:.Name:>);
+			segs.push(this.<:.NameNative:>);
 		}
  <:- end:>
 <:else if .TypeList:>
-		if (this.<:.Name:> && this.<:.Name:>.length) {
-			var a = this.<:.Name:>;
+		if (this.<:.NameNative:> && this.<:.NameNative:>.length) {
+			var a = this.<:.NameNative:>;
 			if (a.length > colferListMax)
 				throw 'colfer: <:.String:> length exceeds colferListMax';
 			var seg = [<:.Index:>];
@@ -348,9 +370,9 @@ const ecmaMarshal = `
 			};
 		}
 <:else:>
-		if (this.<:.Name:>) {
+		if (this.<:.NameNative:>) {
 			segs.push([<:.Index:>]);
-			segs.push(this.<:.Name:>.marshal());
+			segs.push(this.<:.NameNative:>.marshal());
 		}
 <:end:><:end:>
 		var size = 1;
@@ -398,26 +420,26 @@ const ecmaUnmarshal = `
 		}
 <:range .Fields:><:if eq .Type "bool":>
 		if (header == <:.Index:>) {
-			this.<:.Name:> = true;
+			this.<:.NameNative:> = true;
 			readHeader();
 		}
 <:else if eq .Type "uint32":>
 		if (header == <:.Index:>) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = x;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 4 > data.length) throw EOF;
-			this.<:.Name:> = new DataView(data.buffer).getUint32(i);
+			this.<:.NameNative:> = new DataView(data.buffer).getUint32(i);
 			i += 4;
 			readHeader();
 		}
 <:else if eq .Type "uint64":>
 		if (header == <:.Index:>) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = x;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 8 > data.length) throw EOF;
@@ -425,46 +447,46 @@ const ecmaUnmarshal = `
 			var x = view.getUint32(i) * 0x100000000;
 			x += view.getUint32(i + 4);
 			if (x > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = x;
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = x;
 			i += 8;
 			readHeader();
 		}
 <:else if eq .Type "int32":>
 		if (header == <:.Index:>) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = x;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = -1 * x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = -1 * x;
 			readHeader();
 		}
 <:else if eq .Type "int64":>
 		if (header == <:.Index:>) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = x;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> exceeds Number.MAX_SAFE_INTEGER';
-			this.<:.Name:> = -1 * x;
+			if (x < 0) throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> exceeds Number.MAX_SAFE_INTEGER';
+			this.<:.NameNative:> = -1 * x;
 			readHeader();
 		}
 <:else if eq .Type "float32":>
 		if (header == <:.Index:>) {
 			if (i + 4 > data.length) throw EOF;
-			this.<:.Name:> = new DataView(data.buffer).getFloat32(i);
+			this.<:.NameNative:> = new DataView(data.buffer).getFloat32(i);
 			i += 4;
 			readHeader();
 		}
 <:else if eq .Type "float64":>
 		if (header == <:.Index:>) {
 			if (i + 8 > data.length) throw EOF;
-			this.<:.Name:> = new DataView(data.buffer).getFloat64(i);
+			this.<:.NameNative:> = new DataView(data.buffer).getFloat64(i);
 			i += 8;
 			readHeader();
 		}
@@ -477,11 +499,11 @@ const ecmaUnmarshal = `
 			ms += ns / 1E6;
 			ns %= 1E6;
 			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			i += 8;
-			this.<:.Name:> = new Date();
-			this.<:.Name:>.setTime(ms);
-			this.<:.Name:>_ns = ns;
+			this.<:.NameNative:> = new Date();
+			this.<:.NameNative:>.setTime(ms);
+			this.<:.NameNative:>_ns = ns;
 			readHeader();
 		} else if (header == (<:.Index:> | 128)) {
 			if (i + 12 > data.length) throw EOF;
@@ -496,7 +518,7 @@ const ecmaUnmarshal = `
 				}
 			}
 			if (int64[0] != 0 || int64[1] > 31)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> second value exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> second value exceeds Number.MAX_SAFE_INTEGER';
 			var view = new DataView(int64.buffer);
 			var s = (view.getUint32(0) * 0x100000000) + view.getUint32(4);
 			if (data[i] > 127) s = -s;
@@ -504,15 +526,15 @@ const ecmaUnmarshal = `
 			var ns = new DataView(data.buffer).getUint32(i + 8);
 			var ms = (s * 1E3);
 			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.Name:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var msa = Math.floor(ns / 1E6);
 			if (msa > 0) {
 				if (s < 0) ms = (ms + 1000) - (1000 - msa);
 				else ms += msa;
 			}
-			this.<:.Name:> = new Date();
-			this.<:.Name:>.setTime(ms);
-			this.<:.Name:>_ns = ns % 1E6;
+			this.<:.NameNative:> = new Date();
+			this.<:.NameNative:>.setTime(ms);
+			this.<:.NameNative:>_ns = ns % 1E6;
 
 			i += 12;
 			readHeader();
@@ -528,12 +550,12 @@ const ecmaUnmarshal = `
 			while (--length >= 0) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					throw 'colfer: <:.String:> element ' + this.<:.NameNative:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
-					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					throw 'colfer: <:.String:> element ' + this.<:.NameNative:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 				var to = i + size;
 				if (to > data.length) throw EOF;
-				this.<:.Name:>.push(decodeUTF8(data.subarray(i, to)));
+				this.<:.NameNative:>.push(decodeUTF8(data.subarray(i, to)));
 				i = to;
 			}
  <:- else:>
@@ -544,7 +566,7 @@ const ecmaUnmarshal = `
 				throw 'colfer: <:.String:> size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
-			this.<:.Name:> = decodeUTF8(data.subarray(i, to));
+			this.<:.NameNative:> = decodeUTF8(data.subarray(i, to));
 			i = to;
  <:- end:>
 			readHeader();
@@ -560,12 +582,12 @@ const ecmaUnmarshal = `
 			while (--length >= 0) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					throw 'colfer: <:.String:> element ' + this.<:.NameNative:>.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
-					throw 'colfer: <:.String:> element ' + this.<:.Name:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					throw 'colfer: <:.String:> element ' + this.<:.NameNative:>.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
 				var to = i + size;
 				if (to > data.length) throw EOF;
-				this.<:.Name:>.push(data.subarray(i, to));
+				this.<:.NameNative:>.push(data.subarray(i, to));
 				i = to;
 			}
  <:- else:>
@@ -576,7 +598,7 @@ const ecmaUnmarshal = `
 				throw 'colfer: <:.String:> size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
 			var to = i + size;
 			if (to > data.length) throw EOF;
-			this.<:.Name:> = data.subarray(i, to);
+			this.<:.NameNative:> = data.subarray(i, to);
 			i = to;
  <:- end:>
 			readHeader();
@@ -591,7 +613,7 @@ const ecmaUnmarshal = `
 			while (--length >= 0) {
 				var o = new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:>();
 				i += o.unmarshal(data.subarray(i));
-				this.<:.Name:>.push(o);
+				this.<:.NameNative:>.push(o);
 			}
 			readHeader();
 		}
@@ -599,7 +621,7 @@ const ecmaUnmarshal = `
 		if (header == <:.Index:>) {
 			var o = new <:.TypeRef.Pkg.NameNative:>.<:.TypeRef.NameTitle:>();
 			i += o.unmarshal(data.subarray(i));
-			this.<:.Name:> = o;
+			this.<:.NameNative:> = o;
 			readHeader();
 		}
 <:end:><:end:>

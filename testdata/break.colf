@@ -1,0 +1,15 @@
+// Package void tries to break the generated code.
+// Note that void is a reserved keyword in all supported languages except for Go.
+package void
+
+// Class has local and cross-package refereces.
+type class struct {
+	extends int
+	public  []static.int
+}
+
+// Int is a circular dependency.
+type int struct {
+	throw   []class
+	finally []void.class
+}

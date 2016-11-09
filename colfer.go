@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/token"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -33,6 +34,31 @@ type Package struct {
 	// NameNative is the language specific identification token
 	NameNative string
 	Structs    []*Struct
+}
+
+type packages []*Package
+
+func (p packages) Len() int           { return len(p) }
+func (p packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
+func (p packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// Refs returns all direct references sorted by name.
+func (p *Package) Refs() []*Package {
+	found := make(map[*Package]struct{})
+	for _, s := range p.Structs {
+		for _, f := range s.Fields {
+			if f.TypeRef != nil && f.TypeRef.Pkg != p {
+				found[f.TypeRef.Pkg] = struct{}{}
+			}
+		}
+	}
+
+	var refs packages
+	for r := range found {
+		refs = append(refs, r)
+	}
+	sort.Sort(refs)
+	return refs
 }
 
 // HasFloat returns whether p has one or more floating point fields.
@@ -149,8 +175,10 @@ type Field struct {
 	Struct *Struct
 	// Index is the Struct.Fields position.
 	Index int
-	// Name is the identification token.
-	Name string
+	// name is the identification token.
+	name string
+	// NameNative is the language specific identification token
+	NameNative string
 	// Type is the datatype.
 	Type string
 	// TypeNative is the language specific datatype placeholder.
@@ -163,12 +191,12 @@ type Field struct {
 
 // NameTitle gets the identification token in title case.
 func (f *Field) NameTitle() string {
-	return strings.Title(f.Name)
+	return strings.Title(f.name)
 }
 
 // String returns the qualified name.
 func (f *Field) String() string {
-	return fmt.Sprintf("%s.%s", f.Struct, f.Name)
+	return fmt.Sprintf("%s.%s", f.Struct, f.name)
 }
 
 // ReadDefs parses the Colfer files.
@@ -231,7 +259,7 @@ func ReadDefs(files []string) ([]*Package, error) {
 				_, ok := datatypes[t]
 				if ok {
 					if f.TypeList && t != "text" && t != "binary" {
-						return nil, fmt.Errorf("colfer: unsupported lists type %s for field %q", t, f)
+						return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f.String())
 					}
 					continue
 				}
@@ -241,7 +269,7 @@ func ReadDefs(files []string) ([]*Package, error) {
 				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
 					continue
 				}
-				return nil, fmt.Errorf("colfer: unknown datatype for field %q", f)
+				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", t, f.String())
 			}
 		}
 	}
@@ -268,19 +296,28 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 		if len(f.Names) == 0 {
 			return fmt.Errorf("colfer: missing name for field %d", i)
 		}
-		field.Name = f.Names[0].Name
+		field.name = f.Names[0].Name
 
-		t := f.Type
-		if at, ok := t.(*ast.ArrayType); ok {
-			t = at.Elt
-			field.TypeList = true
+		expr := f.Type
+		for {
+			switch t := expr.(type) {
+			case *ast.ArrayType:
+				expr = t.Elt
+				field.TypeList = true
+				continue
+			case *ast.Ident:
+				field.Type = t.Name
+			case *ast.SelectorExpr:
+				pkgIdent, ok := t.X.(*ast.Ident)
+				if !ok {
+					panic("whaa")
+				}
+				field.Type = pkgIdent.Name + "." + t.Sel.Name
+			default:
+				return fmt.Errorf("colfer: unknown datatype declaration for field %s: %#v", field.String(), expr)
+			}
+			break
 		}
-
-		id, ok := t.(*ast.Ident)
-		if !ok {
-			return fmt.Errorf("colfer: unknown datatype declaration for field %s: %#q", field.String(), t)
-		}
-		field.Type = id.Name
 	}
 
 	return nil

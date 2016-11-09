@@ -1,11 +1,23 @@
 package colfer
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 )
+
+const javaKeywords = "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while"
+
+func IsJavaKeyword(s string) bool {
+	for _, k := range strings.Fields(javaKeywords) {
+		if k == s {
+			return true
+		}
+	}
+	return false
+}
 
 // GenerateJava writes the code into the respective ".java" files.
 func GenerateJava(basedir string, packages []*Package) error {
@@ -13,12 +25,22 @@ func GenerateJava(basedir string, packages []*Package) error {
 	template.Must(t.Parse(javaCode))
 
 	for _, p := range packages {
-		p.NameNative = strings.Replace(p.Name, "/", ".", -1)
+		var buf bytes.Buffer
+		for i, seg := range strings.Split(p.Name, "/") {
+			if i != 0 {
+				buf.WriteByte('.')
+			}
+			buf.WriteString(strings.ToLower(seg))
+			if IsJavaKeyword(seg) {
+				buf.WriteByte('_')
+			}
+		}
+		p.NameNative = buf.String()
 	}
 
 	for _, p := range packages {
-		pkgdir, err := makePkgDir(p, basedir)
-		if err != nil {
+		pkgdir := filepath.Join(basedir, strings.Replace(p.NameNative, ".", string([]rune{filepath.Separator}), -1))
+		if err := os.MkdirAll(pkgdir, os.ModeDir|os.ModePerm); err != nil {
 			return err
 		}
 
@@ -50,6 +72,11 @@ func GenerateJava(basedir string, packages []*Package) error {
 					f.TypeNative = "String"
 				case "binary":
 					f.TypeNative = "byte[]"
+				}
+
+				f.NameNative = f.name
+				if IsJavaKeyword(f.NameNative) {
+					f.NameNative += "_"
 				}
 			}
 
@@ -112,7 +139,7 @@ import java.nio.BufferUnderflowException;
 <:- end:>
 <:- end:>
 <:range .Fields:>
-	public <:.TypeNative:><:if .TypeList:>[]<:end:> <:.Name:>
+	public <:.TypeNative:><:if .TypeList:>[]<:end:> <:.NameNative:>
 <:- if eq .Type "binary":><:if .TypeList:> = _zeroBinaries<:else:> = _zeroBytes<:end:>
 <:- else if .TypeList:> = _zero<:.NameTitle:>
 <:- else if eq .Type "text":> = ""
@@ -210,7 +237,7 @@ import java.nio.BufferUnderflowException;
 	/**
 	 * Serializes the object.
 <:- range .Fields:><:if .TypeList:>
-	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
+	 * All {@code null} elements in {@link #<:.NameNative:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
 <:- end:><:end:>
 	 * @param out the data destination.
 	 * @param buf the initial buffer or {@code null}.
@@ -240,7 +267,7 @@ import java.nio.BufferUnderflowException;
 	/**
 	 * Serializes the object.
 <:- range .Fields:><:if .TypeList:>
-	 * All {@code null} elements in {@link #<:.Name:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
+	 * All {@code null} elements in {@link #<:.NameNative:>} will be replaced with <:if eq .Type "text":>{@code ""}<:else if eq .Type "binary":>an empty byte array<:else:>a {@code new} value<:end:>.
 <:- end:><:end:>
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
@@ -253,12 +280,12 @@ import java.nio.BufferUnderflowException;
 
 		try {
 <:- range .Fields:><:if eq .Type "bool":>
-			if (this.<:.Name:>) {
+			if (this.<:.NameNative:>) {
 				buf[i++] = (byte) <:.Index:>;
 			}
 <:else if eq .Type "uint32":>
-			if (this.<:.Name:> != 0) {
-				int x = this.<:.Name:>;
+			if (this.<:.NameNative:> != 0) {
+				int x = this.<:.NameNative:>;
 				if ((x & ~((1 << 21) - 1)) != 0) {
 					buf[i++] = (byte) (<:.Index:> | 0x80);
 					buf[i++] = (byte) (x >>> 24);
@@ -275,8 +302,8 @@ import java.nio.BufferUnderflowException;
 				}
 			}
 <:else if eq .Type "uint64":>
-			if (this.<:.Name:> != 0) {
-				long x = this.<:.Name:>;
+			if (this.<:.NameNative:> != 0) {
+				long x = this.<:.NameNative:>;
 				if ((x & ~((1L << 49) - 1)) != 0) {
 					buf[i++] = (byte) (<:.Index:> | 0x80);
 					buf[i++] = (byte) (x >>> 56);
@@ -297,8 +324,8 @@ import java.nio.BufferUnderflowException;
 				}
 			}
 <:else if eq .Type "int32":>
-			if (this.<:.Name:> != 0) {
-				int x = this.<:.Name:>;
+			if (this.<:.NameNative:> != 0) {
+				int x = this.<:.NameNative:>;
 				if (x < 0) {
 					x = -x;
 					buf[i++] = (byte) (<:.Index:> | 0x80);
@@ -311,8 +338,8 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) x;
 			}
 <:else if eq .Type "int64":>
-			if (this.<:.Name:> != 0) {
-				long x = this.<:.Name:>;
+			if (this.<:.NameNative:> != 0) {
+				long x = this.<:.NameNative:>;
 				if (x < 0) {
 					x = -x;
 					buf[i++] = (byte) (<:.Index:> | 0x80);
@@ -325,18 +352,18 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) x;
 			}
 <:else if eq .Type "float32":>
-			if (this.<:.Name:> != 0.0f) {
+			if (this.<:.NameNative:> != 0.0f) {
 				buf[i++] = (byte) <:.Index:>;
-				int x = Float.floatToRawIntBits(this.<:.Name:>);
+				int x = Float.floatToRawIntBits(this.<:.NameNative:>);
 				buf[i++] = (byte) (x >>> 24);
 				buf[i++] = (byte) (x >>> 16);
 				buf[i++] = (byte) (x >>> 8);
 				buf[i++] = (byte) (x);
 			}
 <:else if eq .Type "float64":>
-			if (this.<:.Name:> != 0.0) {
+			if (this.<:.NameNative:> != 0.0) {
 				buf[i++] = (byte) <:.Index:>;
-				long x = Double.doubleToRawLongBits(this.<:.Name:>);
+				long x = Double.doubleToRawLongBits(this.<:.NameNative:>);
 				buf[i++] = (byte) (x >>> 56);
 				buf[i++] = (byte) (x >>> 48);
 				buf[i++] = (byte) (x >>> 40);
@@ -347,9 +374,9 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) (x);
 			}
 <:else if eq .Type "timestamp":>
-			if (this.<:.Name:> != null) {
-				long s = this.<:.Name:>.getEpochSecond();
-				int ns = this.<:.Name:>.getNano();
+			if (this.<:.NameNative:> != null) {
+				long s = this.<:.NameNative:>.getEpochSecond();
+				int ns = this.<:.NameNative:>.getNano();
 				if (s != 0 || ns != 0) {
 					if (s >= 0 && s < (1L << 32)) {
 						buf[i++] = (byte) <:.Index:>;
@@ -380,9 +407,9 @@ import java.nio.BufferUnderflowException;
 			}
 <:else if eq .Type "text":>
  <:- if .TypeList:>
-			if (this.<:.Name:>.length != 0) {
+			if (this.<:.NameNative:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
-				String[] a = this.<:.Name:>;
+				String[] a = this.<:.NameNative:>;
 
 				int x = a.length;
 				if (x > <:$class:>.colferListMax)
@@ -444,11 +471,11 @@ import java.nio.BufferUnderflowException;
 				}
 			}
  <:- else:>
-			if (! this.<:.Name:>.isEmpty()) {
+			if (! this.<:.NameNative:>.isEmpty()) {
 				buf[i++] = (byte) <:.Index:>;
 				int start = ++i;
 
-				String s = this.<:.Name:>;
+				String s = this.<:.NameNative:>;
 				for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
 					char c = s.charAt(sIndex);
 					if (c < '\u0080') {
@@ -492,9 +519,9 @@ import java.nio.BufferUnderflowException;
  <:- end:>
 <:else if eq .Type "binary":>
  <:- if .TypeList:>
-			if (this.<:.Name:>.length != 0) {
+			if (this.<:.NameNative:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
-				byte[][] a = this.<:.Name:>;
+				byte[][] a = this.<:.NameNative:>;
 
 				int x = a.length;
 				if (x > <:$class:>.colferListMax)
@@ -527,10 +554,10 @@ import java.nio.BufferUnderflowException;
 				}
 			}
  <:- else:>
-			if (this.<:.Name:>.length != 0) {
+			if (this.<:.NameNative:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
 
-				int size = this.<:.Name:>.length;
+				int size = this.<:.NameNative:>.length;
 				if (size > <:$class:>.colferSizeMax)
 					throw new IllegalStateException(format("colfer: <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
 
@@ -543,13 +570,13 @@ import java.nio.BufferUnderflowException;
 
 				int start = i;
 				i += size;
-				System.arraycopy(this.<:.Name:>, 0, buf, start, size);
+				System.arraycopy(this.<:.NameNative:>, 0, buf, start, size);
 			}
  <:- end:>
 <:else if .TypeList:>
-			if (this.<:.Name:>.length != 0) {
+			if (this.<:.NameNative:>.length != 0) {
 				buf[i++] = (byte) <:.Index:>;
-				<:.TypeNative:>[] a = this.<:.Name:>;
+				<:.TypeNative:>[] a = this.<:.NameNative:>;
 
 				int x = a.length;
 				if (x > <:$class:>.colferListMax)
@@ -570,9 +597,9 @@ import java.nio.BufferUnderflowException;
 				}
 			}
 <:else:>
-			if (this.<:.Name:> != null) {
+			if (this.<:.NameNative:> != null) {
 				buf[i++] = (byte) <:.Index:>;
-				i = this.<:.Name:>.marshal(buf, i);
+				i = this.<:.NameNative:>.marshal(buf, i);
 			}
 <:end:><:end:>
 			buf[i++] = (byte) 0x7f;
@@ -616,7 +643,7 @@ import java.nio.BufferUnderflowException;
 			byte header = buf[i++];
 <:range .Fields:><:if eq .Type "bool":>
 			if (header == (byte) <:.Index:>) {
-				this.<:.Name:> = true;
+				this.<:.NameNative:> = true;
 				header = buf[i++];
 			}
 <:else if eq .Type "uint32":>
@@ -627,10 +654,10 @@ import java.nio.BufferUnderflowException;
 					x |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				this.<:.Name:> = x;
+				this.<:.NameNative:> = x;
 				header = buf[i++];
 			} else if (header == (byte) (<:.Index:> | 0x80)) {
-				this.<:.Name:> = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
+				this.<:.NameNative:> = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
 				header = buf[i++];
 			}
 <:else if eq .Type "uint64":>
@@ -644,10 +671,10 @@ import java.nio.BufferUnderflowException;
 					}
 					x |= (b & 0x7fL) << shift;
 				}
-				this.<:.Name:> = x;
+				this.<:.NameNative:> = x;
 				header = buf[i++];
 			} else if (header == (byte) (<:.Index:> | 0x80)) {
-				this.<:.Name:> = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
+				this.<:.NameNative:> = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
 					| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
 				header = buf[i++];
 			}
@@ -659,7 +686,7 @@ import java.nio.BufferUnderflowException;
 					x |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				this.<:.Name:> = x;
+				this.<:.NameNative:> = x;
 				header = buf[i++];
 			} else if (header == (byte) (<:.Index:> | 0x80)) {
 				int x = 0;
@@ -668,7 +695,7 @@ import java.nio.BufferUnderflowException;
 					x |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				this.<:.Name:> = -x;
+				this.<:.NameNative:> = -x;
 				header = buf[i++];
 			}
 <:else if eq .Type "int64":>
@@ -682,7 +709,7 @@ import java.nio.BufferUnderflowException;
 					}
 					x |= (b & 0x7fL) << shift;
 				}
-				this.<:.Name:> = x;
+				this.<:.NameNative:> = x;
 				header = buf[i++];
 			} else if (header == (byte) (<:.Index:> | 0x80)) {
 				long x = 0;
@@ -694,33 +721,33 @@ import java.nio.BufferUnderflowException;
 					}
 					x |= (b & 0x7fL) << shift;
 				}
-				this.<:.Name:> = -x;
+				this.<:.NameNative:> = -x;
 				header = buf[i++];
 			}
 <:else if eq .Type "float32":>
 			if (header == (byte) <:.Index:>) {
 				int x = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
-				this.<:.Name:> = Float.intBitsToFloat(x);
+				this.<:.NameNative:> = Float.intBitsToFloat(x);
 				header = buf[i++];
 			}
 <:else if eq .Type "float64":>
 			if (header == (byte) <:.Index:>) {
 				long x = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
 					| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
-				this.<:.Name:> = Double.longBitsToDouble(x);
+				this.<:.NameNative:> = Double.longBitsToDouble(x);
 				header = buf[i++];
 			}
 <:else if eq .Type "timestamp":>
 			if (header == (byte) <:.Index:>) {
 				long s = (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
 				long ns = (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
-				this.<:.Name:> = java.time.Instant.ofEpochSecond(s, ns);
+				this.<:.NameNative:> = java.time.Instant.ofEpochSecond(s, ns);
 				header = buf[i++];
 			} else if (header == (byte) (<:.Index:> | 0x80)) {
 				long s = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
 					| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
 				long ns = (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
-				this.<:.Name:> = java.time.Instant.ofEpochSecond(s, ns);
+				this.<:.NameNative:> = java.time.Instant.ofEpochSecond(s, ns);
 				header = buf[i++];
 			}
 <:else if eq .Type "text":>
@@ -750,7 +777,7 @@ import java.nio.BufferUnderflowException;
 					i += size;
 					a[ai] = new String(buf, start, size, StandardCharsets.UTF_8);
 				}
-				this.<:.Name:> = a;
+				this.<:.NameNative:> = a;
  <:- else:>
 				int size = 0;
 				for (int shift = 0; true; shift += 7) {
@@ -763,7 +790,7 @@ import java.nio.BufferUnderflowException;
 
 				int start = i;
 				i += size;
-				this.<:.Name:> = new String(buf, start, size, StandardCharsets.UTF_8);
+				this.<:.NameNative:> = new String(buf, start, size, StandardCharsets.UTF_8);
  <:- end:>
 				header = buf[i++];
 			}
@@ -810,10 +837,10 @@ import java.nio.BufferUnderflowException;
 				if (size < 0 || size > <:$class:>.colferSizeMax)
 					throw new SecurityException(format("colfer: <:.String:> size %d exceeds %d bytes", size, <:$class:>.colferSizeMax));
 
-				this.<:.Name:> = new byte[size];
+				this.<:.NameNative:> = new byte[size];
 				int start = i;
 				i += size;
-				System.arraycopy(buf, start, this.<:.Name:>, 0, size);
+				System.arraycopy(buf, start, this.<:.NameNative:>, 0, size);
 
 				header = buf[i++];
 			}
@@ -835,13 +862,13 @@ import java.nio.BufferUnderflowException;
 					i = o.unmarshal(buf, i, end);
 					a[ai] = o;
 				}
-				this.<:.Name:> = a;
+				this.<:.NameNative:> = a;
 				header = buf[i++];
 			}
 <:else:>
 			if (header == (byte) <:.Index:>) {
-				this.<:.Name:> = new <:.TypeNative:>();
-				i = this.<:.Name:>.unmarshal(buf, i, end);
+				this.<:.NameNative:> = new <:.TypeNative:>();
+				i = this.<:.NameNative:>.unmarshal(buf, i, end);
 				header = buf[i++];
 			}
 <:end:><:end:>
@@ -858,11 +885,11 @@ import java.nio.BufferUnderflowException;
 	}
 <:range .Fields:>
 	public <:.TypeNative:><:if .TypeList:>[]<:end:> get<:.NameTitle:>() {
-		return this.<:.Name:>;
+		return this.<:.NameNative:>;
 	}
 
 	public void set<:.NameTitle:>(<:.TypeNative:><:if .TypeList:>[]<:end:> value) {
-		this.<:.Name:> = value;
+		this.<:.NameNative:> = value;
 	}
 <:end:>
 	@Override
@@ -870,26 +897,26 @@ import java.nio.BufferUnderflowException;
 		int h = 1;
 <:- range .Fields:>
 <:- if eq .Type "bool":>
-		h = 31 * h + (this.<:.Name:> ? 1231 : 1237);
+		h = 31 * h + (this.<:.NameNative:> ? 1231 : 1237);
 <:- else if eq .Type "uint32" "int32":>
-		h = 31 * h + this.<:.Name:>;
+		h = 31 * h + this.<:.NameNative:>;
 <:- else if eq .Type "uint64" "int64":>
-		h = 31 * h + (int)(this.<:.Name:> ^ this.<:.Name:> >>> 32);
+		h = 31 * h + (int)(this.<:.NameNative:> ^ this.<:.NameNative:> >>> 32);
 <:- else if eq .Type "float32":>
-		h = 31 * h + Float.floatToIntBits(this.<:.Name:>);
+		h = 31 * h + Float.floatToIntBits(this.<:.NameNative:>);
 <:- else if eq .Type "float64":>
-		long _<:.Name:>Bits = Double.doubleToLongBits(this.<:.Name:>);
-		h = 31 * h + (int) (_<:.Name:>Bits ^ _<:.Name:>Bits >>> 32);
+		long _<:.NameNative:>Bits = Double.doubleToLongBits(this.<:.NameNative:>);
+		h = 31 * h + (int) (_<:.NameNative:>Bits ^ _<:.NameNative:>Bits >>> 32);
 <:- else if eq .Type "binary":>
  <:- if .TypeList:>
-		for (byte[] b : this.<:.Name:>) h = 31 * h + java.util.Arrays.hashCode(b);
+		for (byte[] b : this.<:.NameNative:>) h = 31 * h + java.util.Arrays.hashCode(b);
  <:- else:>
-		for (byte b : this.<:.Name:>) h = 31 * h + b;
+		for (byte b : this.<:.NameNative:>) h = 31 * h + b;
  <:- end:>
 <:- else if .TypeList:>
-		for (<:.TypeNative:> o : this.<:.Name:>) h = 31 * h + (o == null ? 0 : o.hashCode());
+		for (<:.TypeNative:> o : this.<:.NameNative:>) h = 31 * h + (o == null ? 0 : o.hashCode());
 <:- else:>
-		if (this.<:.Name:> != null) h = 31 * h + this.<:.Name:>.hashCode();
+		if (this.<:.NameNative:> != null) h = 31 * h + this.<:.NameNative:>.hashCode();
 <:- end:><:end:>
 		return h;
 	}
@@ -903,19 +930,19 @@ import java.nio.BufferUnderflowException;
 		return o != null && o.getClass() == <:$class:>.class
 <:- range .Fields:>
 <:- if eq .Type "bool" "uint32" "uint64" "int32" "int64":>
-			&& this.<:.Name:> == o.<:.Name:>
+			&& this.<:.NameNative:> == o.<:.NameNative:>
 <:- else if eq .Type "float32" "float64":>
-			&& (this.<:.Name:> == o.<:.Name:> || (this.<:.Name:> != this.<:.Name:> && o.<:.Name:> != o.<:.Name:>))
+			&& (this.<:.NameNative:> == o.<:.NameNative:> || (this.<:.NameNative:> != this.<:.NameNative:> && o.<:.NameNative:> != o.<:.NameNative:>))
 <:- else if eq .Type "binary":>
  <:- if .TypeList:>
-			&& _equals(this.<:.Name:>, o.<:.Name:>)
+			&& _equals(this.<:.NameNative:>, o.<:.NameNative:>)
  <:- else:>
-			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
+			&& java.util.Arrays.equals(this.<:.NameNative:>, o.<:.NameNative:>)
  <:- end:>
 <:- else if .TypeList:>
-			&& java.util.Arrays.equals(this.<:.Name:>, o.<:.Name:>)
+			&& java.util.Arrays.equals(this.<:.NameNative:>, o.<:.NameNative:>)
 <:- else:>
-			&& this.<:.Name:> == null ? o.<:.Name:> == null : this.<:.Name:>.equals(o.<:.Name:>)
+			&& this.<:.NameNative:> == null ? o.<:.NameNative:> == null : this.<:.NameNative:>.equals(o.<:.NameNative:>)
 <:- end:><:end:>;
 	}
 <:if .HasBinaryList:>

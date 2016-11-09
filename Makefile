@@ -14,13 +14,22 @@ build:
 
 test: build
 	go vet ./...
-	go test
+	go test ./...
 
 	colf java testdata/test.colf
 	javac -d testdata/build testdata/*.java
 	java -cp testdata/build testdata.test
 
 	colf -b testdata js testdata/test.colf
+
+regression: build
+	colf -b ../../.. -p github.com/pascaldekloe/colfer/testdata/build/break go testdata/break*.colf
+	go test ./testdata/build/break/...
+
+	colf -b testdata/build/break java testdata/break*.colf
+	javac testdata/build/break/*/*.java
+
+	colf -b testdata/build/break js testdata/break*.colf
 
 bench: build
 	go generate ./testdata/bench
@@ -30,7 +39,7 @@ bench: build
 	javac -d testdata/bench/build -sourcepath testdata/bench/build testdata/bench/bench.java
 	java -cp testdata/bench/build testdata.bench.bench
 
-dist: clean-gen test clean
+dist: clean-gen test regression clean
 	go fmt
 
 fuzzing:

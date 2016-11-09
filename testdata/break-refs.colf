@@ -1,0 +1,6 @@
+package static
+
+// Int is a cross-package reference for void.class.
+type int struct {
+	try []text
+}
