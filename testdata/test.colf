@@ -1,6 +1,7 @@
+// Pacakge testdata covers the mapping for all supported lanugages.
 package testdata
 
-// o contains all supported data types.
+// O contains all supported data types.
 type o struct {
 	b   bool
 	u32 uint32

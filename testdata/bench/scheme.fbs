@@ -1,4 +1,4 @@
-namespace bench;
+namespace gen;
 
 table FlatBuffers {
 	key:long;
