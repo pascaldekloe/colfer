@@ -1,5 +1,6 @@
 clean:
 	go clean ./...
+	rm -fr dist
 	rm -f cmd/colf/colf
 	rm -f testdata/*-fuzz.zip
 	rm -fr testdata/build testdata/bench/build
@@ -41,6 +42,10 @@ bench: build
 
 dist: clean-gen test regression clean
 	go fmt
+	mkdir -p dist
+	GOARCH=amd64 GOOS=linux go build -o dist/colf-linux ./cmd/colf
+	GOARCH=amd64 GOOS=darwin go build -o dist/colf-darwin ./cmd/colf
+	GOARCH=amd64 GOOS=windows go build -o dist/colf.exe ./cmd/colf
 
 fuzzing:
 	rm testdata/corpus/seed*
