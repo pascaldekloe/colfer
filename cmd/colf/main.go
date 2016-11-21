@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -13,10 +14,12 @@ import (
 
 var basedir = flag.String("b", ".", "Use a specific destination base directory.")
 var prefix = flag.String("p", "", "Adds a package prefix. Use slash as a separator when nesting.")
+var verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
 
 func main() {
-	log.SetFlags(0)
 	flag.Parse()
+
+	log.SetFlags(0)
 
 	var files []string
 	switch args := flag.Args(); len(args) {
@@ -24,25 +27,69 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	case 1:
-		colfFiles, err := filepath.Glob("*.colf")
-		if err != nil {
-			log.Fatal(err)
-		}
-		files = colfFiles
+		files = []string{"."}
 	default:
 		files = args[1:]
 	}
 
+	// select language
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "go":
+		if *verbose {
+			fmt.Println("Set up for Go")
+		}
 		gen = colfer.Generate
 	case "java":
+		if *verbose {
+			fmt.Println("Set up for Java")
+		}
 		gen = colfer.GenerateJava
 	case "ecmascript", "javascript", "js":
+		if *verbose {
+			fmt.Println("Set up for ECMAScript")
+		}
 		gen = colfer.GenerateECMA
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
+	}
+
+	// resolve clean file set
+	var writeIndex int
+	for i := 0; i < len(files); i++ {
+		f := files[i]
+
+		info, err := os.Stat(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if info.IsDir() {
+			colfFiles, err := filepath.Glob(filepath.Join(f, "*.colf"))
+			if err != nil {
+				log.Fatal(err)
+			}
+			files = append(files, colfFiles...)
+			continue
+		}
+
+		f = filepath.Clean(f)
+		for j := 0; ; j++ {
+			if j == writeIndex {
+				files[writeIndex] = f
+				writeIndex++
+				break
+			}
+			if files[j] == f {
+				if *verbose {
+					fmt.Println("Dupe schema file", f)
+				}
+				break
+			}
+		}
+	}
+	files = files[:writeIndex]
+	if *verbose {
+		fmt.Println("Found schema files", strings.Join(files, ", "))
 	}
 
 	packages, err := colfer.ReadDefs(files)
@@ -76,17 +123,26 @@ func init() {
 	help += bold + "SYNOPSIS\n\t" + cmd + clear
 	help += " [" + bold + "-b" + clear + " <" + underline + "dir" + clear + ">]"
 	help += " [" + bold + "-p" + clear + " <" + underline + "path" + clear + ">]"
+	help += " [" + bold + "-v" + clear + "]"
 	help += " <" + underline + "language" + clear
 	help += "> [<" + underline + "file" + clear + "> " + underline + "..." + clear + "]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
 	help += ". The options are: " + bold + "Go" + clear + ",\n"
 	help += "\t" + bold + "Java" + clear + " and " + bold + "ECMAScript" + clear + ".\n"
-	help += "\tThe " + underline + "file" + clear + " operands are processed in command-line order. If " + underline + "file" + clear + " is\n"
-	help += "\tabsent, " + cmd + " reads all \".colf\" files in the working directory.\n\n"
+	help += "\tThe " + underline + "file" + clear + " operands specify the input. Directories are scanned for\n"
+	help += "\tfiles with the colf extension. If " + underline + "file" + clear + " is absent, " + cmd + " includes\n"
+	help += "\tthe working directory.\n"
+	help += "\tA package can have multiple schema files.\n\n"
 
-	tail := "\n" + bold + "BUGS" + clear
-	tail += "\n\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
+	tail := "\n" + bold + "EXIT STATUS" + clear + "\n"
+	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2 when\n"
+	tail += "\tinvoked without arguments.\n"
+	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
+	tail += "\tCompile ./src/main/colfer/*.colf into ./target/ as Java:\n\n"
+	tail += "\t\t" + cmd + " -p com/example -b target java src/main/colfer\n"
+	tail += "\n" + bold + "BUGS" + clear + "\n"
+	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
 	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
 
 	flag.Usage = func() {

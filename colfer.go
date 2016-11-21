@@ -8,7 +8,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"reflect"
+	"path"
 	"sort"
 	"strings"
 )
@@ -27,20 +27,35 @@ var datatypes = map[string]struct{}{
 	"binary":    {},
 }
 
+type packages []*Package
+
+func (p packages) Len() int           { return len(p) }
+func (p packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
+func (p packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 // Package is a named definition bundle.
 type Package struct {
 	// Name is the identification token.
 	Name string
 	// NameNative is the language specific identification token
 	NameNative string
-	Structs    []*Struct
+	// Structs are the type definitions.
+	Structs []*Struct
+	// SchemaFiles are the source filenames.
+	SchemaFiles []string
 }
 
-type packages []*Package
-
-func (p packages) Len() int           { return len(p) }
-func (p packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
-func (p packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+// SchemaFileList returns a listing text.
+func (p *Package) SchemaFileList() string {
+	switch len(p.SchemaFiles) {
+	case 0:
+		return ""
+	case 1:
+		return p.SchemaFiles[0]
+	default:
+		return strings.Join(p.SchemaFiles[1:], ", ") + " and " + p.SchemaFiles[0]
+	}
+}
 
 // Refs returns all direct references sorted by name.
 func (p *Package) Refs() []*Package {
@@ -97,6 +112,8 @@ type Struct struct {
 	// Name is the identification token.
 	Name   string
 	Fields []*Field
+	// SchemaFile is the source filename.
+	SchemaFile string
 }
 
 // NameTitle returns the identification token in title case.
@@ -199,43 +216,50 @@ func (f *Field) String() string {
 	return fmt.Sprintf("%s.%s", f.Struct, f.name)
 }
 
-// ReadDefs parses the Colfer files.
+// ReadDefs parses schema files.
 func ReadDefs(files []string) ([]*Package, error) {
 	var packages []*Package
 
 	fileSet := token.NewFileSet()
 	for _, file := range files {
-		file, err := parser.ParseFile(fileSet, file, nil, 0)
+		fileAST, err := parser.ParseFile(fileSet, file, nil, 0)
 		if err != nil {
 			return nil, err
 		}
 
 		var pkg *Package
 		for _, p := range packages {
-			if p.Name == file.Name.Name {
+			if p.Name == fileAST.Name.Name {
 				pkg = p
-				break
 			}
 		}
 		if pkg == nil {
-			pkg = &Package{Name: file.Name.Name}
+			pkg = &Package{Name: fileAST.Name.Name}
 			packages = append(packages, pkg)
 		}
 
-		for _, decl := range file.Decls {
-			d, ok := decl.(*ast.GenDecl)
-			if !ok {
-				return nil, fmt.Errorf("colfer: unsupported declaration type %s", reflect.TypeOf(decl))
-			}
+		pkg.SchemaFiles = append(pkg.SchemaFiles, path.Base(file))
 
-			for _, spec := range d.Specs {
-				s, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					return nil, fmt.Errorf("colfer: unsupported specification type %s", reflect.TypeOf(spec))
-				}
-
-				if err := addStruct(pkg, s); err != nil {
-					return nil, err
+		// switch through the AST types
+		for _, decl := range fileAST.Decls {
+			switch decl := decl.(type) {
+			default:
+				return nil, fmt.Errorf("colfer: unsupported declaration type %T", decl)
+			case *ast.GenDecl:
+				for _, spec := range decl.Specs {
+					switch spec := spec.(type) {
+					default:
+						return nil, fmt.Errorf("colfer: unsupported specification type %T", spec)
+					case *ast.TypeSpec:
+						switch t := spec.Type.(type) {
+						default:
+							return nil, fmt.Errorf("colfer: unsupported data type %T", t)
+						case *ast.StructType:
+							if err := addStruct(pkg, file, spec.Name.Name, t); err != nil {
+								return nil, err
+							}
+						}
+					}
 				}
 			}
 		}
@@ -245,8 +269,8 @@ func ReadDefs(files []string) ([]*Package, error) {
 	for _, pkg := range packages {
 		for _, s := range pkg.Structs {
 			qname := s.String()
-			if _, ok := names[qname]; ok {
-				return nil, fmt.Errorf("colfer: duplicate struct definition %q", qname)
+			if dupe, ok := names[qname]; ok {
+				return nil, fmt.Errorf("colfer: duplicate struct definition %q in file %s and %s", qname, dupe.SchemaFile, s.SchemaFile)
 			}
 			names[qname] = s
 		}
@@ -277,19 +301,11 @@ func ReadDefs(files []string) ([]*Package, error) {
 	return packages, nil
 }
 
-func addStruct(pkg *Package, src *ast.TypeSpec) error {
-	dst := &Struct{
-		Pkg:  pkg,
-		Name: src.Name.Name,
-	}
+func addStruct(pkg *Package, file, name string, src *ast.StructType) error {
+	dst := &Struct{Pkg: pkg, Name: name, SchemaFile: path.Base(file)}
 	pkg.Structs = append(pkg.Structs, dst)
 
-	s, ok := src.Type.(*ast.StructType)
-	if !ok {
-		return fmt.Errorf("colfer: unsupported type %s", reflect.TypeOf(s))
-	}
-
-	for i, f := range s.Fields.List {
+	for i, f := range src.Fields.List {
 		field := Field{Struct: dst, Index: i}
 		dst.Fields = append(dst.Fields, &field)
 
@@ -308,13 +324,14 @@ func addStruct(pkg *Package, src *ast.TypeSpec) error {
 			case *ast.Ident:
 				field.Type = t.Name
 			case *ast.SelectorExpr:
-				pkgIdent, ok := t.X.(*ast.Ident)
-				if !ok {
-					panic("whaa")
+				switch pkgIdent := t.X.(type) {
+				case *ast.Ident:
+					field.Type = pkgIdent.Name + "." + t.Sel.Name
+				default:
+					return fmt.Errorf("colfer: unknown datatype selector expression %T for field %s", pkgIdent, field.String())
 				}
-				field.Type = pkgIdent.Name + "." + t.Sel.Name
 			default:
-				return fmt.Errorf("colfer: unknown datatype declaration for field %s: %#v", field.String(), expr)
+				return fmt.Errorf("colfer: unknown datatype declaration %T for field %s", t, field.String())
 			}
 			break
 		}

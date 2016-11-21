@@ -44,18 +44,30 @@ NAME
 	colf — compile Colfer schemas
 
 SYNOPSIS
-	colf [-b <dir>] [-p <path>] <language> [<file> ...]
+	colf [-b <dir>] [-p <path>] [-v] <language> [<file> ...]
 
 DESCRIPTION
 	Generates source code for the given language. The options are: Go,
 	Java and ECMAScript.
-	The file operands are processed in command-line order. If file is
-	absent, colf reads all ".colf" files in the working directory.
+	The file operands specify the input. Directories are scanned for
+	files with the colf extension. If file is absent, colf includes
+	the working directory.
+	A package can have multiple schema files.
 
   -b string
-	Use a specific destination base directory. (default ".")
+    	Use a specific destination base directory. (default ".")
   -p string
-	Adds a package prefix. Use slash as a separator when nesting.
+    	Adds a package prefix. Use slash as a separator when nesting.
+  -v	Enables verbose reporting to the standard output.
+
+EXIT STATUS
+	The command exits 0 on succes, 1 on compilation failure and 2 when
+	invoked without arguments.
+
+EXAMPLES
+	Compile ./src/main/colfer/*.colf into ./target/ as Java:
+
+		colf -p com/example -b target java src/main/colfer
 
 BUGS
 	Report bugs at https://github.com/pascaldekloe/colfer/issues
@@ -79,7 +91,7 @@ Data structures are defined in `.colf` files. The format is quite conventional.
 package example
 
 type coarse struct {
-	id    uint64
+	ID    uint64
 	name  text
 	holes []hole
 	map   binary
