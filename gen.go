@@ -402,7 +402,7 @@ const goMarshalFieldLen = `<:if eq .Type "bool":>
 	}
 <:else if eq .Type "timestamp":>
 	if v := o.<:.NameTitle:>; !v.IsZero() {
-		if s := uint(v.Unix()); s < 1<<32 {
+		if s := uint64(v.Unix()); s < 1<<32 {
 			l += 9
 		} else {
 			l += 13
