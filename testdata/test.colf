@@ -17,4 +17,6 @@ type o struct {
 	os  []o
 	ss  []text
 	as  []binary
+	u8  uint8
+	u16 uint16
 }

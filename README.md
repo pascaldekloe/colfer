@@ -112,6 +112,8 @@ The following table shows how Colfer data types are applied per language.
 | Colfer	| ECMAScript	| Go		| Java		|
 |:--------------|:--------------|:--------------|:--------------|
 | bool		| Boolean	| bool		| boolean	|
+| uint8		| Number	| uint8		| byte †	|
+| uint16	| Number	| uint16	| short †	|
 | uint32	| Number	| uint32	| int †		|
 | uint64	| Number ‡	| uint64	| long †	|
 | int32		| Number	| int32		| int		|

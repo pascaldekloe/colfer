@@ -58,6 +58,10 @@ func GenerateJava(basedir string, packages []*Package) error {
 					}
 				case "bool":
 					f.TypeNative = "boolean"
+				case "uint8":
+					f.TypeNative = "byte"
+				case "uint16":
+					f.TypeNative = "short"
 				case "uint32", "int32":
 					f.TypeNative = "int"
 				case "uint64", "int64":
@@ -284,6 +288,22 @@ import java.nio.BufferUnderflowException;
 			if (this.<:.NameNative:>) {
 				buf[i++] = (byte) <:.Index:>;
 			}
+<:else if eq .Type "uint8":>
+			if (this.<:.NameNative:> != 0) {
+				buf[i++] = (byte) <:.Index:>;
+				buf[i++] = this.<:.NameNative:>;
+			}
+<:else if eq .Type "uint16":>
+			if (this.<:.NameNative:> != 0) {
+				short x = this.<:.NameNative:>;
+				if ((x & (short)0xff00) != 0) {
+					buf[i++] = (byte) <:.Index:>;
+					buf[i++] = (byte) (x >>> 8);
+				} else {
+					buf[i++] = (byte) (<:.Index:> | 0x80);
+				}
+				buf[i++] = (byte) x;
+			}
 <:else if eq .Type "uint32":>
 			if (this.<:.NameNative:> != 0) {
 				int x = this.<:.NameNative:>;
@@ -292,15 +312,14 @@ import java.nio.BufferUnderflowException;
 					buf[i++] = (byte) (x >>> 24);
 					buf[i++] = (byte) (x >>> 16);
 					buf[i++] = (byte) (x >>> 8);
-					buf[i++] = (byte) (x);
 				} else {
 					buf[i++] = (byte) <:.Index:>;
 					while (x > 0x7f) {
 						buf[i++] = (byte) (x | 0x80);
 						x >>>= 7;
 					}
-					buf[i++] = (byte) x;
 				}
+				buf[i++] = (byte) x;
 			}
 <:else if eq .Type "uint64":>
 			if (this.<:.NameNative:> != 0) {
@@ -647,6 +666,19 @@ import java.nio.BufferUnderflowException;
 				this.<:.NameNative:> = true;
 				header = buf[i++];
 			}
+<:else if eq .Type "uint8":>
+			if (header == (byte) <:.Index:>) {
+				this.<:.NameNative:> = buf[i++];
+				header = buf[i++];
+			}
+<:else if eq .Type "uint16":>
+			if (header == (byte) <:.Index:>) {
+				this.<:.NameNative:> = (short) ((buf[i++] & 0xff) << 8 | (buf[i++] & 0xff));
+				header = buf[i++];
+			} else if (header == (byte) (<:.Index:> | 0x80)) {
+				this.<:.NameNative:> = (short) (buf[i++] & 0xff);
+				header = buf[i++];
+			}
 <:else if eq .Type "uint32":>
 			if (header == (byte) <:.Index:>) {
 				int x = 0;
@@ -899,6 +931,10 @@ import java.nio.BufferUnderflowException;
 <:- range .Fields:>
 <:- if eq .Type "bool":>
 		h = 31 * h + (this.<:.NameNative:> ? 1231 : 1237);
+<:- else if eq .Type "uint8":>
+		h = 31 * h + (this.<:.NameNative:> & 0xff);
+<:- else if eq .Type "uint16":>
+		h = 31 * h + (this.<:.NameNative:> & 0xffff);
 <:- else if eq .Type "uint32" "int32":>
 		h = 31 * h + this.<:.NameNative:>;
 <:- else if eq .Type "uint64" "int64":>
@@ -930,7 +966,7 @@ import java.nio.BufferUnderflowException;
 	public final boolean equals(<:$class:> o) {
 		return o != null && o.getClass() == <:$class:>.class
 <:- range .Fields:>
-<:- if eq .Type "bool" "uint32" "uint64" "int32" "int64":>
+<:- if eq .Type "bool" "uint8" "uint16" "uint32" "uint64" "int32" "int64":>
 			&& this.<:.NameNative:> == o.<:.NameNative:>
 <:- else if eq .Type "float32" "float64":>
 			&& (this.<:.NameNative:> == o.<:.NameNative:> || (this.<:.NameNative:> != this.<:.NameNative:> && o.<:.NameNative:> != o.<:.NameNative:>))

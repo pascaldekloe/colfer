@@ -64,7 +64,11 @@ function newGoldenCases() {
 		'0b01007f7f': {os: [new testdata.O({b: true})]},
 		'0b027f7f7f': {os: [new testdata.O(), new testdata.O()]},
 		'0c0300016101627f': {ss: ["", "a", "b"]},
-		'0d0201000201027f': {as: [new Uint8Array([0]), new Uint8Array([1, 2])]}
+		'0d0201000201027f': {as: [new Uint8Array([0]), new Uint8Array([1, 2])]},
+		'0e017f': {u8: 1},
+		'0eff7f': {u8: 255},
+		'8f017f': {u16: 1},
+		'0fffff7f': {u16: 65535}
 	}
 }
 

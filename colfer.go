@@ -16,6 +16,8 @@ import (
 // datatypes holds all supported names.
 var datatypes = map[string]struct{}{
 	"bool":      {},
+	"uint8":     {},
+	"uint16":    {},
 	"uint32":    {},
 	"uint64":    {},
 	"int32":     {},

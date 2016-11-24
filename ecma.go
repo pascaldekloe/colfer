@@ -165,8 +165,22 @@ const ecmaMarshal = `
 	this.<:.NameTitle:>.prototype.marshal = function() {
 		var segs = [];
 <:range .Fields:><:if eq .Type "bool":>
-		if (this.<:.NameNative:>) {
+		if (this.<:.NameNative:>)
 			segs.push([<:.Index:>]);
+<:else if eq .Type "uint8":>
+		if (this.<:.NameNative:>) {
+			if (this.<:.NameNative:> > 255 || this.<:.NameNative:> < 0)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> out of reach: ' + this.<:.NameNative:>;
+			segs.push([<:.Index:>, this.<:.NameNative:>]);
+		}
+<:else if eq .Type "uint16":>
+		if (this.<:.NameNative:>) {
+			if (this.<:.NameNative:> > 65535 || this.<:.NameNative:> < 0)
+				throw 'colfer: <:.Struct.Pkg.NameNative:>/<:.Struct.NameTitle:> field <:.NameNative:> out of reach: ' + this.<:.NameNative:>;
+			if (this.<:.NameNative:> < 256)
+				segs.push([<:.Index:> | 128, this.<:.NameNative:>]);
+			else
+				segs.push([<:.Index:>, this.<:.NameNative:> >>> 8, this.<:.NameNative:> & 255]);
 		}
 <:else if eq .Type "uint32":>
 		if (this.<:.NameNative:>) {
@@ -402,7 +416,7 @@ const ecmaUnmarshal = `
 		var header = data[0];
 		var i = 1;
 		var readHeader = function() {
-			if (i == data.length) throw EOF;
+			if (i >= data.length) throw EOF;
 			header = data[i++];
 		}
 
@@ -425,6 +439,22 @@ const ecmaUnmarshal = `
 		if (header == <:.Index:>) {
 			this.<:.NameNative:> = true;
 			readHeader();
+		}
+<:else if eq .Type "uint8":>
+		if (header == <:.Index:>) {
+			if (i + 1 >= data.length) throw EOF;
+			this.<:.NameNative:> = data[i++];
+			header = data[i++];
+		}
+<:else if eq .Type "uint16":>
+		if (header == <:.Index:>) {
+			if (i + 2 >= data.length) throw EOF;
+			this.<:.NameNative:> = (data[i++] << 8) | data[i++];
+			header = data[i++];
+		} else if (header == (<:.Index:> | 128)) {
+			if (i + 1 >= data.length) throw EOF;
+			this.<:.NameNative:> = data[i++];
+			header = data[i++];
 		}
 <:else if eq .Type "uint32":>
 		if (header == <:.Index:>) {

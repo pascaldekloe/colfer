@@ -108,6 +108,10 @@ public class test {
 		newCase(goldenCases, "0b027f7f7f").os = new O[] {new O(), new O()};
 		newCase(goldenCases, "0c0300016101627f").ss = new String[] {"", "a", "b"};
 		newCase(goldenCases, "0d0201000201027f").as = new byte[][]{new byte[]{0}, new byte[]{1, 2}};
+		newCase(goldenCases, "0e017f").u8 = 1;
+		newCase(goldenCases, "0eff7f").u8 = -1;
+		newCase(goldenCases, "8f017f").u16 = 1;
+		newCase(goldenCases, "0fffff7f").u16 = -1;
 		return goldenCases;
 	}
 

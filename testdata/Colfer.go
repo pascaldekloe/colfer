@@ -55,6 +55,8 @@ type O struct {
 	Os	[]*O
 	Ss	[]string
 	As	[][]byte
+	U8	uint8
+	U16	uint16
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
@@ -270,6 +272,27 @@ func (o *O) MarshalTo(buf []byte) int {
 		}
 	}
 
+	if x := o.U8; x != 0 {
+		buf[i] = 14
+		i++
+		buf[i] = x
+		i++
+	}
+
+	if x := o.U16; x >= 1 << 8 {
+		buf[i] = 15
+		i++
+		buf[i] = byte(x>>8)
+		i++
+		buf[i] = byte(x)
+		i++
+	} else if x != 0 {
+		buf[i] = 15 | 0x80
+		i++
+		buf[i] = byte(x)
+		i++
+	}
+
 	buf[i] = 0x7f
 	i++
 	return i
@@ -432,6 +455,16 @@ func (o *O) MarshalLen() (int, error) {
 		}
 	}
 
+	if x := o.U8; x != 0 {
+		l += 2
+	}
+
+	if x := o.U16; x >= 1<<8 {
+		l += 3
+	} else if x != 0 {
+		l += 2
+	}
+
 	if l > ColferSizeMax {
 		return l, ColferMax(fmt.Sprintf("colfer: struct testdata.o exceeds %d bytes", ColferSizeMax))
 	}
@@ -461,13 +494,13 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	i := 1
 
 	if header == 0 {
-		o.B = true
 		if i >= len(data) {
 			if i >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
 		}
+		o.B = true
 		header = data[i]
 		i++
 	}
@@ -1091,6 +1124,42 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 			}
 			return 0, io.EOF
 		}
+		header = data[i]
+		i++
+	}
+
+	if header == 14 {
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		o.U8 = data[i]
+		i++
+		header = data[i]
+		i++
+	}
+
+	if header == 15 {
+		if i+2 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		o.U16 = uint16(data[i]) << 8 | uint16(data[i+1])
+		header = data[i+2]
+		i += 3
+	} else if header == 15|0x80 {
+		if i+1 >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: testdata.o size %d exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		o.U16 = uint16(data[i])
+		i++
 		header = data[i]
 		i++
 	}

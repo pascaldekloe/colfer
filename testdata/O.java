@@ -47,6 +47,8 @@ public class O implements java.io.Serializable {
 	public O[] os = _zeroOs;
 	public String[] ss = _zeroSs;
 	public byte[][] as = _zeroBinaries;
+	public byte u8;
+	public short u16;
 
 
 	/**
@@ -193,15 +195,14 @@ public class O implements java.io.Serializable {
 					buf[i++] = (byte) (x >>> 24);
 					buf[i++] = (byte) (x >>> 16);
 					buf[i++] = (byte) (x >>> 8);
-					buf[i++] = (byte) (x);
 				} else {
 					buf[i++] = (byte) 1;
 					while (x > 0x7f) {
 						buf[i++] = (byte) (x | 0x80);
 						x >>>= 7;
 					}
-					buf[i++] = (byte) x;
 				}
+				buf[i++] = (byte) x;
 			}
 
 			if (this.u64 != 0) {
@@ -500,6 +501,22 @@ public class O implements java.io.Serializable {
 				}
 			}
 
+			if (this.u8 != 0) {
+				buf[i++] = (byte) 14;
+				buf[i++] = this.u8;
+			}
+
+			if (this.u16 != 0) {
+				short x = this.u16;
+				if ((x & (short)0xff00) != 0) {
+					buf[i++] = (byte) 15;
+					buf[i++] = (byte) (x >>> 8);
+				} else {
+					buf[i++] = (byte) (15 | 0x80);
+				}
+				buf[i++] = (byte) x;
+			}
+
 			buf[i++] = (byte) 0x7f;
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
@@ -769,6 +786,19 @@ public class O implements java.io.Serializable {
 				header = buf[i++];
 			}
 
+			if (header == (byte) 14) {
+				this.u8 = buf[i++];
+				header = buf[i++];
+			}
+
+			if (header == (byte) 15) {
+				this.u16 = (short) ((buf[i++] & 0xff) << 8 | (buf[i++] & 0xff));
+				header = buf[i++];
+			} else if (header == (byte) (15 | 0x80)) {
+				this.u16 = (short) (buf[i++] & 0xff);
+				header = buf[i++];
+			}
+
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
@@ -893,6 +923,22 @@ public class O implements java.io.Serializable {
 		this.as = value;
 	}
 
+	public byte getU8() {
+		return this.u8;
+	}
+
+	public void setU8(byte value) {
+		this.u8 = value;
+	}
+
+	public short getU16() {
+		return this.u16;
+	}
+
+	public void setU16(short value) {
+		this.u16 = value;
+	}
+
 	@Override
 	public final int hashCode() {
 		int h = 1;
@@ -911,6 +957,8 @@ public class O implements java.io.Serializable {
 		for (O o : this.os) h = 31 * h + (o == null ? 0 : o.hashCode());
 		for (String o : this.ss) h = 31 * h + (o == null ? 0 : o.hashCode());
 		for (byte[] b : this.as) h = 31 * h + java.util.Arrays.hashCode(b);
+		h = 31 * h + (this.u8 & 0xff);
+		h = 31 * h + (this.u16 & 0xffff);
 		return h;
 	}
 
@@ -934,7 +982,9 @@ public class O implements java.io.Serializable {
 			&& this.o == null ? o.o == null : this.o.equals(o.o)
 			&& java.util.Arrays.equals(this.os, o.os)
 			&& java.util.Arrays.equals(this.ss, o.ss)
-			&& _equals(this.as, o.as);
+			&& _equals(this.as, o.as)
+			&& this.u8 == o.u8
+			&& this.u16 == o.u16;
 	}
 
 	private static boolean _equals(byte[][] a, byte[][] b) {

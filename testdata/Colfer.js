@@ -27,6 +27,8 @@ var testdata = new function() {
 		this.os = [];
 		this.ss = [];
 		this.as = [];
+		this.u8 = 0;
+		this.u16 = 0;
 
 		for (var p in init) this[p] = init[p];
 	}
@@ -38,9 +40,8 @@ var testdata = new function() {
 	this.O.prototype.marshal = function() {
 		var segs = [];
 
-		if (this.b) {
+		if (this.b)
 			segs.push([0]);
-		}
 
 		if (this.u32) {
 			if (this.u32 > 4294967295 || this.u32 < 0)
@@ -247,6 +248,21 @@ var testdata = new function() {
 			}
 		}
 
+		if (this.u8) {
+			if (this.u8 > 255 || this.u8 < 0)
+				throw 'colfer: testdata/O field u8 out of reach: ' + this.u8;
+			segs.push([14, this.u8]);
+		}
+
+		if (this.u16) {
+			if (this.u16 > 65535 || this.u16 < 0)
+				throw 'colfer: testdata/O field u16 out of reach: ' + this.u16;
+			if (this.u16 < 256)
+				segs.push([15 | 128, this.u16]);
+			else
+				segs.push([15, this.u16 >>> 8, this.u16 & 255]);
+		}
+
 		var size = 1;
 		segs.forEach(function(seg) {
 			size += seg.length;
@@ -270,7 +286,7 @@ var testdata = new function() {
 		var header = data[0];
 		var i = 1;
 		var readHeader = function() {
-			if (i == data.length) throw EOF;
+			if (i >= data.length) throw EOF;
 			header = data[i++];
 		}
 
@@ -496,6 +512,22 @@ var testdata = new function() {
 				i = to;
 			}
 			readHeader();
+		}
+
+		if (header == 14) {
+			if (i + 1 >= data.length) throw EOF;
+			this.u8 = data[i++];
+			header = data[i++];
+		}
+
+		if (header == 15) {
+			if (i + 2 >= data.length) throw EOF;
+			this.u16 = (data[i++] << 8) | data[i++];
+			header = data[i++];
+		} else if (header == (15 | 128)) {
+			if (i + 1 >= data.length) throw EOF;
+			this.u16 = data[i++];
+			header = data[i++];
 		}
 
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
