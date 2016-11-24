@@ -186,7 +186,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 
 	if header == 0 {
 		if i+1 >= len(data) {
-			if i >= ColferSizeMax {
+			if i+1 >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
@@ -219,7 +219,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 		i++
 	} else if header == 0|0x80 {
 		if i+8 >= len(data) {
-			if i >= ColferSizeMax {
+			if i+8 >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
@@ -321,7 +321,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 
 	if header == 3 {
 		if i+1 >= len(data) {
-			if i >= ColferSizeMax {
+			if i+1 >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
@@ -354,7 +354,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 		i++
 	} else if header == 3|0x80 {
 		if i+4 >= len(data) {
-			if i >= ColferSizeMax {
+			if i+4 >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
 			}
 			return 0, io.EOF
