@@ -81,11 +81,10 @@ import (
 // Colfer configuration attributes
 var (
 	// ColferSizeMax is the upper limit for serial byte sizes.
-	ColferSizeMax = 16 * 1024 * 1024
-
+	ColferSizeMax = {{.SizeMax}}
 {{- if .HasList}}
 	// ColferListMax is the upper limit for the number of elements in a list.
-	ColferListMax = 64 * 1024
+	ColferListMax = {{.ListMax}}
 {{- end}}
 )
 

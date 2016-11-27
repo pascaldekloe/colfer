@@ -125,10 +125,10 @@ import java.nio.BufferUnderflowException;
 {{$class := .NameTitle}}public class {{$class}} implements java.io.Serializable {
 
 	/** The upper limit for serial byte sizes. */
-	public static int colferSizeMax = 16 * 1024 * 1024;
+	public static int colferSizeMax = {{.Pkg.SizeMax}};
 {{if .HasList}}
 	/** The upper limit for the number of elements in a list. */
-	public static int colferListMax = 64 * 1024;
+	public static int colferListMax = {{.Pkg.ListMax}};
 {{end}}
 {{- if .HasBinary}}
 	private static final byte[] _zeroBytes = new byte[0];

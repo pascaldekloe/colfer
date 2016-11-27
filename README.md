@@ -54,10 +54,14 @@ DESCRIPTION
 	the working directory.
 	A package can have multiple schema files.
 
-  -b string
+  -b directory
     	Use a specific destination base directory. (default ".")
-  -p string
+  -l expression
+    	Sets the list limit expression. (default "64 * 1024")
+  -p prefix
     	Adds a package prefix. Use slash as a separator when nesting.
+  -s expression
+    	Sets the size limit expression. (default "16 * 1024 * 1024")
   -v	Enables verbose reporting to the standard output.
 
 EXIT STATUS

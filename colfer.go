@@ -45,6 +45,10 @@ type Package struct {
 	Structs []*Struct
 	// SchemaFiles are the source filenames.
 	SchemaFiles []string
+	// SizeMax is the uper limit expression.
+	SizeMax string
+	// ListMax is the uper limit expression.
+	ListMax string
 }
 
 // SchemaFileList returns a listing text.

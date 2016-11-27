@@ -12,9 +12,12 @@ import (
 	"github.com/pascaldekloe/colfer"
 )
 
-var basedir = flag.String("b", ".", "Use a specific destination base directory.")
-var prefix = flag.String("p", "", "Adds a package prefix. Use slash as a separator when nesting.")
+var basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
+var prefix = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
 var verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
+
+var sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the size limit `expression`.")
+var listMax = flag.String("l", "64 * 1024", "Sets the list limit `expression`.")
 
 func main() {
 	flag.Parse()
@@ -102,6 +105,8 @@ func main() {
 
 	for _, p := range packages {
 		p.Name = path.Join(*prefix, p.Name)
+		p.SizeMax = *sizeMax
+		p.ListMax = *listMax
 	}
 
 	if err := gen(*basedir, packages); err != nil {

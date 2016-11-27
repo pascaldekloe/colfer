@@ -61,10 +61,10 @@ var {{.NameNative}} = new function() {
 	const EOF = 'colfer: EOF';
 
 	// The upper limit for serial byte sizes.
-	var colferSizeMax = 16 * 1024 * 1024;
+	var colferSizeMax = {{.SizeMax}};
 {{- if .HasList}}
 	// The upper limit for the number of elements in a list.
-	var colferListMax = 64 * 1024;
+	var colferListMax = {{.ListMax}};
 {{- end}}
 {{range .Structs}}
 	// Constructor.
