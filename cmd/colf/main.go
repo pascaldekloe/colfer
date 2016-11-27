@@ -12,12 +12,15 @@ import (
 	"github.com/pascaldekloe/colfer"
 )
 
-var basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
-var prefix = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
-var verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
+var (
+	basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
+	prefix = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
+	format = flag.Bool("f", false, "Normalizes the format of the schemas on the fly.")
+	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
 
-var sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the size limit `expression`.")
-var listMax = flag.String("l", "64 * 1024", "Sets the list limit `expression`.")
+	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the size limit `expression`.")
+	listMax = flag.String("l", "64 * 1024", "Sets the list limit `expression`.")
+)
 
 func main() {
 	flag.Parse()
@@ -99,6 +102,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	if *format {
+		for _, file := range files {
+			changed, err := colfer.Format(file)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if changed {
+				fmt.Println("Formatted", file)
+			}
+		}
+	}
+
 	if len(packages) == 0 {
 		log.Fatal("colfer: no struct definitons found")
 	}

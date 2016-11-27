@@ -38,10 +38,10 @@ func (i ColferTail) Error() string {
 
 // Header is a prefix for requests and responses.
 type Header struct {
-	SeqID	uint64
-	Method	string
-	Error	string
-	BodySize	uint32
+	SeqID    uint64
+	Method   string
+	Error    string
+	BodySize uint32
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.

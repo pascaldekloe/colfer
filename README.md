@@ -56,6 +56,7 @@ DESCRIPTION
 
   -b directory
     	Use a specific destination base directory. (default ".")
+  -f	Normalizes the format of the schemas on the fly.
   -l expression
     	Sets the list limit expression. (default "64 * 1024")
   -p prefix

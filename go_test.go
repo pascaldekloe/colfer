@@ -14,7 +14,7 @@ import (
 	"github.com/pascaldekloe/goe/verify"
 )
 
-//go:generate go run ./cmd/colf/main.go go testdata/test.colf
+//go:generate go run ./cmd/colf/main.go -f go testdata/test.colf
 
 type golden struct {
 	serial string

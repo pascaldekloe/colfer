@@ -5,6 +5,7 @@ test: build
 	go test ./...
 
 	colf java testdata/test.colf
+	mkdir -p testdata/build
 	javac -d testdata/build testdata/*.java
 	java -cp testdata/build testdata.test
 	javadoc -d testdata/build/javadoc testdata > /dev/null
@@ -17,7 +18,6 @@ clean:
 	rm -f cmd/colf/colf
 	rm -f testdata/*-fuzz.zip
 	rm -fr testdata/build testdata/bench/build
-	mkdir testdata/build testdata/bench/build
 
 clean-gen:
 	rm -f testdata/Colfer.* testdata/O.java
@@ -25,6 +25,7 @@ clean-gen:
 build:
 	go generate
 	go get github.com/pascaldekloe/colfer/cmd/colf
+	go generate ./rpc
 
 regression: build
 	colf -b ../../.. -p github.com/pascaldekloe/colfer/testdata/build/break go testdata/break*.colf

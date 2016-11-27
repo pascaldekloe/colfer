@@ -1,11 +1,11 @@
 package gen
 
 type Colfer struct {
-	key	int64
-	host	text
-	port	int32
-	size	int64
-	hash	uint64
-	ratio	float64
-	route	bool
+	key   int64
+	host  text
+	port  int32
+	size  int64
+	hash  uint64
+	ratio float64
+	route bool
 }

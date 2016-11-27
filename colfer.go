@@ -1,14 +1,14 @@
 // Package colfer provides the schema interpretation.
 package colfer
 
-//go:generate go run ./cmd/colf/main.go -b rpc go rpc/header.colf
-
 import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"path"
 	"sort"
 	"strings"
@@ -243,6 +243,29 @@ func (f *Field) DocText(indent string) string {
 // String returns the qualified name.
 func (f *Field) String() string {
 	return fmt.Sprintf("%s.%s", f.Struct, f.name)
+}
+
+// Format normalizes the file's content.
+// The content of file is expected to be syntactically correct.
+func Format(file string) (changed bool, err error) {
+	orig, err := ioutil.ReadFile(file)
+	if err != nil {
+		return false, err
+	}
+
+	clean, err := format.Source(orig)
+	if err != nil {
+		return false, fmt.Errorf("colfer: format %q: %s", file, err)
+	}
+
+	if bytes.Equal(orig, clean) {
+		return false, nil
+	}
+
+	if err := ioutil.WriteFile(file, clean, 0644); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // ReadDefs parses schema files.

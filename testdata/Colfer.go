@@ -44,37 +44,37 @@ func (i ColferTail) Error() string {
 // O contains all supported data types.
 type O struct {
 	// B tests booleans.
-	B	bool
+	B bool
 	// U32 tests unsigned 32-bit integers.
-	U32	uint32
+	U32 uint32
 	// U64 tests unsigned 64-bit integers.
-	U64	uint64
+	U64 uint64
 	// I32 tests signed 32-bit integers.
-	I32	int32
+	I32 int32
 	// I64 tests signed 64-bit integers.
-	I64	int64
+	I64 int64
 	// F32 tests 32-bit floating points.
-	F32	float32
+	F32 float32
 	// F64 tests 64-bit floating points.
-	F64	float64
+	F64 float64
 	// T tests timestamps.
-	T	time.Time
+	T time.Time
 	// S tests text.
-	S	string
+	S string
 	// A tests binaries.
-	A	[]byte
+	A []byte
 	// O tests nested data structures.
-	O	*O
+	O *O
 	// Os tests data structure lists.
-	Os	[]*O
+	Os []*O
 	// Ss tests text lists.
-	Ss	[]string
+	Ss []string
 	// As tests binary lists.
-	As	[][]byte
+	As [][]byte
 	// U8 tests unsigned 8-bit integers.
-	U8	uint8
+	U8 uint8
 	// U16 tests unsigned 16-bit integers.
-	U16	uint16
+	U16 uint16
 }
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.

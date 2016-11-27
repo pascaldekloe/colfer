@@ -1,6 +1,8 @@
 package colfer
 
 import (
+	"bytes"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,17 +44,22 @@ func GenerateGo(basedir string, packages []*Package) error {
 			}
 		}
 
-		pkgdir := filepath.Join(basedir, p.Name)
-		if err := os.MkdirAll(pkgdir, os.ModeDir|os.ModePerm); err != nil {
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, p); err != nil {
 			return err
 		}
-		f, err := os.Create(filepath.Join(pkgdir, "Colfer.go"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
 
-		if err = t.Execute(f, p); err != nil {
+		path := filepath.Join(basedir, p.Name)
+		if err := os.MkdirAll(path, 0777); err != nil {
+			return err
+		}
+
+		path = filepath.Join(path, "Colfer.go")
+		if err := ioutil.WriteFile(path, buf.Bytes(), 0666); err != nil {
+			return err
+		}
+
+		if _, err := Format(path); err != nil {
 			return err
 		}
 	}
