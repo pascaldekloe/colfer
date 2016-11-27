@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -14,18 +14,23 @@ import (
 
 var (
 	basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
-	prefix = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
-	format = flag.Bool("f", false, "Normalizes the format of the schemas on the fly.")
+	prefix  = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
+	format  = flag.Bool("f", false, "Normalizes the format of the schemas on the fly.")
 	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
 
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the size limit `expression`.")
 	listMax = flag.String("l", "64 * 1024", "Sets the list limit `expression`.")
 )
 
+var report = log.New(ioutil.Discard, "", 0)
+
 func main() {
 	flag.Parse()
 
 	log.SetFlags(0)
+	if *verbose {
+		report.SetOutput(os.Stderr)
+	}
 
 	var files []string
 	switch args := flag.Args(); len(args) {
@@ -42,19 +47,13 @@ func main() {
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "ecmascript", "javascript", "js":
-		if *verbose {
-			fmt.Println("Set up for ECMAScript")
-		}
+		report.Println("Set up for ECMAScript")
 		gen = colfer.GenerateECMA
 	case "go":
-		if *verbose {
-			fmt.Println("Set up for Go")
-		}
+		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
 	case "java":
-		if *verbose {
-			fmt.Println("Set up for Java")
-		}
+		report.Println("Set up for Java")
 		gen = colfer.GenerateJava
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
@@ -86,17 +85,13 @@ func main() {
 				break
 			}
 			if files[j] == f {
-				if *verbose {
-					fmt.Println("Dupe schema file", f)
-				}
+				report.Println("Duplicate inclusion of", f, "ignored")
 				break
 			}
 		}
 	}
 	files = files[:writeIndex]
-	if *verbose {
-		fmt.Println("Found schema files", strings.Join(files, ", "))
-	}
+	report.Println("Found schema files", strings.Join(files, ", "))
 
 	packages, err := colfer.ReadDefs(files)
 	if err != nil {
@@ -110,7 +105,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if changed {
-				fmt.Println("Formatted", file)
+				log.Println("colfer: formatted", file)
 			}
 		}
 	}
