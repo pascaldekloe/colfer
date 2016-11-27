@@ -1,3 +1,16 @@
+.PHONY: clean clean-gen build test regression bench fuzzing
+
+test: build
+	go vet ./...
+	go test ./...
+
+	colf java testdata/test.colf
+	javac -d testdata/build testdata/*.java
+	java -cp testdata/build testdata.test
+	javadoc -d testdata/build/javadoc testdata > /dev/null
+
+	colf -b testdata js testdata/test.colf
+
 clean:
 	go clean ./...
 	rm -fr dist
@@ -13,19 +26,9 @@ build:
 	go generate
 	go get github.com/pascaldekloe/colfer/cmd/colf
 
-test: build
-	go vet ./...
-	go test ./...
-
-	colf java testdata/test.colf
-	javac -d testdata/build testdata/*.java
-	java -cp testdata/build testdata.test
-
-	colf -b testdata js testdata/test.colf
-
 regression: build
 	colf -b ../../.. -p github.com/pascaldekloe/colfer/testdata/build/break go testdata/break*.colf
-	go test ./testdata/build/break/...
+	go build ./testdata/build/break/...
 
 	colf -b testdata/build/break java testdata/break*.colf
 	javac testdata/build/break/*/*.java

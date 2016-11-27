@@ -36,6 +36,7 @@ func (i ColferTail) Error() string {
 	return fmt.Sprintf("colfer: data continuation at byte %d", i)
 }
 
+// Header is a prefix for requests and responses.
 type Header struct {
 	SeqID	uint64
 	Method	string

@@ -1,22 +1,38 @@
-// Pacakge testdata covers the mapping for all supported lanugages.
+// Package testdata covers the mapping for all supported lanugages.
 package testdata
 
 // O contains all supported data types.
 type o struct {
+	// B tests booleans.
 	b   bool
+	// U32 tests unsigned 32-bit integers.
 	u32 uint32
+	// U64 tests unsigned 64-bit integers.
 	u64 uint64
+	// I32 tests signed 32-bit integers.
 	i32 int32
+	// I64 tests signed 64-bit integers.
 	i64 int64
+	// F32 tests 32-bit floating points.
 	f32 float32
+	// F64 tests 64-bit floating points.
 	f64 float64
+	// T tests timestamps.
 	t   timestamp
+	// S tests text.
 	s   text
+	// A tests binaries.
 	a   binary
+	// O tests nested data structures.
 	o   o
+	// Os tests data structure lists.
 	os  []o
+	// Ss tests text lists.
 	ss  []text
+	// As tests binary lists.
 	as  []binary
+	// U8 tests unsigned 8-bit integers.
 	u8  uint8
+	// U16 tests unsigned 16-bit integers.
 	u16 uint16
 }

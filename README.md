@@ -92,8 +92,11 @@ Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java#mave
 Data structures are defined in `.colf` files. The format is quite conventional.
 
 ```
+// Package example offers a quick demonstration.
+// These comment lines will end up in the generated code.
 package example
 
+// Coarse is the grounds where the game of golf is played.
 type coarse struct {
 	ID    uint64
 	name  text
@@ -103,10 +106,15 @@ type coarse struct {
 }
 
 type hole struct {
-	par   int32
+	// Lat is the latitude of the cup.
 	lat   float64
+	// Lon is the longitude of the cup.
 	lon   float64
+	// Par is the difficulty index.
+	par   uint8
+	// Water marks the presence of water.
 	water bool
+	// Sand marks the presence of sand.
 	sand  bool
 }
 ```

@@ -4,6 +4,7 @@ package colfer
 //go:generate go run ./cmd/colf/main.go -b rpc go rpc/header.colf
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -41,6 +42,8 @@ type Package struct {
 	Name string
 	// NameNative is the language specific identification token
 	NameNative string
+	// Docs are the documentation texts.
+	Docs []string
 	// Structs are the type definitions.
 	Structs []*Struct
 	// SchemaFiles are the source filenames.
@@ -49,6 +52,11 @@ type Package struct {
 	SizeMax string
 	// ListMax is the uper limit expression.
 	ListMax string
+}
+
+// DocText returns the documentation lines prefixed with ident.
+func (p *Package) DocText(ident string) string {
+	return docText(p.Docs, ident)
 }
 
 // SchemaFileList returns a listing text.
@@ -116,7 +124,10 @@ func (p *Package) HasList() bool {
 type Struct struct {
 	Pkg *Package
 	// Name is the identification token.
-	Name   string
+	Name string
+	// Docs are the documentation texts.
+	Docs []string
+	// Fields are the elements in order of appearance.
 	Fields []*Field
 	// SchemaFile is the source filename.
 	SchemaFile string
@@ -125,6 +136,11 @@ type Struct struct {
 // NameTitle returns the identification token in title case.
 func (s *Struct) NameTitle() string {
 	return strings.Title(s.Name)
+}
+
+// DocText returns the documentation lines prefixed with ident.
+func (s *Struct) DocText(indent string) string {
+	return docText(s.Docs, indent)
 }
 
 // String returns the qualified name.
@@ -202,6 +218,8 @@ type Field struct {
 	name string
 	// NameNative is the language specific identification token
 	NameNative string
+	// Docs are the documentation texts.
+	Docs []string
 	// Type is the datatype.
 	Type string
 	// TypeNative is the language specific datatype placeholder.
@@ -212,9 +230,14 @@ type Field struct {
 	TypeList bool
 }
 
-// NameTitle gets the identification token in title case.
+// NameTitle returns the identification token in title case.
 func (f *Field) NameTitle() string {
 	return strings.Title(f.name)
+}
+
+// DocText returns the documentation lines prefixed with ident.
+func (f *Field) DocText(indent string) string {
+	return docText(f.Docs, indent)
 }
 
 // String returns the qualified name.
@@ -228,7 +251,7 @@ func ReadDefs(files []string) ([]*Package, error) {
 
 	fileSet := token.NewFileSet()
 	for _, file := range files {
-		fileAST, err := parser.ParseFile(fileSet, file, nil, 0)
+		fileAST, err := parser.ParseFile(fileSet, file, nil, parser.ParseComments|parser.AllErrors)
 		if err != nil {
 			return nil, err
 		}
@@ -246,6 +269,8 @@ func ReadDefs(files []string) ([]*Package, error) {
 
 		pkg.SchemaFiles = append(pkg.SchemaFiles, path.Base(file))
 
+		pkg.Docs = append(pkg.Docs, docs(fileAST.Doc)...)
+
 		// switch through the AST types
 		for _, decl := range fileAST.Decls {
 			switch decl := decl.(type) {
@@ -253,18 +278,8 @@ func ReadDefs(files []string) ([]*Package, error) {
 				return nil, fmt.Errorf("colfer: unsupported declaration type %T", decl)
 			case *ast.GenDecl:
 				for _, spec := range decl.Specs {
-					switch spec := spec.(type) {
-					default:
-						return nil, fmt.Errorf("colfer: unsupported specification type %T", spec)
-					case *ast.TypeSpec:
-						switch t := spec.Type.(type) {
-						default:
-							return nil, fmt.Errorf("colfer: unsupported data type %T", t)
-						case *ast.StructType:
-							if err := addStruct(pkg, file, spec.Name.Name, t); err != nil {
-								return nil, err
-							}
-						}
+					if err := addSpec(pkg, decl, spec, file); err != nil {
+						return nil, err
 					}
 				}
 			}
@@ -307,10 +322,29 @@ func ReadDefs(files []string) ([]*Package, error) {
 	return packages, nil
 }
 
-func addStruct(pkg *Package, file, name string, src *ast.StructType) error {
-	dst := &Struct{Pkg: pkg, Name: name, SchemaFile: path.Base(file)}
-	pkg.Structs = append(pkg.Structs, dst)
+func addSpec(pkg *Package, decl *ast.GenDecl, spec ast.Spec, file string) error {
+	switch spec := spec.(type) {
+	default:
+		return fmt.Errorf("colfer: unsupported specification type %T", spec)
+	case *ast.TypeSpec:
+		switch t := spec.Type.(type) {
+		default:
+			return fmt.Errorf("colfer: unsupported data type %T", t)
+		case *ast.StructType:
+			s := &Struct{Pkg: pkg, Name: spec.Name.Name, SchemaFile: path.Base(file)}
+			pkg.Structs = append(pkg.Structs, s)
 
+			s.Docs = append(docs(decl.Doc), docs(spec.Doc)...)
+			if err := mapStruct(s, t); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func mapStruct(dst *Struct, src *ast.StructType) error {
 	for i, f := range src.Fields.List {
 		field := Field{Struct: dst, Index: i}
 		dst.Fields = append(dst.Fields, &field)
@@ -319,6 +353,8 @@ func addStruct(pkg *Package, file, name string, src *ast.StructType) error {
 			return fmt.Errorf("colfer: missing name for field %d", i)
 		}
 		field.name = f.Names[0].Name
+
+		field.Docs = docs(f.Doc)
 
 		expr := f.Type
 		for {
@@ -344,4 +380,33 @@ func addStruct(pkg *Package, file, name string, src *ast.StructType) error {
 	}
 
 	return nil
+}
+
+func docs(g *ast.CommentGroup) []string {
+	var a []string
+	if g != nil {
+		for _, c := range g.List {
+			a = append(a, c.Text)
+		}
+	}
+	return a
+}
+
+func docText(docs []string, indent string) string {
+	if len(docs) == 0 {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	for _, s := range docs {
+		if !strings.HasPrefix(s, "//") {
+			continue
+		}
+
+		buf.WriteString(indent)
+		buf.WriteString(s[2:])
+		buf.WriteByte('\n')
+	}
+
+	return buf.String()
 }
