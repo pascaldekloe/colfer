@@ -35,21 +35,21 @@ func main() {
 	// select language
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
-	case "go":
-		if *verbose {
-			fmt.Println("Set up for Go")
-		}
-		gen = colfer.Generate
-	case "java":
-		if *verbose {
-			fmt.Println("Set up for Java")
-		}
-		gen = colfer.GenerateJava
 	case "ecmascript", "javascript", "js":
 		if *verbose {
 			fmt.Println("Set up for ECMAScript")
 		}
 		gen = colfer.GenerateECMA
+	case "go":
+		if *verbose {
+			fmt.Println("Set up for Go")
+		}
+		gen = colfer.GenerateGo
+	case "java":
+		if *verbose {
+			fmt.Println("Set up for Java")
+		}
+		gen = colfer.GenerateJava
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
