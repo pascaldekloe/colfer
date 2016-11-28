@@ -20,10 +20,10 @@ var testData = []*gen.Colfer{
 }
 
 var protoTestData = []*gen.ProtoBuf{
-	{Key: testData[0].Key, Host: testData[0].Host, Port: testData[0].Port, Size_: testData[0].Size, Hash: testData[0].Hash, Ratio: testData[0].Ratio, Route: testData[0].Route},
-	{Key: testData[1].Key, Host: testData[1].Host, Port: testData[1].Port, Size_: testData[1].Size, Hash: testData[1].Hash, Ratio: testData[1].Ratio, Route: testData[1].Route},
-	{Key: testData[2].Key, Host: testData[2].Host, Port: testData[2].Port, Size_: testData[2].Size, Hash: testData[2].Hash, Ratio: testData[2].Ratio, Route: testData[2].Route},
-	{Key: testData[3].Key, Host: testData[3].Host, Port: testData[3].Port, Size_: testData[3].Size, Hash: testData[3].Hash, Ratio: testData[3].Ratio, Route: testData[3].Route},
+	{Key: testData[0].Key, Host: testData[0].Host, Port: uint32(testData[0].Port), Size_: testData[0].Size, Hash: testData[0].Hash, Ratio: testData[0].Ratio, Route: testData[0].Route},
+	{Key: testData[1].Key, Host: testData[1].Host, Port: uint32(testData[1].Port), Size_: testData[1].Size, Hash: testData[1].Hash, Ratio: testData[1].Ratio, Route: testData[1].Route},
+	{Key: testData[2].Key, Host: testData[2].Host, Port: uint32(testData[2].Port), Size_: testData[2].Size, Hash: testData[2].Hash, Ratio: testData[2].Ratio, Route: testData[2].Route},
+	{Key: testData[3].Key, Host: testData[3].Host, Port: uint32(testData[3].Port), Size_: testData[3].Size, Hash: testData[3].Hash, Ratio: testData[3].Ratio, Route: testData[3].Route},
 }
 
 var colferSerials = make([][]byte, len(testData))

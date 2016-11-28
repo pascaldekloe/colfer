@@ -3,7 +3,7 @@ namespace gen;
 table FlatBuffers {
 	key:long;
 	host:string;
-	port:int;
+	port:ushort;
 	size:long;
 	hash:ulong;
 	ratio:double;

@@ -161,26 +161,18 @@ The following changes are backward compatible.
 ## Performance
 
 ```
-% make bench
-go test -run none -bench .
-BenchmarkMarshal/colfer-8   	20000000	        68.5 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshal/protobuf-8 	20000000	        81.8 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshal/flatbuf-8  	 2000000	       712 ns/op	     472 B/op	      12 allocs/op
-BenchmarkUnmarshal/colfer-8 	20000000	        98.1 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/protobuf-8         	10000000	       129 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/flatbuf-8          	10000000	       153 ns/op	      84 B/op	       2 allocs/op
-BenchmarkMarshalReuse/colfer-8        	30000000	        37.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/protobuf-8      	30000000	        49.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/flatbuf-8       	 5000000	       297 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse/colfer-8      	20000000	        65.0 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/protobuf-8    	20000000	        92.9 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/flatbuf-8     	10000000	       127 ns/op	      20 B/op	       1 allocs/op
-PASS
-ok  	github.com/pascaldekloe/colfer	19.741s
-java -cp . testdata.bench.bench
-20M marshals avg 62ns
-20M marshals with buffer reuse avg 35ns
-20M unmarshals avg 65ns
+BenchmarkMarshal/colfer-8   	20000000	        65.9 ns/op	      48 B/op	       1 allocs/op
+BenchmarkMarshal/protobuf-8 	20000000	        81.4 ns/op	      52 B/op	       1 allocs/op
+BenchmarkMarshal/flatbuf-8  	 2000000	       701 ns/op	     472 B/op	      12 allocs/op
+BenchmarkUnmarshal/colfer-8 	20000000	        94.3 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshal/protobuf-8         	10000000	       128 ns/op	      84 B/op	       2 allocs/op
+BenchmarkUnmarshal/flatbuf-8          	10000000	       152 ns/op	      84 B/op	       2 allocs/op
+BenchmarkMarshalReuse/colfer-8        	50000000	        36.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalReuse/protobuf-8      	30000000	        48.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalReuse/flatbuf-8       	 5000000	       294 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUnmarshalReuse/colfer-8      	20000000	        62.7 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalReuse/protobuf-8    	20000000	        92.5 ns/op	      20 B/op	       1 allocs/op
+BenchmarkUnmarshalReuse/flatbuf-8     	10000000	       119 ns/op	      20 B/op	       1 allocs/op
 ```
 
 

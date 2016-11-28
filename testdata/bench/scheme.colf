@@ -3,7 +3,7 @@ package gen
 type Colfer struct {
 	key   int64
 	host  text
-	port  int32
+	port  uint16
 	size  int64
 	hash  uint64
 	ratio float64
