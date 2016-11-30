@@ -285,20 +285,61 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		i++
 	}
 {{else if eq .Type "float32"}}
-	if v := o.{{.NameTitle}}; v != 0.0 {
+ {{- if .TypeList}}
+	if l := len(o.{{.NameTitle}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameTitle}} {
+			x := math.Float32bits(v)
+			buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+			i += 4
+		}
+	}
+ {{- else}}
+	if v := o.{{.NameTitle}}; v != 0 {
 		buf[i] = {{.Index}}
 		x := math.Float32bits(v)
 		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 5
 	}
+ {{- end}}
 {{else if eq .Type "float64"}}
-	if v := o.{{.NameTitle}}; v != 0.0 {
+ {{- if .TypeList}}
+	if l := len(o.{{.NameTitle}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameTitle}} {
+			x := math.Float64bits(v)
+			buf[i], buf[i+1], buf[i+2], buf[i+3] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
+			buf[i+4], buf[i+5], buf[i+6], buf[i+7] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+			i += 8
+		}
+	}
+ {{- else}}
+	if v := o.{{.NameTitle}}; v != 0 {
 		buf[i] = {{.Index}}
 		x := math.Float64bits(v)
 		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
 		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
 		i += 9
 	}
+ {{- end}}
 {{else if eq .Type "timestamp"}}
 	if v := o.{{.NameTitle}}; !v.IsZero() {
 		s, ns := uint64(v.Unix()), uint(v.Nanosecond())
@@ -430,13 +471,33 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
 {{else if eq .Type "float32"}}
-	if o.{{.NameTitle}} != 0.0 {
+ {{- if .TypeList}}
+	if x := len(o.{{.NameTitle}}); x != 0 {
+		l += 2 + x*4
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+	}
+ {{- else}}
+	if o.{{.NameTitle}} != 0 {
 		l += 5
 	}
+ {{- end}}
 {{else if eq .Type "float64"}}
-	if o.{{.NameTitle}} != 0.0 {
+ {{- if .TypeList}}
+	if x := len(o.{{.NameTitle}}); x != 0 {
+		l += 2 + x*8
+		for x >= 0x80 {
+			x >>= 7
+			l++
+		}
+	}
+ {{- else}}
+	if o.{{.NameTitle}} != 0 {
 		l += 9
 	}
+ {{- end}}
 {{else if eq .Type "timestamp"}}
 	if v := o.{{.NameTitle}}; !v.IsZero() {
 		if s := uint64(v.Unix()); s < 1<<32 {
@@ -781,6 +842,61 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		i++
 	}
 {{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+	if header == {{.Index}} {
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+		if end := i + l*4; end >= len(data) {
+			if end >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", end, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		a := make([]float32, l)
+		o.{{.NameTitle}} = a
+
+		for ai := range a {
+			x := uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
+			i += 4
+			a[ai] = math.Float32frombits(x)
+		}
+
+		header = data[i]
+		i++
+	}
+ {{- else}}
 	if header == {{.Index}} {
 		if i+4 >= len(data) {
 			if i+4 >= ColferSizeMax {
@@ -794,7 +910,64 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		header = data[i+4]
 		i += 5
 	}
+ {{- end}}
 {{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+	if header == {{.Index}} {
+		if i >= len(data) {
+			if i >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", i, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					if i >= ColferSizeMax {
+						return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", i, ColferSizeMax))
+					}
+					return 0, io.EOF
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+		if end := i + l*8; end >= len(data) {
+			if end >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size %d exceeds %d bytes", end, ColferSizeMax))
+			}
+			return 0, io.EOF
+		}
+		a := make([]float64, l)
+		o.{{.NameTitle}} = a
+
+		for ai := range a {
+			x := uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32
+			x |= uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
+			i += 8
+			a[ai] = math.Float64frombits(x)
+		}
+
+		header = data[i]
+		i++
+	}
+ {{- else}}
 	if header == {{.Index}} {
 		if i+8 >= len(data) {
 			if i+8 >= ColferSizeMax {
@@ -809,6 +982,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		header = data[i+8]
 		i += 9
 	}
+ {{- end}}
 {{else if eq .Type "timestamp"}}
 	if header == {{.Index}} {
 		if i+8 >= len(data) {

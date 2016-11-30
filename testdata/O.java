@@ -33,6 +33,8 @@ public class O implements java.io.Serializable {
 	private static final byte[][] _zeroBinaries = new byte[0][];
 	private static final O[] _zeroOs = new O[0];
 	private static final String[] _zeroSs = new String[0];
+	private static final float[] _zeroF32s = new float[0];
+	private static final double[] _zeroF64s = new double[0];
 
 
 	/**
@@ -114,6 +116,16 @@ public class O implements java.io.Serializable {
 	 * U16 tests unsigned 16-bit integers.
 	 */
 	public short u16;
+
+	/**
+	 * F32s tests 32-bit floating point lists.
+	 */
+	public float[] f32s = _zeroF32s;
+
+	/**
+	 * F64s tests 64-bit floating point lists.
+	 */
+	public double[] f64s = _zeroF64s;
 
 
 	/**
@@ -582,6 +594,54 @@ public class O implements java.io.Serializable {
 				buf[i++] = (byte) x;
 			}
 
+			if (this.f32s.length != 0) {
+				buf[i++] = (byte) 16;
+				float[] a = this.f32s;
+
+				int l = a.length;
+				if (l > O.colferListMax)
+					throw new IllegalStateException(format("colfer: testdata.o.f32s length %d exceeds %d elements", l, O.colferListMax));
+				while (l > 0x7f) {
+					buf[i++] = (byte) (l | 0x80);
+					l >>>= 7;
+				}
+				buf[i++] = (byte) l;
+
+				for (float f : a) {
+					int x = Float.floatToRawIntBits(f);
+					buf[i++] = (byte) (x >>> 24);
+					buf[i++] = (byte) (x >>> 16);
+					buf[i++] = (byte) (x >>> 8);
+					buf[i++] = (byte) (x);
+				}
+			}
+
+			if (this.f64s.length != 0) {
+				buf[i++] = (byte) 17;
+				double[] a = this.f64s;
+
+				int l = a.length;
+				if (l > O.colferListMax)
+					throw new IllegalStateException(format("colfer: testdata.o.f64s length %d exceeds %d elements", l, O.colferListMax));
+				while (l > 0x7f) {
+					buf[i++] = (byte) (l | 0x80);
+					l >>>= 7;
+				}
+				buf[i++] = (byte) l;
+
+				for (double f : a) {
+					long x = Double.doubleToRawLongBits(f);
+					buf[i++] = (byte) (x >>> 56);
+					buf[i++] = (byte) (x >>> 48);
+					buf[i++] = (byte) (x >>> 40);
+					buf[i++] = (byte) (x >>> 32);
+					buf[i++] = (byte) (x >>> 24);
+					buf[i++] = (byte) (x >>> 16);
+					buf[i++] = (byte) (x >>> 8);
+					buf[i++] = (byte) (x);
+				}
+			}
+
 			buf[i++] = (byte) 0x7f;
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
@@ -864,6 +924,45 @@ public class O implements java.io.Serializable {
 				header = buf[i++];
 			}
 
+			if (header == (byte) 16) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > O.colferListMax)
+					throw new SecurityException(format("colfer: testdata.o.f32s length %d exceeds %d elements", length, O.colferListMax));
+
+				float[] a = new float[length];
+				for (int ai = 0; ai < length; ai++) {
+					int x = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
+					a[ai] = Float.intBitsToFloat(x);
+				}
+				this.f32s = a;
+				header = buf[i++];
+			}
+
+			if (header == (byte) 17) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > O.colferListMax)
+					throw new SecurityException(format("colfer: testdata.o.f64s length %d exceeds %d elements", length, O.colferListMax));
+
+				double[] a = new double[length];
+				for (int ai = 0; ai < length; ai++) {
+					long x = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
+						| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
+					a[ai] = Double.longBitsToDouble(x);
+				}
+				this.f64s = a;
+				header = buf[i++];
+			}
+
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
@@ -1132,6 +1231,38 @@ public class O implements java.io.Serializable {
 		this.u16 = value;
 	}
 
+	/**
+	 * Gets testdata.o.f32s.
+	 * @return the value.
+	 */
+	public float[] getF32s() {
+		return this.f32s;
+	}
+
+	/**
+	 * Sets testdata.o.f32s.
+	 * @param value the replacement.
+	 */
+	public void setF32s(float[] value) {
+		this.f32s = value;
+	}
+
+	/**
+	 * Gets testdata.o.f64s.
+	 * @return the value.
+	 */
+	public double[] getF64s() {
+		return this.f64s;
+	}
+
+	/**
+	 * Sets testdata.o.f64s.
+	 * @param value the replacement.
+	 */
+	public void setF64s(double[] value) {
+		this.f64s = value;
+	}
+
 	@Override
 	public final int hashCode() {
 		int h = 1;
@@ -1152,6 +1283,8 @@ public class O implements java.io.Serializable {
 		for (byte[] b : this.as) h = 31 * h + java.util.Arrays.hashCode(b);
 		h = 31 * h + (this.u8 & 0xff);
 		h = 31 * h + (this.u16 & 0xffff);
+		h = 31 * h + java.util.Arrays.hashCode(this.f32s);
+		h = 31 * h + java.util.Arrays.hashCode(this.f64s);
 		return h;
 	}
 
@@ -1177,7 +1310,9 @@ public class O implements java.io.Serializable {
 			&& java.util.Arrays.equals(this.ss, o.ss)
 			&& _equals(this.as, o.as)
 			&& this.u8 == o.u8
-			&& this.u16 == o.u16;
+			&& this.u16 == o.u16
+			&& java.util.Arrays.equals(this.f32s, o.f32s)
+			&& java.util.Arrays.equals(this.f64s, o.f64s);
 	}
 
 	private static boolean _equals(byte[][] a, byte[][] b) {

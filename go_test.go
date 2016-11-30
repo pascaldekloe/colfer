@@ -79,6 +79,8 @@ func newGoldenCases() []*golden {
 		{"0eff7f", testdata.O{U8: math.MaxUint8}},
 		{"8f017f", testdata.O{U16: 1}},
 		{"0fffff7f", testdata.O{U16: math.MaxUint16}},
+		{"1002000000003f8000007f", testdata.O{F32s: []float32{0, 1}}},
+		{"11014058c000000000007f", testdata.O{F64s: []float64{99}}},
 	}
 }
 

@@ -267,9 +267,9 @@ import java.nio.BufferUnderflowException;
 
 	/**
 	 * Serializes the object.
-{{- range .Fields}}{{if .TypeList}}
+{{- range .Fields}}{{if .TypeList}}{{if eq .Type "float32" "float64"}}{{else}}
 	 * All {@code null} elements in {@link #{{.NameNative}}} will be replaced with {{if eq .Type "text"}}{@code ""}{{else if eq .Type "binary"}}an empty byte array{{else}}a {@code new} value{{end}}.
-{{- end}}{{end}}
+{{- end}}{{end}}{{end}}
 	 * @param out the data destination.
 	 * @param buf the initial buffer or {@code null}.
 	 * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
@@ -297,9 +297,9 @@ import java.nio.BufferUnderflowException;
 
 	/**
 	 * Serializes the object.
-{{- range .Fields}}{{if .TypeList}}
+{{- range .Fields}}{{if .TypeList}}{{if eq .Type "float32" "float64"}}{{else}}
 	 * All {@code null} elements in {@link #{{.NameNative}}} will be replaced with {{if eq .Type "text"}}{@code ""}{{else if eq .Type "binary"}}an empty byte array{{else}}a {@code new} value{{end}}.
-{{- end}}{{end}}
+{{- end}}{{end}}{{end}}
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
@@ -398,6 +398,29 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) x;
 			}
 {{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+			if (this.{{.NameNative}}.length != 0) {
+				buf[i++] = (byte) {{.Index}};
+				float[] a = this.{{.NameNative}};
+
+				int l = a.length;
+				if (l > {{$class}}.colferListMax)
+					throw new IllegalStateException(format("colfer: {{.String}} length %d exceeds %d elements", l, {{$class}}.colferListMax));
+				while (l > 0x7f) {
+					buf[i++] = (byte) (l | 0x80);
+					l >>>= 7;
+				}
+				buf[i++] = (byte) l;
+
+				for (float f : a) {
+					int x = Float.floatToRawIntBits(f);
+					buf[i++] = (byte) (x >>> 24);
+					buf[i++] = (byte) (x >>> 16);
+					buf[i++] = (byte) (x >>> 8);
+					buf[i++] = (byte) (x);
+				}
+			}
+ {{- else}}
 			if (this.{{.NameNative}} != 0.0f) {
 				buf[i++] = (byte) {{.Index}};
 				int x = Float.floatToRawIntBits(this.{{.NameNative}});
@@ -406,7 +429,35 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) (x >>> 8);
 				buf[i++] = (byte) (x);
 			}
+ {{- end}}
 {{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+			if (this.{{.NameNative}}.length != 0) {
+				buf[i++] = (byte) {{.Index}};
+				double[] a = this.{{.NameNative}};
+
+				int l = a.length;
+				if (l > {{$class}}.colferListMax)
+					throw new IllegalStateException(format("colfer: {{.String}} length %d exceeds %d elements", l, {{$class}}.colferListMax));
+				while (l > 0x7f) {
+					buf[i++] = (byte) (l | 0x80);
+					l >>>= 7;
+				}
+				buf[i++] = (byte) l;
+
+				for (double f : a) {
+					long x = Double.doubleToRawLongBits(f);
+					buf[i++] = (byte) (x >>> 56);
+					buf[i++] = (byte) (x >>> 48);
+					buf[i++] = (byte) (x >>> 40);
+					buf[i++] = (byte) (x >>> 32);
+					buf[i++] = (byte) (x >>> 24);
+					buf[i++] = (byte) (x >>> 16);
+					buf[i++] = (byte) (x >>> 8);
+					buf[i++] = (byte) (x);
+				}
+			}
+ {{- else}}
 			if (this.{{.NameNative}} != 0.0) {
 				buf[i++] = (byte) {{.Index}};
 				long x = Double.doubleToRawLongBits(this.{{.NameNative}});
@@ -419,6 +470,7 @@ import java.nio.BufferUnderflowException;
 				buf[i++] = (byte) (x >>> 8);
 				buf[i++] = (byte) (x);
 			}
+ {{- end}}
 {{else if eq .Type "timestamp"}}
 			if (this.{{.NameNative}} != null) {
 				long s = this.{{.NameNative}}.getEpochSecond();
@@ -785,15 +837,52 @@ import java.nio.BufferUnderflowException;
 			}
 {{else if eq .Type "float32"}}
 			if (header == (byte) {{.Index}}) {
+ {{- if .TypeList}}
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > {{$class}}.colferListMax)
+					throw new SecurityException(format("colfer: {{.String}} length %d exceeds %d elements", length, {{$class}}.colferListMax));
+
+				float[] a = new float[length];
+				for (int ai = 0; ai < length; ai++) {
+					int x = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
+					a[ai] = Float.intBitsToFloat(x);
+				}
+				this.{{.NameNative}} = a;
+ {{- else}}
 				int x = (buf[i++] & 0xff) << 24 | (buf[i++] & 0xff) << 16 | (buf[i++] & 0xff) << 8 | (buf[i++] & 0xff);
 				this.{{.NameNative}} = Float.intBitsToFloat(x);
+ {{- end}}
 				header = buf[i++];
 			}
 {{else if eq .Type "float64"}}
 			if (header == (byte) {{.Index}}) {
+ {{- if .TypeList}}
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > {{$class}}.colferListMax)
+					throw new SecurityException(format("colfer: {{.String}} length %d exceeds %d elements", length, {{$class}}.colferListMax));
+
+				double[] a = new double[length];
+				for (int ai = 0; ai < length; ai++) {
+					long x = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
+						| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
+					a[ai] = Double.longBitsToDouble(x);
+				}
+				this.{{.NameNative}} = a;
+ {{- else}}
 				long x = (buf[i++] & 0xffL) << 56 | (buf[i++] & 0xffL) << 48 | (buf[i++] & 0xffL) << 40 | (buf[i++] & 0xffL) << 32
 					| (buf[i++] & 0xffL) << 24 | (buf[i++] & 0xffL) << 16 | (buf[i++] & 0xffL) << 8 | (buf[i++] & 0xffL);
 				this.{{.NameNative}} = Double.longBitsToDouble(x);
+ {{- end}}
 				header = buf[i++];
 			}
 {{else if eq .Type "timestamp"}}
@@ -974,10 +1063,18 @@ import java.nio.BufferUnderflowException;
 {{- else if eq .Type "uint64" "int64"}}
 		h = 31 * h + (int)(this.{{.NameNative}} ^ this.{{.NameNative}} >>> 32);
 {{- else if eq .Type "float32"}}
+ {{- if .TypeList}}
+		h = 31 * h + java.util.Arrays.hashCode(this.{{.NameNative}});
+ {{- else}}
 		h = 31 * h + Float.floatToIntBits(this.{{.NameNative}});
+ {{- end}}
 {{- else if eq .Type "float64"}}
+ {{- if .TypeList}}
+		h = 31 * h + java.util.Arrays.hashCode(this.{{.NameNative}});
+ {{- else}}
 		long _{{.NameNative}}Bits = Double.doubleToLongBits(this.{{.NameNative}});
 		h = 31 * h + (int) (_{{.NameNative}}Bits ^ _{{.NameNative}}Bits >>> 32);
+ {{- end}}
 {{- else if eq .Type "binary"}}
  {{- if .TypeList}}
 		for (byte[] b : this.{{.NameNative}}) h = 31 * h + java.util.Arrays.hashCode(b);
@@ -1000,17 +1097,17 @@ import java.nio.BufferUnderflowException;
 	public final boolean equals({{$class}} o) {
 		return o != null && o.getClass() == {{$class}}.class
 {{- range .Fields}}
-{{- if eq .Type "bool" "uint8" "uint16" "uint32" "uint64" "int32" "int64"}}
-			&& this.{{.NameNative}} == o.{{.NameNative}}
-{{- else if eq .Type "float32" "float64"}}
-			&& (this.{{.NameNative}} == o.{{.NameNative}} || (this.{{.NameNative}} != this.{{.NameNative}} && o.{{.NameNative}} != o.{{.NameNative}}))
-{{- else if eq .Type "binary"}}
- {{- if .TypeList}}
+{{- if .TypeList}}
+ {{- if eq .Type "binary"}}
 			&& _equals(this.{{.NameNative}}, o.{{.NameNative}})
  {{- else}}
 			&& java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
  {{- end}}
-{{- else if .TypeList}}
+{{- else if eq .Type "bool" "uint8" "uint16" "uint32" "uint64" "int32" "int64"}}
+			&& this.{{.NameNative}} == o.{{.NameNative}}
+{{- else if eq .Type "float32" "float64"}}
+			&& (this.{{.NameNative}} == o.{{.NameNative}} || (this.{{.NameNative}} != this.{{.NameNative}} && o.{{.NameNative}} != o.{{.NameNative}}))
+{{- else if eq .Type "binary"}}
 			&& java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
 {{- else}}
 			&& this.{{.NameNative}} == null ? o.{{.NameNative}} == null : this.{{.NameNative}}.equals(o.{{.NameNative}})

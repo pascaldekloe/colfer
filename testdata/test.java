@@ -112,6 +112,8 @@ public class test {
 		newCase(goldenCases, "0eff7f").u8 = -1;
 		newCase(goldenCases, "8f017f").u16 = 1;
 		newCase(goldenCases, "0fffff7f").u16 = -1;
+		newCase(goldenCases, "1002000000003f8000007f").f32s = new float[] {0, 1};
+		newCase(goldenCases, "11014058c000000000007f").f64s = new double[] {99};
 		return goldenCases;
 	}
 

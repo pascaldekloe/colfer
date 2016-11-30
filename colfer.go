@@ -326,8 +326,12 @@ func ReadDefs(files []string) ([]*Package, error) {
 				t := f.Type
 				_, ok := datatypes[t]
 				if ok {
-					if f.TypeList && t != "text" && t != "binary" {
-						return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f.String())
+					if f.TypeList {
+						switch t {
+						case "float32", "float64", "text", "binary":
+						default:
+							return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f.String())
+						}
 					}
 					continue
 				}

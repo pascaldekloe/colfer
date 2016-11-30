@@ -47,6 +47,10 @@ var testdata = new function() {
 		this.u8 = 0;
 		// U16 tests unsigned 16-bit integers.
 		this.u16 = 0;
+		// F32s tests 32-bit floating point lists.
+		this.f32s = [];
+		// F64s tests 64-bit floating point lists.
+		this.f64s = [];
 
 		for (var p in init) this[p] = init[p];
 	}
@@ -279,6 +283,40 @@ var testdata = new function() {
 				segs.push([15 | 128, this.u16]);
 			else
 				segs.push([15, this.u16 >>> 8, this.u16 & 255]);
+		}
+
+		if (this.f32s && this.f32s.length) {
+			if (this.f32s.length > colferListMax)
+				throw 'colfer: testdata.o.f32s length exceeds colferListMax';
+			var seg = [16];
+			encodeVarint(seg, this.f32s.length);
+			segs.push(seg);
+
+			var bytes = new Uint8Array(this.f32s.length * 4);
+			segs.push(bytes);
+
+			var view = new DataView(bytes.buffer);
+			this.f32s.forEach(function(f, i) {
+				if (f > 3.4028234663852886E38 || f < -3.4028234663852886E38)
+					throw 'colfer: testdata.o.f32s[' + i + '] exceeds 32-bit range';
+				view.setFloat32(i * 4, f);
+			});
+		}
+
+		if (this.f64s && this.f64s.length) {
+			if (this.f64s.length > colferListMax)
+				throw 'colfer: testdata.o.f64s length exceeds colferListMax';
+			var seg = [17];
+			encodeVarint(seg, this.f64s.length);
+			segs.push(seg);
+
+			var bytes = new Uint8Array(this.f64s.length * 8);
+			segs.push(bytes);
+
+			var view = new DataView(bytes.buffer);
+			this.f64s.forEach(function(f, i) {
+				view.setFloat64(i * 8, f);
+			});
 		}
 
 		var size = 1;
@@ -546,6 +584,38 @@ var testdata = new function() {
 			if (i + 1 >= data.length) throw EOF;
 			this.u16 = data[i++];
 			header = data[i++];
+		}
+
+		if (header == 16) {
+			var length = readVarint();
+			if (length < 0)
+				throw 'colfer: testdata.o.f32s length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: testdata.o.f32s length ' + length + ' exceeds ' + colferListMax + ' elements';
+			if (i + length * 4 > data.length) throw EOF;
+
+			var view = new DataView(data.buffer);
+			while (--length >= 0) {
+				this.f32s.push(view.getFloat32(i));
+				i += 4;
+			}
+			readHeader();
+		}
+
+		if (header == 17) {
+			var length = readVarint();
+			if (length < 0)
+				throw 'colfer: testdata.o.f64s length exceeds Number.MAX_SAFE_INTEGER';
+			if (length > colferListMax)
+				throw 'colfer: testdata.o.f64s length ' + length + ' exceeds ' + colferListMax + ' elements';
+			if (i + length * 8 > data.length) throw EOF;
+
+			var view = new DataView(data.buffer);
+			while (--length >= 0) {
+				this.f64s.push(view.getFloat64(i));
+				i += 8;
+			}
+			readHeader();
 		}
 
 		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);

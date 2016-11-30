@@ -35,4 +35,8 @@ type o struct {
 	u8 uint8
 	// U16 tests unsigned 16-bit integers.
 	u16 uint16
+	// F32s tests 32-bit floating point lists.
+	f32s []float32
+	// F64s tests 64-bit floating point lists.
+	f64s []float64
 }

@@ -28,7 +28,7 @@ The format is inspired by Proto**col** Buf**fer**.
 * RMI (WIP
 [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
 )
-* Lists for numbers and timestamps
+* Lists for integers and timestamps
 * Please [share](https://github.com/pascaldekloe/colfer/wiki/Users#production-use) your experiences
 
 
@@ -143,7 +143,7 @@ The following table shows how Colfer data types are applied per language.
 * †† timezone not preserved
 * ‡‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
-Lists may contain text, binaries or data structures.
+Lists may contain floating points, text, binaries or data structures.
 
 
 ## Compatibility
@@ -217,5 +217,5 @@ as a 64-bit two's complement integer. In both cases the value is followed with
 The data for text and binaries is prefixed with a varint byte size declaration.
 Text is encoded as UTF-8.
 
-Lists of text, binaries and data structures are prefixed with a varint element
-size declaration.
+Lists of floating points, text, binaries and data structures are prefixed with a
+varint element size declaration.
