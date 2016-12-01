@@ -15,11 +15,11 @@ import (
 var (
 	basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
 	prefix  = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
-	format  = flag.Bool("f", false, "Normalizes the format of the schemas on the fly.")
-	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard output.")
+	format  = flag.Bool("f", false, "Normalizes schemas on the fly.")
+	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard error.")
 
-	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the size limit `expression`.")
-	listMax = flag.String("l", "64 * 1024", "Sets the list limit `expression`.")
+	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n    \t`expression` is applied to the target language under the name\n    \tColferSizeMax.")
+	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\n    \tlist. The `expression` is applied to the target language under the\n    \tname ColferListMax.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
@@ -137,11 +137,8 @@ func init() {
 
 	help := bold + "NAME\n\t" + cmd + clear + " \u2014 compile Colfer schemas\n\n"
 	help += bold + "SYNOPSIS\n\t" + cmd + clear
-	help += " [" + bold + "-b" + clear + " <" + underline + "dir" + clear + ">]"
-	help += " [" + bold + "-p" + clear + " <" + underline + "path" + clear + ">]"
-	help += " [" + bold + "-v" + clear + "]"
-	help += " <" + underline + "language" + clear
-	help += "> [<" + underline + "file" + clear + "> " + underline + "..." + clear + "]\n\n"
+	help += " [ " + underline + "options" + clear + " ] " + underline + "language" + clear
+	help += " [ " + underline + "file" + clear + " " + underline + "..." + clear + " ]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for the given " + underline + "language" + clear
 	help += ". The options are: " + bold + "Go" + clear + ",\n"
@@ -150,13 +147,14 @@ func init() {
 	help += "\tfiles with the colf extension. If " + underline + "file" + clear + " is absent, " + cmd + " includes\n"
 	help += "\tthe working directory.\n"
 	help += "\tA package can have multiple schema files.\n\n"
+	help += bold + "OPTIONS\n" + clear
 
 	tail := "\n" + bold + "EXIT STATUS" + clear + "\n"
-	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2 when\n"
-	tail += "\tinvoked without arguments.\n"
+	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
+	tail += "\twhen invoked without arguments.\n"
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
-	tail += "\tCompile ./src/main/colfer/*.colf into ./target/ as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com/example -b target java src/main/colfer\n"
+	tail += "\tCompile ./api/*.colf into ./src/ as Java:\n\n"
+	tail += "\t\t" + cmd + " -p com/example -b src java api\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
 	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
