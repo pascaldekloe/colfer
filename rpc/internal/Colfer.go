@@ -4,9 +4,12 @@ package internal
 // The compiler used schema file header.colf.
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 )
+
+var intconv = binary.BigEndian
 
 // Colfer configuration attributes
 var (
@@ -51,8 +54,7 @@ func (o *Header) MarshalTo(buf []byte) int {
 
 	if x := o.SeqID; x >= 1<<49 {
 		buf[i] = 0 | 0x80
-		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>56), byte(x>>48), byte(x>>40), byte(x>>32)
-		buf[i+5], buf[i+6], buf[i+7], buf[i+8] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		intconv.PutUint64(buf[i+1:], x)
 		i += 9
 	} else if x != 0 {
 		buf[i] = 0
@@ -96,7 +98,7 @@ func (o *Header) MarshalTo(buf []byte) int {
 
 	if x := o.BodySize; x >= 1<<21 {
 		buf[i] = 3 | 0x80
-		buf[i+1], buf[i+2], buf[i+3], buf[i+4] = byte(x>>24), byte(x>>16), byte(x>>8), byte(x)
+		intconv.PutUint32(buf[i+1:], x)
 		i += 5
 	} else if x != 0 {
 		buf[i] = 3
@@ -186,14 +188,12 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 	i := 1
 
 	if header == 0 {
-		if i+1 >= len(data) {
-			if i+1 >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
-		}
-		x := uint64(data[i])
+		start := i
 		i++
+		if i >= len(data) {
+			goto eof
+		}
+		x := uint64(data[start])
 
 		if x >= 0x80 {
 			x &= 0x7f
@@ -201,10 +201,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 				b := uint64(data[i])
 				i++
 				if i >= len(data) {
-					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-					}
-					return 0, io.EOF
+					goto eof
 				}
 
 				if b < 0x80 || shift == 56 {
@@ -219,23 +216,19 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 		header = data[i]
 		i++
 	} else if header == 0|0x80 {
-		if i+8 >= len(data) {
-			if i+8 >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
+		start := i
+		i += 8
+		if i >= len(data) {
+			goto eof
 		}
-		o.SeqID = uint64(data[i])<<56 | uint64(data[i+1])<<48 | uint64(data[i+2])<<40 | uint64(data[i+3])<<32 | uint64(data[i+4])<<24 | uint64(data[i+5])<<16 | uint64(data[i+6])<<8 | uint64(data[i+7])
-		header = data[i+8]
-		i += 9
+		o.SeqID = intconv.Uint64(data[start:])
+		header = data[i]
+		i++
 	}
 
 	if header == 1 {
 		if i >= len(data) {
-			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
+			goto eof
 		}
 		x := uint(data[i])
 		i++
@@ -244,10 +237,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 			x &= 0x7f
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
-					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-					}
-					return 0, io.EOF
+					goto eof
 				}
 				b := uint(data[i])
 				i++
@@ -259,28 +249,25 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 				x |= (b & 0x7f) << shift
 			}
 		}
+
 		if x > uint(ColferSizeMax) {
 			return 0, ColferMax(fmt.Sprintf("colfer: internal.header.method size %d exceeds %d bytes", x, ColferSizeMax))
 		}
-		to := i + int(x)
-		if to >= len(data) {
-			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
-		}
-		o.Method = string(data[i:to])
 
-		header = data[to]
-		i = to + 1
+		start := i
+		i += int(x)
+		if i >= len(data) {
+			goto eof
+		}
+		o.Method = string(data[start:i])
+
+		header = data[i]
+		i++
 	}
 
 	if header == 2 {
 		if i >= len(data) {
-			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
+			goto eof
 		}
 		x := uint(data[i])
 		i++
@@ -289,10 +276,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 			x &= 0x7f
 			for shift := uint(7); ; shift += 7 {
 				if i >= len(data) {
-					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-					}
-					return 0, io.EOF
+					goto eof
 				}
 				b := uint(data[i])
 				i++
@@ -304,31 +288,29 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 				x |= (b & 0x7f) << shift
 			}
 		}
+
 		if x > uint(ColferSizeMax) {
 			return 0, ColferMax(fmt.Sprintf("colfer: internal.header.error size %d exceeds %d bytes", x, ColferSizeMax))
 		}
-		to := i + int(x)
-		if to >= len(data) {
-			if i >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
-		}
-		o.Error = string(data[i:to])
 
-		header = data[to]
-		i = to + 1
+		start := i
+		i += int(x)
+		if i >= len(data) {
+			goto eof
+		}
+		o.Error = string(data[start:i])
+
+		header = data[i]
+		i++
 	}
 
 	if header == 3 {
-		if i+1 >= len(data) {
-			if i+1 >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
-		}
-		x := uint32(data[i])
+		start := i
 		i++
+		if i >= len(data) {
+			goto eof
+		}
+		x := uint32(data[start])
 
 		if x >= 0x80 {
 			x &= 0x7f
@@ -336,10 +318,7 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 				b := uint32(data[i])
 				i++
 				if i >= len(data) {
-					if i >= ColferSizeMax {
-						return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-					}
-					return 0, io.EOF
+					goto eof
 				}
 
 				if b < 0x80 {
@@ -354,24 +333,27 @@ func (o *Header) Unmarshal(data []byte) (int, error) {
 		header = data[i]
 		i++
 	} else if header == 3|0x80 {
-		if i+4 >= len(data) {
-			if i+4 >= ColferSizeMax {
-				return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
-			}
-			return 0, io.EOF
+		start := i
+		i += 4
+		if i >= len(data) {
+			goto eof
 		}
-		o.BodySize = uint32(data[i])<<24 | uint32(data[i+1])<<16 | uint32(data[i+2])<<8 | uint32(data[i+3])
-		header = data[i+4]
-		i += 5
+		o.BodySize = intconv.Uint32(data[start:])
+		header = data[i]
+		i++
 	}
 
 	if header != 0x7f {
 		return 0, ColferError(i - 1)
 	}
-	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: internal.header size %d exceeds %d bytes", i, ColferSizeMax))
+	if i < ColferSizeMax {
+		return i, nil
 	}
-	return i, nil
+eof:
+	if i >= ColferSizeMax {
+		return 0, ColferMax(fmt.Sprintf("colfer: internal.header size exceeds %d bytes", ColferSizeMax))
+	}
+	return 0, io.EOF
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"strings"
@@ -107,6 +108,61 @@ func TestUnmarshal(t *testing.T) {
 			continue
 		}
 		verify.Values(t, fmt.Sprintf("0x%s", gold.serial), got, gold.object)
+	}
+}
+
+func TestUnmarshalEOF(t *testing.T) {
+	for _, gold := range newGoldenCases() {
+		data, err := hex.DecodeString(gold.serial)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for i := range data {
+			incomplete := data[:i]
+			if _, err := new(O).Unmarshal(incomplete); err != io.EOF {
+				t.Errorf("0x%s: got error %T: %q", hex.EncodeToString(incomplete), err, err)
+			}
+		}
+	}
+}
+
+func TestUnmarshalSizeMax(t *testing.T) {
+	orig := ColferSizeMax
+	defer func() {
+		ColferSizeMax = orig
+	}()
+
+	for _, gold := range newGoldenCases() {
+		data, err := hex.DecodeString(gold.serial)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for ColferSizeMax = range data {
+			// not supported
+			if ColferSizeMax == 0 {
+				continue
+			}
+
+			for i := range data {
+				// cutoff on or after max
+				if i+1 < ColferSizeMax {
+					continue
+				}
+				part := data[:i+1]
+
+				switch _, err := new(O).Unmarshal(part); err.(type) {
+				case ColferMax:
+					continue // pass
+				case nil:
+					t.Errorf("0x%s: no error with ColferSizeMax=%d", hex.EncodeToString(part), ColferSizeMax)
+				default:
+					t.Errorf("0x%s: got error %T with ColferSizeMax=%d: %q", hex.EncodeToString(part), err, ColferSizeMax, err)
+				}
+				break
+			}
+		}
 	}
 }
 
