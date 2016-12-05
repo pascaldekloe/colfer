@@ -9,7 +9,7 @@ import (
 	"github.com/pascaldekloe/colfer/rpc/internal"
 )
 
-//go:generate colf -f go
+//go:generate $GOPATH/bin/colf -f go
 
 // colferer covers the encoding methods.
 type colferer interface {

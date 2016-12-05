@@ -8,7 +8,7 @@ import (
 	"github.com/pascaldekloe/colfer/testdata/bench/build/gen"
 )
 
-//go:generate colf -b build -f go scheme.colf
+//go:generate $GOPATH/bin/colf -b build -f go scheme.colf
 //go:generate protoc --gogofaster_out=build/gen -I. -I${GOPATH}/src -I${GOPATH}/src/github.com/gogo/protobuf/protobuf scheme.proto
 //go:generate flatc -o build -g scheme.fbs
 
