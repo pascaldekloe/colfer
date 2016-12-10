@@ -5,12 +5,12 @@ COLF?=${GOPATH}/bin/colf
 test: build
 	go vet
 	go fmt
-	go test
+	go test -v
 
 	java -cp build/classes testdata.test
 
 testcover-go: Colfer.go
-	go test -coverprofile testcover-go github.com/pascaldekloe/colfer/testdata
+	go test -v -coverprofile testcover-go github.com/pascaldekloe/colfer/testdata
 
 clean:
 	go clean

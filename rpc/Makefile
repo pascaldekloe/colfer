@@ -3,7 +3,7 @@
 test: internal
 	go vet
 	go fmt
-	go test
+	go test -v
 
 bench: internal
 	go test -bench .
@@ -13,7 +13,7 @@ clean:
 	rm -fr internal
 
 internal:
-	go generate
+	go generate -x
 
 testcover:
-	go test -coverprofile testcover
+	go test -v -coverprofile testcover
