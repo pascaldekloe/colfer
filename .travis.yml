@@ -3,5 +3,7 @@ language: go
 go:
   - 1.7
 
-jdk:
-  - oraclejdk8
+addons:
+  apt:
+    packages:
+      - openjdk-8-jdk
