@@ -1,9 +1,11 @@
 package testdata
 
+import "github.com/pascaldekloe/colfer/go/gen"
+
 // Fuzz is a test for the generated code.
 // See https://github.com/dvyukov/go-fuzz
 func Fuzz(data []byte) int {
-	o := new(O)
+	o := new(gen.O)
 	err := o.UnmarshalBinary(data)
 	if err != nil {
 		return 0

@@ -1,5 +1,5 @@
-// Package testdata covers the mapping for all supported lanugages.
-package testdata
+// Package gen tests all field mapping options.
+package gen
 
 // O contains all supported data types.
 type o struct {

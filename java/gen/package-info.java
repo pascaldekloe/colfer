@@ -2,6 +2,6 @@
 // The compiler used schema file test.colf.
 
 /**
- * Package testdata covers the mapping for all supported lanugages.
+ * Package gen tests all field mapping options.
  */
-package testdata;
+package gen;

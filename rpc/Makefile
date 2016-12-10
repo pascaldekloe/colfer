@@ -1,19 +1,23 @@
-.PHONY: clean test bench
+.PHONY: bench clean test
+
+COLF?=../colf
 
 test: internal
 	go vet
 	go fmt
+
+	$(COLF) -b build go ../testdata/test.colf
+
 	go test -v
-
-bench: internal
-	go test -bench .
-
-clean:
-	rm -f testcover
-	rm -fr internal
-
-internal:
-	go generate -x
 
 testcover:
 	go test -v -coverprofile testcover
+
+bench: test
+	go test -bench .
+
+clean:
+	rm -fr internal testcover
+
+internal:
+	$(COLF) go

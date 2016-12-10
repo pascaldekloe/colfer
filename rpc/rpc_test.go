@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"github.com/pascaldekloe/colfer/testdata"
+	"github.com/pascaldekloe/colfer/rpc/build/gen"
 )
 
 type mockConn struct {
@@ -34,7 +34,7 @@ func TestRequest(t *testing.T) {
 	c := NewClientCodec(conn)
 
 	h := &rpc.Request{Seq: 42}
-	b := &testdata.O{S: "body " + strings.Repeat("A", 64*1024)}
+	b := &gen.O{S: "body " + strings.Repeat("A", 64*1024)}
 	if err := c.WriteRequest(h, b); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
@@ -46,7 +46,7 @@ func TestRequest(t *testing.T) {
 		t.Errorf("got sequence ID %d, want %d", gotH.Seq, h.Seq)
 	}
 
-	gotB := new(testdata.O)
+	gotB := new(gen.O)
 	if err := s.ReadRequestBody(gotB); err != nil {
 		t.Fatalf("read body error: %s", err)
 	} else if gotB.S != b.S {
@@ -61,7 +61,7 @@ func TestResponse(t *testing.T) {
 	c := NewClientCodec(conn)
 
 	h := &rpc.Response{Seq: 42}
-	b := &testdata.O{S: "body " + strings.Repeat("A", 64*1024)}
+	b := &gen.O{S: "body " + strings.Repeat("A", 64*1024)}
 	if err := s.WriteResponse(h, b); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
@@ -73,7 +73,7 @@ func TestResponse(t *testing.T) {
 		t.Errorf("got sequence ID %d, want %d", gotH.Seq, h.Seq)
 	}
 
-	gotB := new(testdata.O)
+	gotB := new(gen.O)
 	if err := c.ReadResponseBody(gotB); err != nil {
 		t.Fatalf("read body error: %s", err)
 	} else if gotB.S != b.S {
@@ -87,10 +87,10 @@ func TestRequestBodySkip(t *testing.T) {
 	s := NewServerCodec(conn)
 	c := NewClientCodec(conn)
 
-	if err := c.WriteRequest(&rpc.Request{Seq: 1}, &testdata.O{S: "body 1"}); err != nil {
+	if err := c.WriteRequest(&rpc.Request{Seq: 1}, &gen.O{S: "body 1"}); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
-	if err := c.WriteRequest(&rpc.Request{Seq: 2}, &testdata.O{S: "body 2"}); err != nil {
+	if err := c.WriteRequest(&rpc.Request{Seq: 2}, &gen.O{S: "body 2"}); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
 
@@ -109,7 +109,7 @@ func TestRequestBodySkip(t *testing.T) {
 		t.Errorf("got sequence ID %d, want %d", gotH.Seq, want)
 	}
 
-	gotB := new(testdata.O)
+	gotB := new(gen.O)
 	if err := s.ReadRequestBody(gotB); err != nil {
 		t.Fatalf("read body error: %s", err)
 	} else if want := "body 2"; gotB.S != want {
@@ -123,10 +123,10 @@ func TestResponseBodySkip(t *testing.T) {
 	s := NewServerCodec(conn)
 	c := NewClientCodec(conn)
 
-	if err := s.WriteResponse(&rpc.Response{Seq: 1}, &testdata.O{S: "body 1"}); err != nil {
+	if err := s.WriteResponse(&rpc.Response{Seq: 1}, &gen.O{S: "body 1"}); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
-	if err := s.WriteResponse(&rpc.Response{Seq: 2}, &testdata.O{S: "body 2"}); err != nil {
+	if err := s.WriteResponse(&rpc.Response{Seq: 2}, &gen.O{S: "body 2"}); err != nil {
 		t.Fatalf("write error: %s", err)
 	}
 
@@ -145,7 +145,7 @@ func TestResponseBodySkip(t *testing.T) {
 		t.Errorf("got sequence ID %d, want %d", gotH.Seq, want)
 	}
 
-	gotB := new(testdata.O)
+	gotB := new(gen.O)
 	if err := c.ReadResponseBody(gotB); err != nil {
 		t.Fatalf("read body error: %s", err)
 	} else if want := "body 2"; gotB.S != want {
@@ -182,7 +182,7 @@ func BenchmarkCodec(b *testing.B) {
 	// client requests
 	go func() {
 		header := new(rpc.Request)
-		body := new(testdata.O)
+		body := new(gen.O)
 		for i := 0; i < b.N; i++ {
 			id := uint64(i)
 			header.Seq = id
@@ -197,7 +197,7 @@ func BenchmarkCodec(b *testing.B) {
 	go func() {
 		req := new(rpc.Request)
 		res := new(rpc.Response)
-		body := new(testdata.O)
+		body := new(gen.O)
 		for i := 0; i < b.N; i++ {
 			if err := s.ReadRequestHeader(req); err != nil {
 				b.Fatal(err)
@@ -215,7 +215,7 @@ func BenchmarkCodec(b *testing.B) {
 	}()
 
 	header := new(rpc.Response)
-	body := new(testdata.O)
+	body := new(gen.O)
 	for i := 0; i < b.N; i++ {
 		id := uint64(i)
 

@@ -1,4 +1,4 @@
-package testdata;
+import gen.O;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
@@ -189,7 +189,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal max exception");
 		} catch (IllegalStateException e) {
-			String want = "colfer: testdata.o exceeds 2 bytes";
+			String want = "colfer: gen.o exceeds 2 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("marshal max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -206,7 +206,7 @@ public class test {
 			o.marshal(new byte[6], 0);
 			fail("no marshal text max exception");
 		} catch (IllegalStateException e) {
-			String want = "colfer: testdata.o.s size 3 exceeds 2 UTF-8 bytes";
+			String want = "colfer: gen.o.s size 3 exceeds 2 UTF-8 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("marshal text max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -223,7 +223,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal binary max exception");
 		} catch (IllegalStateException e) {
-			String want = "colfer: testdata.o.a size 3 exceeds 2 bytes";
+			String want = "colfer: gen.o.a size 3 exceeds 2 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("marshal binary max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -240,7 +240,7 @@ public class test {
 			o.marshal(new byte[O.colferSizeMax], 0);
 			fail("no marshal list max exception");
 		} catch (IllegalStateException e) {
-			String want = "colfer: testdata.o.os length 10 exceeds 9 elements";
+			String want = "colfer: gen.o.os length 10 exceeds 9 elements";
 			if (! want.equals(e.getMessage()))
 				fail("marshal list max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -256,7 +256,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal max exception");
 		} catch (SecurityException e) {
-			String want = "colfer: testdata.o exceeds 2 bytes";
+			String want = "colfer: gen.o exceeds 2 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("unmarshal max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -272,7 +272,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal text max exception");
 		} catch (SecurityException e) {
-			String want = "colfer: testdata.o.s size 10 exceeds 9 UTF-8 bytes";
+			String want = "colfer: gen.o.s size 10 exceeds 9 UTF-8 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("unmarshal text max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -288,7 +288,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal binary max exception");
 		} catch (SecurityException e) {
-			String want = "colfer: testdata.o.a size 10 exceeds 9 bytes";
+			String want = "colfer: gen.o.a size 10 exceeds 9 bytes";
 			if (! want.equals(e.getMessage()))
 				fail("unmarshal binary max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
@@ -304,7 +304,7 @@ public class test {
 			new O().unmarshal(serial, 0);
 			fail("no unmarshal list max exception");
 		} catch (SecurityException e) {
-			String want = "colfer: testdata.o.os length 10 exceeds 9 elements";
+			String want = "colfer: gen.o.os length 10 exceeds 9 elements";
 			if (! want.equals(e.getMessage()))
 				fail("unmarshal list max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {

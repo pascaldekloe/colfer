@@ -1,6 +1,6 @@
-package testdata.bench;
-
 import java.util.Arrays;
+
+import bench.gen.Colfer;
 
 
 public class bench {
@@ -11,8 +11,8 @@ public class bench {
 		benchUnmarshal();
 	}
 
-	private static gen.Colfer[] newTestData() {
-		gen.Colfer c1 = new gen.Colfer();
+	private static Colfer[] newTestData() {
+		Colfer c1 = new Colfer();
 		c1.key = 1234567890L;
 		c1.host = "db003lz12";
 		c1.port = 389;
@@ -21,7 +21,7 @@ public class bench {
 		c1.ratio = 0.99;
 		c1.route = true;
 
-		gen.Colfer c2 = new gen.Colfer();
+		Colfer c2 = new Colfer();
 		c2.key = 1234567891L;
 		c2.host = "localhost";
 		c2.port = 22;
@@ -30,7 +30,7 @@ public class bench {
 		c2.ratio = 0.20;
 		c2.route = false;
 
-		gen.Colfer c3 = new gen.Colfer();
+		Colfer c3 = new Colfer();
 		c3.key = 1234567892L;
 		c3.host = "kdc.local";
 		c3.port = 88;
@@ -39,7 +39,7 @@ public class bench {
 		c3.ratio = 0.06;
 		c3.route = false;
 
-		gen.Colfer c4 = new gen.Colfer();
+		Colfer c4 = new Colfer();
 		c4.key = 1234567893L;
 		c4.host = "vhost8.dmz.example.com";
 		c4.port = 27017;
@@ -48,15 +48,15 @@ public class bench {
 		c4.ratio = 0.0;
 		c4.route = true;
 
-		return new gen.Colfer[] {c1, c2, c3, c4};
+		return new Colfer[] {c1, c2, c3, c4};
 	}
 
 	// prevent compiler optimization
 	public static byte[] holdSerial;
-	public static gen.Colfer holdData;
+	public static Colfer holdData;
 
 	static void benchMarshal() {
-		gen.Colfer[] testData = newTestData();
+		Colfer[] testData = newTestData();
 		final int n = 20000000;
 
 		long start = System.nanoTime();
@@ -70,8 +70,8 @@ public class bench {
 	}
 
 	static void benchMarshalReuse() {
-		gen.Colfer[] testData = newTestData();
-		holdSerial = new byte[gen.Colfer.colferSizeMax];
+		Colfer[] testData = newTestData();
+		holdSerial = new byte[Colfer.colferSizeMax];
 		final int n = 20000000;
 
 		long start = System.nanoTime();
@@ -84,7 +84,7 @@ public class bench {
 	}
 
 	static void benchUnmarshal() {
-		gen.Colfer[] testData = newTestData();
+		Colfer[] testData = newTestData();
 		byte[][] serials = new byte[testData.length][];
 		for (int i = 0; i < serials.length; i++) {
 			byte[] buf = new byte[200];
@@ -95,7 +95,7 @@ public class bench {
 
 		long start = System.nanoTime();
 		for (int i = 0; i < n; i++) {
-			holdData = new gen.Colfer();
+			holdData = new Colfer();
 			holdData.unmarshal(serials[i % serials.length], 0);
 		}
 		long end = System.nanoTime();
