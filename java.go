@@ -92,7 +92,7 @@ func GenerateJava(basedir string, packages []*Package) error {
 					f.TypeNative = "byte[]"
 				}
 
-				f.NameNative = f.name
+				f.NameNative = f.Name
 				if IsJavaKeyword(f.NameNative) {
 					f.NameNative += "_"
 				}

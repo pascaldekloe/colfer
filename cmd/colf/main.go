@@ -93,7 +93,7 @@ func main() {
 	files = files[:writeIndex]
 	report.Println("Found schema files", strings.Join(files, ", "))
 
-	packages, err := colfer.ReadDefs(files)
+	packages, err := colfer.ParseFiles(files)
 	if err != nil {
 		log.Fatal(err)
 	}
