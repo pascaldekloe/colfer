@@ -14,7 +14,8 @@ The format is inspired by Proto**col** Buf**fer**.
 #### Features
 
 * Simple and straightforward in use
-* Support for: Go, Java and ECMAScript/JavaScript
+* Support for: **C++**, **Go** (a.k.a. golang), **Java** and **JavaScript**
+(a.k.a. ECMAScript)
 * No dependencies other than the core library
 * Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
 * The generated code is human-readable
@@ -28,7 +29,7 @@ The format is inspired by Proto**col** Buf**fer**.
 * RMI (WIP
 [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
 )
-* Lists for integers and timestamps
+* List type support for integers and timestamps
 * Please [share](https://github.com/pascaldekloe/colfer/wiki/Users#production-use) your experiences
 
 
@@ -47,8 +48,8 @@ SYNOPSIS
 	colf [ options ] language [ file ... ]
 
 DESCRIPTION
-	Generates source code for the given language. The options are: Go,
-	Java and ECMAScript.
+	Generates source code for a language. The options are: C++, Go,
+	Java and JavaScript.
 	The file operands specify the input. Directories are scanned for
 	files with the colf extension. If file is absent, colf includes
 	the working directory.
@@ -130,21 +131,21 @@ what the generated code looks like.
 
 The following table shows how Colfer data types are applied per language.
 
-| Colfer	| ECMAScript	| Go		| Java		|
-|:--------------|:--------------|:--------------|:--------------|
-| bool		| Boolean	| bool		| boolean	|
-| uint8		| Number	| uint8		| byte †	|
-| uint16	| Number	| uint16	| short †	|
-| uint32	| Number	| uint32	| int †		|
-| uint64	| Number ‡	| uint64	| long †	|
-| int32		| Number	| int32		| int		|
-| int64		| Number ‡	| int64		| long		|
-| float32	| Number	| float32	| float		|
-| float64	| Number	| float64	| double	|
-| timestamp	| Date + Number	| time.Time ††	| java.time.Instant |
-| text		| String ‡‡	| string	| java.lang.String ‡‡ |
-| binary	| Uint8Array	| []byte	| byte[]	|
-| list		| Array		| slice		| array		|
+| Colfer	| C++				| Go		| Java			| JavaScript	|
+|:--------------|:------------------------------|:--------------|:----------------------|:--------------|
+| bool		| bool				| bool		| boolean		| Boolean	|
+| uint8		| std::uint8_t			| uint8		| byte †		| Number	|
+| uint16	| std::uint16_t			| uint16	| short †		| Number	|
+| uint32	| std::uint32_t			| uint32	| int †			| Number	|
+| uint64	| std::uint64_t			| uint64	| long †		| Number ‡	|
+| int32		| std::int32_t			| int32		| int			| Number	|
+| int64		| std::int64_t			| int64		| long			| Number ‡	|
+| float32	| float				| float32	| float			| Number	|
+| float64	| double			| float64	| double		| Number	|
+| timestamp	| std::chrono::nanoseconds	| time.Time ††	| java.time.Instant	| Date + Number	|
+| text		| std::string			| string	| String ‡‡		| String ‡‡	|
+| binary	| std::vector\<std::uint8_t\>	| []byte	| byte[]		| Uint8Array	|
+| list		| std::vector			| slice		| array			| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)

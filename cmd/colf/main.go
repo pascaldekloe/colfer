@@ -46,15 +46,18 @@ func main() {
 	// select language
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
-	case "ecmascript", "javascript", "js":
-		report.Println("Set up for ECMAScript")
-		gen = colfer.GenerateECMA
+	case "c++", "cpp":
+		report.Println("Set up for C++")
+		log.Fatal("colf: C++ template not implemented yet")
 	case "go":
 		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
 	case "java":
 		report.Println("Set up for Java")
 		gen = colfer.GenerateJava
+	case "javascript", "js", "ecmascript":
+		report.Println("Set up for ECMAScript")
+		gen = colfer.GenerateECMA
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
@@ -140,9 +143,9 @@ func init() {
 	help += " [ " + underline + "options" + clear + " ] " + underline + "language" + clear
 	help += " [ " + underline + "file" + clear + " " + underline + "..." + clear + " ]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
-	help += "Generates source code for the given " + underline + "language" + clear
-	help += ". The options are: " + bold + "Go" + clear + ",\n"
-	help += "\t" + bold + "Java" + clear + " and " + bold + "ECMAScript" + clear + ".\n"
+	help += "Generates source code for a " + underline + "language" + clear + ". The options are: "
+	help += bold + "C++" + clear + ", " + bold + "Go" + clear + ",\n"
+	help += "\t" + bold + "Java" + clear + " and " + bold + "JavaScript" + clear + ".\n"
 	help += "\tThe " + underline + "file" + clear + " operands specify the input. Directories are scanned for\n"
 	help += "\tfiles with the colf extension. If " + underline + "file" + clear + " is absent, " + cmd + " includes\n"
 	help += "\tthe working directory.\n"
