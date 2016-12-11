@@ -1,6 +1,6 @@
 import java.util.Arrays;
 
-import bench.gen.Colfer;
+import bench.Colfer;
 
 
 public class bench {
