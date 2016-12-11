@@ -15,4 +15,4 @@ node_modules:
 	npm install qunit
 
 clean:
-	rm -fr build Colfer.js
+	rm -fr build coverage Colfer.js
