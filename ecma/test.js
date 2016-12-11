@@ -1,8 +1,8 @@
 QUnit.test('constructor', function(assert) {
-	assert.deepEqual(new testdata.O(), new testdata.O({}), 'absent and empty init');
+	assert.deepEqual(new gen.O(), new gen.O({}), 'absent and empty init');
 
-	var o = new testdata.O({s: 'hello', i32: 42});
-	assert.deepEqual(new testdata.O(o), o, 'clone');
+	var o = new gen.O({s: 'hello', i32: 42});
+	assert.deepEqual(new gen.O(o), o, 'clone');
 });
 
 function newGoldenCases() {
@@ -59,10 +59,10 @@ function newGoldenCases() {
 		'0901ff7f': {a: new Uint8Array([0xFF])},
 		'090202007f': {a: new Uint8Array([2, 0])},
 		'09c0010909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909097f': {a: new Uint8Array(192).fill(9)},
-		'0a7f7f': {o: new testdata.O()},
-		'0a007f7f': {o: new testdata.O({b: true})},
-		'0b01007f7f': {os: [new testdata.O({b: true})]},
-		'0b027f7f7f': {os: [new testdata.O(), new testdata.O()]},
+		'0a7f7f': {o: new gen.O()},
+		'0a007f7f': {o: new gen.O({b: true})},
+		'0b01007f7f': {os: [new gen.O({b: true})]},
+		'0b027f7f7f': {os: [new gen.O(), new gen.O()]},
 		'0c0300016101627f': {ss: ["", "a", "b"]},
 		'0d0201000201027f': {as: [new Uint8Array([0]), new Uint8Array([1, 2])]},
 		'0e017f': {u8: 1},
@@ -80,7 +80,7 @@ QUnit.test('marshal', function(assert) {
 		var feed = golden[hex];
 		var desc = hex + ': ' + JSON.stringify(feed)
 		try {
-			var o = new testdata.O(feed);
+			var o = new gen.O(feed);
 			var got = encodeHex(o.marshal());
 			assert.equal(got, hex, desc);
 		} catch (err) {
@@ -95,9 +95,9 @@ QUnit.test('unmarshal', function(assert) {
 		var want = golden[hex];
 		var desc = hex + ': ' + JSON.stringify(want)
 		try {
-			var got = new testdata.O();
+			var got = new gen.O();
 			got.unmarshal(decodeHex(hex));
-			assert.deepEqual(got, new testdata.O(want), desc);
+			assert.deepEqual(got, new gen.O(want), desc);
 		} catch (err) {
 			assert.equal(err, 'no error', desc);
 		}
