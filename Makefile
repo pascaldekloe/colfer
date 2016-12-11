@@ -1,4 +1,4 @@
-.PHONY: clean bench build test
+.PHONY: clean deploy
 
 deploy: colf
 	make -C ecma clean test
