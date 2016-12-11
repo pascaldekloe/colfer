@@ -1,4 +1,4 @@
-package gen
+package bench
 
 type Colfer struct {
 	key   int64

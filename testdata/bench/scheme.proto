@@ -1,4 +1,4 @@
-package gen;
+package bench;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 

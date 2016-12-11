@@ -1,18 +1,19 @@
 .PHONY: bench clean
 
-COLF?=${GOPATH}/bin/colf
+COLF?=../../colf
 
-bench: build
-	go test -bench .
-
-	java -cp build/classes testdata.bench.bench
-
-build:
-	go generate -x
-
-	$(COLF) -b build/java java
-	mkdir -p build/classes
-	javac -d build/classes -sourcepath build/java *.java
+bench: Colfer.go FlatBuffers.go scheme.pb.go
+	go test -bench . -benchtime 3s
 
 clean:
-	rm -fr build
+	go clean
+	rm -f Colfer.go FlatBuffers.go scheme.pb.go
+
+Colfer.go:
+	$(COLF) -b .. -f go ../../testdata/bench/scheme.colf
+
+scheme.pb.go:
+	protoc --gogofaster_out=. -I../../testdata/bench -I./vendor -I./vendor/github.com/gogo/protobuf/protobuf ../../testdata/bench/scheme.proto
+
+FlatBuffers.go:
+	flatc -o .. -g ../../testdata/bench/scheme.fbs
