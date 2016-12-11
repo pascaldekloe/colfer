@@ -5,6 +5,10 @@ size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
 to marshal and unmarshall data structures.
+* C++: WIP #10
+* Go, a.k.a. golang
+* Java, Android compliant
+* JavaScript, a.k.a. ECMAScript, NodeJS compliant
 
 This is free and unencumbered software released into the
 [public domain](http://creativecommons.org/publicdomain/zero/1.0).
@@ -14,8 +18,6 @@ The format is inspired by Proto**col** Buf**fer**.
 #### Features
 
 * Simple and straightforward in use
-* Support for: **C++**, **Go** (a.k.a. golang), **Java** and **JavaScript**
-(a.k.a. ECMAScript)
 * No dependencies other than the core library
 * Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
 * The generated code is human-readable
