@@ -937,7 +937,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 		l := int(x)
 		a := make([]*O, l)
 		malloc := make([]O, l)
-		for ai, _ := range a {
+		for ai := range a {
 			v := &malloc[ai]
 			a[ai] = v
 

@@ -10,6 +10,7 @@ import (
 
 const javaKeywords = "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while"
 
+// IsJavaKeyword returs whether s is a reserved word in Java code.
 func IsJavaKeyword(s string) bool {
 	for _, k := range strings.Fields(javaKeywords) {
 		if k == s {

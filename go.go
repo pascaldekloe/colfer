@@ -997,7 +997,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		l := int(x)
 		a := make([]*{{.TypeNative}}, l)
 		malloc := make([]{{.TypeNative}}, l)
-		for ai, _ := range a {
+		for ai := range a {
 			v := &malloc[ai]
 			a[ai] = v
 
