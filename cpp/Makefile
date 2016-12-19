@@ -1,13 +1,16 @@
 .PHONY: clean test
 
 CXX?=clang
-CXXFLAGS?=-std=c++11 -pedantic -Werror
+CXXFLAGS=-std=c++11 -g -O0
 
-test: clean a.out
-	./a.out
+test: clean gen_test
 
-a.out:
-	$(CXX) $(CXXFLAGS) test.cpp gen/Colfer.cpp
+Colfer.o:
+	$(CXX) -c $(CXXFLAGS) -pedantic -Werror gen/Colfer.cpp
+
+gen_test: Colfer.o
+	$(CXX) -o gen_test $(CXXFLAGS) Colfer.o gen_test.cpp
+	./gen_test
 
 clean:
-	rm -f a.out
+	rm -f *.o *_test
