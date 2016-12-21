@@ -13,4 +13,4 @@ gen_test: Colfer.o
 	./gen_test
 
 clean:
-	rm -f *.o *_test
+	rm -fr *.o *_test *_test.dSYM

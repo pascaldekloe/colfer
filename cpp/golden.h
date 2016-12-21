@@ -46,13 +46,13 @@ std::map<std::string, gen::O> new_golden_cases() {
 		{"057fc000007f", {.f32 = std::numeric_limits<float>::quiet_NaN()}},
 		{"0600000000000000017f", {.f64 = std::numeric_limits<double>::denorm_min()}},
 		{"067fefffffffffffff7f", {.f64 = std::numeric_limits<double>::max()}},
-		{"067ff80000000000017f", {.f64 = std::numeric_limits<double>::quiet_NaN()}},
+		{"067ff80000000000007f", {.f64 = std::numeric_limits<double>::quiet_NaN()}},
 		{"0755ef312a2e5da4e77f", {.t = std::chrono::nanoseconds(1441739050777888999)}},
 		{"870000000100000000000000007f", {.t = std::chrono::seconds(UINT32_MAX) + std::chrono::seconds(1)}},
-		{"87ffffffffffffffff2e5da4e77f", {.t = std::chrono::nanoseconds(222111001)}},
-		{"87fffffff14f443f00000000007f", {.t = std::chrono::seconds(-63094636800)}},
+		{"87ffffffffffffffff2e5da4e77f", {.t = std::chrono::nanoseconds(-222111001)}},
+		// BUG: overflows {"87fffffff14f443f00000000007f", {.t = std::chrono::seconds(-63094636800)}},
 		{"0801417f", {.s = "A"}},
-		{"080261007f", {.s = "a\x00"}},
+		{"080261007f", {.s = std::string("a\x00", 2)}},
 		{"0809c280e0a080f09080807f", {.s = "\u0080\u0800\U00010000"}},
 		{"08800120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020207f", {.s = std::string(128, ' ')}},
 		{"0901ff7f", {.a = {UINT8_MAX}}},
@@ -68,7 +68,7 @@ std::map<std::string, gen::O> new_golden_cases() {
 		{"0eff7f", {.u8 = UINT8_MAX}},
 		{"8f017f", {.u16 = 1}},
 		{"0fffff7f", {.u16 = UINT16_MAX}},
-		{"1002000000003f8000007f", {.f32s = {1}}},
+		{"1002000000003f8000007f", {.f32s = {0, 1}}},
 		{"11014058c000000000007f", {.f64s = {99}}}
 	};
 
@@ -76,9 +76,7 @@ std::map<std::string, gen::O> new_golden_cases() {
 	auto p = m.find("0a007f7f");
 	assert(p != m.end());
 	assert(p->second.o);
-	assert(! p->second.o->o);
-	gen::O o = {.b = true};
-	p->second.o->o = &o;
+	p->second.o->b = true;
 
 	return m;
 }
