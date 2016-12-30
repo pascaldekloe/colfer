@@ -46,9 +46,9 @@ func main() {
 	// select language
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
-	case "c++", "cpp":
-		report.Println("Set up for C++")
-		log.Fatal("colf: C++ template not implemented yet")
+	case "c", "c++", "cpp":
+		report.Println("Set up for C")
+		log.Fatal("colf: C template not implemented yet")
 	case "go":
 		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
@@ -144,7 +144,7 @@ func init() {
 	help += " [ " + underline + "file" + clear + " " + underline + "..." + clear + " ]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
 	help += "Generates source code for a " + underline + "language" + clear + ". The options are: "
-	help += bold + "C++" + clear + ", " + bold + "Go" + clear + ",\n"
+	help += bold + "C" + clear + ", " + bold + "Go" + clear + ",\n"
 	help += "\t" + bold + "Java" + clear + " and " + bold + "JavaScript" + clear + ".\n"
 	help += "\tThe " + underline + "file" + clear + " operands specify the input. Directories are scanned for\n"
 	help += "\tfiles with the colf extension. If " + underline + "file" + clear + " is absent, " + cmd + " includes\n"
@@ -157,7 +157,9 @@ func init() {
 	tail += "\twhen invoked without arguments.\n"
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./api/*.colf into ./src/ as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com/example -b src java api\n"
+	tail += "\t\t" + cmd + " -p com/example -b src java api\n\n"
+	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
+	tail += "\t\t" + cmd + " -s 2048 -l 96 c io.colf\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
 	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
