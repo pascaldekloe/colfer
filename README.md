@@ -111,8 +111,8 @@ Data structures are defined in `.colf` files. The format is quite conventional.
 // These comment lines will end up in the generated code.
 package demo
 
-// Coarse is the grounds where the game of golf is played.
-type coarse struct {
+// Course is the grounds where the game of golf is played.
+type Course struct {
 	ID    uint64
 	name  text
 	holes []hole
