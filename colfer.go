@@ -119,6 +119,8 @@ type Struct struct {
 	Pkg *Package
 	// Name is the identification token.
 	Name string
+	// NameNative is the language specific identification token
+	NameNative string
 	// Docs are the documentation texts.
 	Docs []string
 	// Fields are the elements in order of appearance.

@@ -1,10 +1,11 @@
 .PHONY: clean deploy
 
 deploy: colf
+	make -C c clean test
 	make -C ecma clean test
-	make -C go clean gen test
+	make -C go clean test
 	make -C java clean test
-	make -C rpc clean internal test
+	make -C rpc clean test
 
 colf:
 	go build ./cmd/colf

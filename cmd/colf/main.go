@@ -46,9 +46,9 @@ func main() {
 	// select language
 	var gen func(string, []*colfer.Package) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
-	case "c", "c++", "cpp":
+	case "c":
 		report.Println("Set up for C")
-		log.Fatal("colf: C template not implemented yet")
+		gen = colfer.GenerateC
 	case "go":
 		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
