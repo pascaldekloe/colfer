@@ -3,7 +3,5 @@ language: go
 go:
   - 1.7
 
-compiler: clang
-
 sudo: required
 dist: trusty
