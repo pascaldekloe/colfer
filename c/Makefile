@@ -3,7 +3,6 @@
 COLF?=../colf
 
 CC?=clang
-CFLAGS=-std=c99 -g -O0 -pedantic -Werror
 
 
 test: clean gen gen_test
@@ -13,10 +12,10 @@ gen:
 	$(COLF) -b gen C ../testdata/test.colf
 
 Colfer.o:
-	$(CC) $(CFLAGS) -c  gen/Colfer.c
+	$(CC) -c -std=c99 -g -O0 -pedantic -Werror gen/Colfer.c
 
 gen_test: Colfer.o
-	$(CC) $(CFLAGS) -o gen_test Colfer.o gen_test.c
+	$(CC) -o gen_test -g Colfer.o gen_test.c
 
 clean:
 	rm -fr gen
