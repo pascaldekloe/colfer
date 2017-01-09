@@ -713,7 +713,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		x <<= 8;
 		o->{{.NameNative}} = x | *p++;
 		header = *p++;
-	} else if (header == (15 | 128)) {
+	} else if (header == ({{.Index}} | 128)) {
 		o->{{.NameNative}} = *p++;
 		header = *p++;
 	}
