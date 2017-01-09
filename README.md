@@ -13,7 +13,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### Language Support
 
-* C, C99 compliant, C++13 compliant, WIP, API might change
+* C, C99 compliant, C++11 compliant, WIP
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
@@ -178,20 +178,7 @@ The following changes are backward compatible.
 
 ## Performance
 
-```
-BenchmarkMarshal/colfer-8   	20000000	        65.9 ns/op	      48 B/op	       1 allocs/op
-BenchmarkMarshal/protobuf-8 	20000000	        81.4 ns/op	      52 B/op	       1 allocs/op
-BenchmarkMarshal/flatbuf-8  	 2000000	       701 ns/op	     472 B/op	      12 allocs/op
-BenchmarkUnmarshal/colfer-8 	20000000	        94.3 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/protobuf-8         	10000000	       128 ns/op	      84 B/op	       2 allocs/op
-BenchmarkUnmarshal/flatbuf-8          	10000000	       152 ns/op	      84 B/op	       2 allocs/op
-BenchmarkMarshalReuse/colfer-8        	50000000	        36.7 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/protobuf-8      	30000000	        48.4 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalReuse/flatbuf-8       	 5000000	       294 ns/op	       0 B/op	       0 allocs/op
-BenchmarkUnmarshalReuse/colfer-8      	20000000	        62.7 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/protobuf-8    	20000000	        92.5 ns/op	      20 B/op	       1 allocs/op
-BenchmarkUnmarshalReuse/flatbuf-8     	10000000	       119 ns/op	      20 B/op	       1 allocs/op
-```
+Colfer aims to be the fastest and the smallest format while still resilient to malicious input. See the [benchmark wiki](https://github.com/pascaldekloe/colfer/wiki/Benchmark) for a comparison.
 
 
 
