@@ -149,8 +149,7 @@ std::string Namespace::GetFullyQualifiedName(const std::string &name,
     }
     stream << components[i];
   }
-
-  stream << "." << name;
+  if (name.length()) stream << "." << name;
   return stream.str();
 }
 
@@ -1836,6 +1835,7 @@ CheckedError Parser::DoParse(const char *source, const char **include_paths,
   source_ = cursor_ = source;
   line_ = 1;
   error_.clear();
+  field_stack_.clear();
   builder_.Clear();
   // Start with a blank namespace just in case this file doesn't have one.
   namespaces_.push_back(new Namespace());
