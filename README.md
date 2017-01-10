@@ -112,7 +112,7 @@ Data structures are defined in `.colf` files. The format is quite conventional.
 package demo
 
 // Course is the grounds where the game of golf is played.
-type Course struct {
+type course struct {
 	ID    uint64
 	name  text
 	holes []hole
@@ -141,7 +141,7 @@ The following table shows how Colfer data types are applied per language.
 
 | Colfer	| C		| Go		| Java		| JavaScript	|
 |:--------------|:--------------|:--------------|:--------------|:--------------|
-| bool		| bool		| bool		| boolean	| Boolean	|
+| bool		| char		| bool		| boolean	| Boolean	|
 | uint8		| uint8_t	| uint8		| byte †	| Number	|
 | uint16	| uint16_t	| uint16	| short †	| Number	|
 | uint32	| uint32_t	| uint32	| int †		| Number	|
@@ -151,8 +151,8 @@ The following table shows how Colfer data types are applied per language.
 | float32	| float		| float32	| float		| Number	|
 | float64	| double	| float64	| double	| Number	|
 | timestamp	| 2 × time_t	| Time ††	| Instant	| Date + Number	|
-| text		| char †‡	| string	| String ‡‡	| String ‡‡	|
-| binary	| uint8_t †‡ 	| []byte	| byte[]	| Uint8Array	|
+| text		| char* †‡	| string	| String ‡‡	| String ‡‡	|
+| binary	| uint8_t* †‡ 	| []byte	| byte[]	| Uint8Array	|
 | list		| †‡		| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
