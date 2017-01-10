@@ -1,23 +1,19 @@
-.PHONY: bench clean test
+include ../common.mk
 
-COLF?=../colf
+.PHONY: test
+test: internal build
+	go test -v -coverprofile build/coverage
 
-test: internal
-	go vet
-	go fmt
+.PHONY: test
+bench: internal build
+	go test -run none -bench .
 
-	$(COLF) -b build go ../testdata/test.colf
+internal: install
+	$(COLF) Go
 
-	go test -v
+build: install
+	$(COLF) -b build Go ../testdata/test.colf
 
-testcover:
-	go test -v -coverprofile testcover
-
-bench: test
-	go test -bench .
-
+.PHONY: clean
 clean:
-	rm -fr internal testcover
-
-internal:
-	$(COLF) go
+	rm -fr internal build

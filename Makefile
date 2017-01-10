@@ -1,27 +1,30 @@
-.PHONY: clean deploy
+include common.mk
 
-deploy: colf
-	make -C c clean test
-	make -C ecma clean test
-	make -C go clean test
-	make -C java clean test
-	make -C rpc clean test
-
-colf:
-	go build ./cmd/colf
-
-install:
-	go get ./cmd/...
-
-clean:
-	go clean -i ./cmd/...
-	rm -fr colf dist */build
-
-dist: clean deploy
+.PHONY: dist
+dist: clean test build
 	go fmt ./...
 	go vet ./...
 
-	mkdir -p dist
-	GOARCH=amd64 GOOS=linux go build -o dist/colf-linux ./cmd/colf
-	GOARCH=amd64 GOOS=darwin go build -o dist/colf-darwin ./cmd/colf
-	GOARCH=amd64 GOOS=windows go build -o dist/colf.exe ./cmd/colf
+.PHONY: test
+test: install
+	make -C c
+	make -C ecma
+	make -C go
+	make -C java
+	make -C rpc
+
+.PHONY: bench
+bench: install
+	make -C c/bench
+	make -C go/bench
+	make -C java/bench
+
+build:
+	GOARCH=amd64 GOOS=linux go build -o build/colf-linux ./cmd/colf
+	GOARCH=amd64 GOOS=darwin go build -o build/colf-darwin ./cmd/colf
+	GOARCH=amd64 GOOS=windows go build -o build/colf.exe ./cmd/colf
+
+.PHONY: clean
+clean:
+	go clean -i ./cmd/...
+	rm -fr build

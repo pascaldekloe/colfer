@@ -1,21 +1,17 @@
-.PHONY: clean run
+include ../../common.mk
 
-COLF?=../../colf
+.PHONY: test
+test: build
+	build/bench 10000000
 
-run: clean bench
-	./bench 10000000
+build: install
+	$(COLF) -b build/gen -f -s 1024 c ../../testdata/bench/scheme.colf
+	protoc --cpp_out=build/gen -I../../testdata/bench ../../testdata/bench/scheme.proto
+	flatc --cpp -o build/gen ../../testdata/bench/scheme.fbs
 
-bench: gen Colfer.o
-	g++ -o bench -std=c++11 -O3 bench.cpp Colfer.o
+	gcc -o build/Colfer.o -c -O3 build/gen/Colfer.c
+	g++ -o build/bench -std=c++11 -O3 bench.cpp build/Colfer.o
 
-gen:
-	$(COLF) -b gen -f -s 1024 c ../../testdata/bench/scheme.colf
-	protoc --cpp_out=gen -I../../testdata/bench ../../testdata/bench/scheme.proto
-	flatc --cpp -o gen ../../testdata/bench/scheme.fbs
-
-Colfer.o: gen
-	gcc -c -O3 gen/Colfer.c
-
+.PHONY: clean
 clean:
-	rm -f *.o bench
-	rm -fr gen
+	rm -fr gen build

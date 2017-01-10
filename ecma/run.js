@@ -6,11 +6,13 @@ testrunner.setup({
 		tests: true,
 		coverage: true
 	},
-	coverage: true,
+	coverage: {
+		dir: "build/coverage"
+	},
 	maxBlockDuration: 2000
 });
 
 testrunner.run({
-	code: "./Colfer.js",
+	code: "gen/Colfer.js",
 	tests: "./test.js"
 });

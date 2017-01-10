@@ -1,6 +1,6 @@
-#include "gen/Colfer.h"
-#include "gen/scheme.pb.h"
-#include "gen/scheme_generated.h"
+#include "build/gen/Colfer.h"
+#include "build/gen/scheme.pb.h"
+#include "build/gen/scheme_generated.h"
 
 #include <chrono>
 #include <iostream>

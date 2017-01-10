@@ -1,18 +1,18 @@
-.PHONY: clean test
+include ../common.mk
 
-COLF?=../colf
-
-test: build node_modules
+.PHONY: test
+test: gen build node_modules
 	node run.js
 
-build: Colfer.js
-	$(COLF) -b build js ../testdata/break*.colf
+build: install
+	$(COLF) -b build JavaScript ../testdata/break*.colf
 
-Colfer.js:
-	$(COLF) js ../testdata/test.colf
+gen: install
+	$(COLF) -b gen JavaScript ../testdata/test.colf
 
 node_modules:
 	npm install qunit
 
+.PHONY: clean
 clean:
-	rm -fr build coverage Colfer.js
+	rm -fr gen build
