@@ -17,39 +17,109 @@ const size_t test_data_len = sizeof(test_data) / sizeof(bench_colfer);
 // Rounds is the number of operations to run for each benchmark.
 size_t rounds = 10000000;
 
+// prevents compiler optimization:
+void* serial;
+size_t serial_size;
+
+void marshal_colfer() {
+	auto start = std::chrono::high_resolution_clock::now();
+	for (size_t i = 0; i < rounds; ++i)
+		serial_size = bench_colfer_marshal(&test_data[i % test_data_len], serial);
+	auto end = std::chrono::high_resolution_clock::now();
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	std::cout << "BENCH Colfer " << rounds << " marshals avg " << took / rounds << "ns\n";
+}
+
+void unmarshal_colfer() {
+	void* serials[test_data_len];
+	size_t serial_sizes[test_data_len];
+	for (size_t i = 0; i < test_data_len; i++) {
+		serials[i] = malloc(colfer_size_max);
+		serial_sizes[i] = bench_colfer_marshal(&test_data[i], serials[i]);
+	}
+
+	auto o = new bench_colfer;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	for (size_t i = 0; i < rounds; ++i)
+		serial_size = bench_colfer_unmarshal(o, serials[i % test_data_len], colfer_size_max);
+	auto end = std::chrono::high_resolution_clock::now();
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	std::cout << "BENCH Colfer " << rounds << " umarshals avg " << took / rounds << "ns\n";
+}
+
+void marshal_fb() {
+	flatbuffers::FlatBufferBuilder fbb;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	for (size_t i = 0; i < rounds; ++i) {
+		auto item = test_data[i % test_data_len];
+
+		fbb.Clear();
+		auto host = fbb.CreateString(item.host.utf8, item.host.len);
+		auto o = bench::CreateFlatBuffers(fbb, item.key, host, item.port, item.size, item.hash, item.ratio, item.route);
+		fbb.Finish(o);
+
+		serial = fbb.GetBufferPointer();
+		serial_size = fbb.GetSize();
+		fbb.ReleaseBufferPointer();
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	std::cout << "BENCH FlatBuffers " << rounds << " marshals avg " << took / rounds << "ns\n";
+}
+
+void unmarshal_fb() {
+	flatbuffers::FlatBufferBuilder fbb;
+
+	void* serials[test_data_len];
+	size_t serial_sizes[test_data_len];
+	for (size_t i = 0; i < test_data_len; ++i) {
+		auto item = test_data[i % test_data_len];
+
+		fbb.Clear();
+		auto host = fbb.CreateString(item.host.utf8, item.host.len);
+		auto o = bench::CreateFlatBuffers(fbb, item.key, host, item.port, item.size, item.hash, item.ratio, item.route);
+		fbb.Finish(o);
+
+		serial_sizes[i] = fbb.GetSize();
+		serials[i] = malloc(fbb.GetSize());
+		memcpy(serials[i], fbb.GetBufferPointer(), fbb.GetSize());
+	}
+
+	bench_colfer o = {};
+
+	auto start = std::chrono::high_resolution_clock::now();
+	for (size_t i = 0; i < rounds; ++i) {
+		auto view = bench::GetFlatBuffers(serials[i % test_data_len]);
+		o.key = view->key();
+		auto s = view->host()->str();
+		o.host.utf8 = &s[0];
+		o.host.len = s.size();
+		o.port = view->port();
+		o.size = view->size();
+		o.hash = view->hash();
+		o.ratio = view->ratio();
+		o.route = view->route();
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	std::cout << "BENCH FlatBuffers " << rounds << " unmarshals avg " << took / rounds << "ns\n";
+}
+
 int main(int argc, char **argv) {
 	if (argc >= 2) {
 		rounds = strtol(argv[1], NULL, 0);
 	}
 
-	void* serials[test_data_len];
-	for (size_t i = 0; i < test_data_len; i++)
-		serials[i] = malloc(colfer_size_max);
-	bench_colfer o = {};
+	serial = malloc(colfer_size_max);
 
-	auto start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i) {
-		size_t item = i % test_data_len;
-		if (!bench_colfer_marshal(&test_data[item], serials[item])) {
-			std::cout << "marshal error\n";
-			return 1;
-		}
-	}
-	auto end = std::chrono::high_resolution_clock::now();
-
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH Colfer " << rounds << " marshals avg " << took / rounds << "ns\n";
-
-	start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i) {
-		size_t item = i % test_data_len;
-		if (!bench_colfer_unmarshal(&o, serials[item], colfer_size_max)) {
-			std::cout << "unmarshal error\n";
-			return 1;
-		}
-	}
-	end = std::chrono::high_resolution_clock::now();
-
-	took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH Colfer " << rounds << " umarshals avg " << took / rounds << "ns\n";
+	marshal_colfer();
+	unmarshal_colfer();
+	marshal_fb();
+	unmarshal_fb();
 }

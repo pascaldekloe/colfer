@@ -9,3 +9,5 @@ table FlatBuffers {
 	ratio:double;
 	route:bool;
 }
+
+root_type FlatBuffers;
