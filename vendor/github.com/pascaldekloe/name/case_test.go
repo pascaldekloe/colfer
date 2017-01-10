@@ -6,7 +6,7 @@ import (
 )
 
 var goldenCamelSnakes = map[string]string{
-	"": "",
+	"":      "",
 	"name":  "name",
 	"Label": "label",
 	"ID":    "ID",
@@ -58,7 +58,7 @@ func TestSnakeToSnake(t *testing.T) {
 func TestSnakeToCamel(t *testing.T) {
 	for camel, snake := range goldenCamelSnakes {
 		want := strings.Title(camel)
-		got := strings.Title(CamelCase(snake))
+		got := CamelCase(snake, true)
 		if got != want {
 			t.Errorf("camel case %q titled got %q, want %q", snake, got, camel)
 		}

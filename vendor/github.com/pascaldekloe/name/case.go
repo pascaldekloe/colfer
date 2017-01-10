@@ -1,17 +1,22 @@
-// Package name implements naming conventions like camel case and snake case.
+// Package name implements naming conventions like camel and snake case.
 package name
 
 import "unicode"
 
 // CamelCase returns the camel case of word sequence s.
-// The input can be any case or just a bunch of words.
-// Upper case abbreviations are preserved. Use strings.ToLower,
-// strings.ToUpper and strings.Title to enforce a letter case.
-func CamelCase(s string) string {
+// The input can be any case or even just a bunch of words.
+// Upper case abbreviations are preserved. When upper is true
+// then the first rune is mapped to its upper case form.
+func CamelCase(s string, upper bool) string {
 	out := make([]rune, 0, len(s)+5)
-	var upper bool
-	for _, r := range s {
+	for i, r := range s {
 		switch {
+		case i == 0:
+			if !upper {
+				r = unicode.ToLower(r)
+			}
+
+			fallthrough
 		case unicode.IsLetter(r):
 			if upper {
 				r = unicode.ToUpper(r)
@@ -24,7 +29,6 @@ func CamelCase(s string) string {
 
 		default:
 			upper = true
-			continue
 
 		}
 	}
@@ -32,17 +36,17 @@ func CamelCase(s string) string {
 }
 
 // SnakeCase returns the snake case of word sequence s.
-// The input can be any case or just a bunch of words.
-// Upper case abbreviations are preserved. Use strings.ToLower and
-// strings.ToUpper to enforce a letter case.
+// The input can be any case or even just a bunch of words.
+// Upper case abbreviations are preserved. Use strings.ToLower
+// and strings.ToUpper to enforce a letter case.
 func SnakeCase(s string) string {
 	return Delimit(s, '_')
 }
 
 // Delimit returns word sequence s delimited with sep.
-// The input can be any case or just a bunch of words.
-// Upper case abbreviations are preserved. Use strings.ToLower and
-// strings.ToUpper to enforce a letter case.
+// The input can be any case or even just a bunch of words.
+// Upper case abbreviations are preserved. Use strings.ToLower
+// and strings.ToUpper to enforce a letter case.
 func Delimit(s string, sep rune) string {
 	out := make([]rune, 0, len(s)+5)
 
@@ -74,12 +78,8 @@ func Delimit(s string, sep rune) string {
 		out = append(out, r)
 	}
 
-	if len(out) == 0 {
-		return ""
-	}
-
 	// trim tailing separator
-	if i := len(out) - 1; out[i] == sep {
+	if i := len(out) - 1; i >= 0 && out[i] == sep {
 		out = out[:i]
 	}
 
