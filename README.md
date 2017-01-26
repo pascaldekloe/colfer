@@ -1,6 +1,6 @@
 # Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
-Colfer is a schema-based binary serialization format optimized for speed and
+Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec) optimized for speed and
 size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
@@ -179,56 +179,3 @@ The following changes are backward compatible.
 ## Performance
 
 Colfer aims to be the fastest and the smallest format while still resilient to malicious input. See the [benchmark wiki](https://github.com/pascaldekloe/colfer/wiki/Benchmark) for a comparison.
-
-
-
-## Format
-
-Data structures consist of zero or more field *value definitions* followed by a
-termination byte `0x7f`. Only those fields with a value other than the *zero
-value* may be serialized. Fields appear in order as stated by the schema.
-
-The zero value for booleans is `false`, integers: `0`, floating points: `0.0`,
-timestamps: `1970-01-01T00:00:00.000000000Z`, text & binary: the empty
-string, nested data structures: `null` and an empty list for data structure
-lists.
-
-Data is represented in a big-endian manner. The format relies on *varints* also
-known as a
-[variable-length quantity](https://en.wikipedia.org/wiki/Variable-length_quantity).
-Bits reserved for future use (*RFU*) must be set to 0.
-
-
-#### Value Definiton
-
-Each definition starts with an 8-bit header. The 7 least significant bits
-identify the field by its (0-based position) index in the schema. The most
-significant bit is used as a *flag*.
-
-Boolean occurrences set the value to `true`. The flag is RFU.
-
-Unsigned 8-bit integer values just follow the header byte and the flag is RFU.
-Unsigned 16-bit integer values greather than 255 also follow the header byte.
-Smaller values are encoded in one byte with the header flag set.
-Unsigned 32-bit integer values less than 1<<21 are encoded as varints and
-larger values set the header flag for fixed length encoding.
-Unsigned 64-bit integer values less than 1<<49 are encoded as varints and
-larger values set the header flag for fixed length encoding.
-
-Signed 32- and 64-bit integers are encoded as varints. The flag stands for
-negative. The tenth byte for 64-bit integers is skipped for encoding since its
-value is fixed to `0x01`.
-
-Floating points are encoded conform IEEE 754. The flag is RFU.
-
-Timestamps are encoded as a 32-bit unsigned integer for the number of seconds
-that have elapsed since 00:00:00 UTC, Thursday, 1 January 1970, not counting
-leap seconds. When the header flag is set then the number of seconds is encoded
-as a 64-bit two's complement integer. In both cases the value is followed with
-32 bits for the nanosecond fraction. Note that the first two bits are RFU.
-
-The data for text and binaries is prefixed with a varint byte size declaration.
-Text is encoded as UTF-8. The flag is RFU.
-
-Lists of floating points, text, binaries and data structures are prefixed with a
-varint element size declaration. The flag is RFU.
