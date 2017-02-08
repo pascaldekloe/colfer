@@ -1096,7 +1096,9 @@ import java.nio.BufferUnderflowException;
 	}
 
 	public final boolean equals({{$class}} o) {
-		return o != null && o.getClass() == {{$class}}.class
+		if (o == null) return false;
+		if (o == this) return true;
+		return o.getClass() == {{$class}}.class
 {{- range .Fields}}
 {{- if .TypeList}}
  {{- if eq .Type "binary"}}

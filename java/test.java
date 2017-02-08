@@ -125,6 +125,11 @@ public class test {
 
 
 	static void identity() {
+		if (new O().equals((Object) null))
+			fail("equals null Object");
+		if (new O().equals((O) null))
+			fail("equals null O");
+
 		Object[] a = newGoldenCases().values().toArray();
 		Object[] b = newGoldenCases().values().toArray();
 		if (! Arrays.equals(a, b))

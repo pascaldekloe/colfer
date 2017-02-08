@@ -1294,7 +1294,9 @@ public class O implements java.io.Serializable {
 	}
 
 	public final boolean equals(O o) {
-		return o != null && o.getClass() == O.class
+		if (o == null) return false;
+		if (o == this) return true;
+		return o.getClass() == O.class
 			&& this.b == o.b
 			&& this.u32 == o.u32
 			&& this.u64 == o.u64
