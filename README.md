@@ -30,6 +30,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### TODO's
 
+* Rust and Python
 * RMI (WIP
 [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
 )
