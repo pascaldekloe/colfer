@@ -1,0 +1,104 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+
+<groupId>net.quies.colfer</groupId>
+<artifactId>colfer-maven-plugin</artifactId>
+<version>1.6</version>
+<packaging>maven-plugin</packaging>
+
+<name>Colfer Maven Plugin</name>
+<description>Makes schema compilation part of the build.</description>
+<url>https://github.com/pascaldekloe/colfer</url>
+
+<licenses>
+<license>
+	<name>Public Domain</name>
+	<url>http://creativecommons.org/publicdomain/zero/1.0</url>
+</license>
+</licenses>
+
+<developers>
+<developer>
+	<id>pascaldekloe</id>
+	<name>Pascal S. de Kloe</name>
+	<email>pascal@quies.net</email>
+	<timezone>Europe/Amsterdam</timezone>
+</developer>
+</developers>
+
+<issueManagement>
+<system>GitHub</system>
+<url>https://github.com/pascaldekloe/colfer/issues</url>
+</issueManagement>
+
+<scm>
+<connection>scm:git:git://github.com/pascaldekloe/colfer.git</connection>
+<developerConnection>scm:git:ssh://github.com:pascaldekloe/colfer.git</developerConnection>
+<url>https://github.com/pascaldekloe/colfer/tree/master</url>
+</scm>
+
+<properties>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
+
+<dependencies>
+<dependency>
+	<groupId>org.apache.maven</groupId>
+	<artifactId>maven-plugin-api</artifactId>
+	<version>3.3.9</version>
+</dependency>
+<dependency>
+	<groupId>org.apache.maven</groupId>
+	<artifactId>maven-core</artifactId>
+	<version>3.3.9</version>
+</dependency>
+<dependency>
+	<groupId>org.apache.maven.plugin-tools</groupId>
+	<artifactId>maven-plugin-annotations</artifactId>
+	<version>3.2</version>
+	<scope>provided</scope>
+</dependency>
+</dependencies>
+
+
+<build>
+
+<plugins>
+<plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<version>3.6.1</version>
+        <configuration>
+		<source>1.8</source>
+		<target>1.8</target>
+        </configuration>
+</plugin>
+<plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-invoker-plugin</artifactId>
+	<version>1.10</version>
+	<executions>
+	<execution>
+		<id>integration-clean</id>
+		<phase>pre-clean</phase>
+		<goals><goal>run</goal></goals>
+		<configuration>
+			<goals><goal>clean</goal></goals>
+		</configuration>
+	</execution>
+	<execution>
+		<id>integration-test</id>
+		<goals><goal>install</goal><goal>run</goal></goals>
+		<configuration>
+			<goals><goal>test</goal></goals>
+		</configuration>
+	</execution>
+	</executions>
+</plugin>
+</plugins>
+
+</build>
+
+</project>
