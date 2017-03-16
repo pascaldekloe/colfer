@@ -23,7 +23,7 @@ build:
 	GOARCH=amd64 GOOS=linux go build -o build/colf-linux ./cmd/colf
 	GOARCH=amd64 GOOS=darwin go build -o build/colf-darwin ./cmd/colf
 	GOARCH=amd64 GOOS=windows go build -o build/colf.exe ./cmd/colf
-	cp cmd/* java/maven/src/main/resources/amd64/
+	cp build/* java/maven/src/main/resources/amd64/
 	mvn -f java/maven install
 
 .PHONY: clean
