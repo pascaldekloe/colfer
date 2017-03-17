@@ -103,6 +103,8 @@ throws IOException {
 		args.add("-s=" + sizeMax);
 	if (listMax != null)
 		args.add("-l=" + listMax);
+	if (formatSchemas)
+		args.add("-f");
 	args.add(lang);
 	for (File s : schemas) args.add(s.toString());
 
