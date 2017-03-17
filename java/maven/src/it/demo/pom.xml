@@ -7,6 +7,7 @@
 <groupId>net.quies.colfer</groupId>
 <artifactId>maven-plugin-it</artifactId>
 <version>1-SNAPSHOT</version>
+<packaging>war</packaging>
 
 <name>Maven Plugin Integration Test</name>
 
@@ -31,8 +32,6 @@
 	<artifactId>@project.artifactId@</artifactId>
 	<version>@project.version@</version>
 	<configuration>
-		<lang>java</lang>
-		<packagePrefix>com/example</packagePrefix>
 		<sizeMax>2 * 1024</sizeMax>
 		<listMax>99</listMax>
 		<formatSchema>true</formatSchema>
@@ -40,9 +39,18 @@
 	<executions>
 	<execution>
 		<id>colf-java</id>
-		<goals>
-			<goal>compile</goal>
-		</goals>
+		<goals><goal>compile</goal></goals>
+		<configuration>
+			<packagePrefix>com/example</packagePrefix>
+		</configuration>
+	</execution>
+	<execution>
+		<id>colf-ecma</id>
+		<goals><goal>compile</goal></goals>
+		<configuration>
+			<lang>js</lang>
+			<sourceTarget>${project.build.directory}/${project.build.finalName}/script</sourceTarget>
+		</configuration>
 	</execution>
 	</executions>
 </plugin>

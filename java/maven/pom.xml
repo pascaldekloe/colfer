@@ -92,7 +92,7 @@
 		<id>integration-test</id>
 		<goals><goal>install</goal><goal>run</goal></goals>
 		<configuration>
-			<goals><goal>test</goal></goals>
+			<goals><goal>package</goal></goals>
 		</configuration>
 	</execution>
 	</executions>
