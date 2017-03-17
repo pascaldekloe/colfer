@@ -121,6 +121,7 @@ throws MojoExecutionException {
 	String resource;
 	{
 		String arch = System.getProperty("os.arch").toLowerCase();
+		if ("x86_64".equals(arch)) arch = "amd64";
 		if (! "amd64".equals(arch))
 			throw new MojoExecutionException("unsupported hardware architecture: " + arch);
 
