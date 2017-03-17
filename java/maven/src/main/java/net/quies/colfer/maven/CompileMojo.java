@@ -1,5 +1,6 @@
 package net.quies.colfer.maven;
 
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -21,34 +22,53 @@ import java.util.Set;
 
 
 /**
- * Runs the colfer compiler.
+ * Generates source code for a language. The options are: C, Go,
+ * Java and JavaScript.
  * @author Pascal S. de Kloe
  */
 @Mojo(name="compile", defaultPhase=LifecyclePhase.GENERATE_SOURCES)
 public class CompileMojo extends AbstractMojo {
 
-@Parameter(defaultValue="Java", property="colfer.lang", required=true)
+/** The target language. */
+@Parameter(defaultValue="Java", required=true)
 String lang;
 
-@Parameter(defaultValue="src/main/colfer", property="colfer.schemas", required=true)
+/**
+ * The source files. Directories are scanned for
+ * files with the colf extension.
+ */
+@Parameter(defaultValue="src/main/colfer", required=true)
 File[] schemas;
 
-@Parameter(property="colfer.formatSchemas")
+/** Normalizes schemas on the fly. */
+@Parameter
 boolean formatSchemas;
 
-@Parameter(property="colfer.packagePrefix")
+/** Adds a package prefix. Use slash as a separator when nesting. */
+@Parameter
 String packagePrefix;
 
-@Parameter(property="colfer.sizeMax")
+/**
+ * Sets the default upper limit for serial byte sizes. The
+ * expression is applied to the target language under the name
+ * ColferSizeMax. (default "16 * 1024 * 1024")
+ */
+@Parameter
 String sizeMax;
 
-@Parameter(property="colfer.listMax")
+/**
+ * Sets the default upper limit for the number of elements in a
+ * list. The expression is applied to the target language under the
+ * name ColferListMax. (default "64 * 1024")
+ */
+@Parameter
 String listMax;
 
-@Parameter(defaultValue="${project.build.directory}/generated-sources/colfer", property="colfer.sourceTarget", required=true)
+/** Use a specific destination base directory. */
+@Parameter(defaultValue="${project.build.directory}/generated-sources/colfer", required=true)
 File sourceTarget;
 
-@Parameter(defaultValue="${project}", readonly=true, required=true)
+@Component
 MavenProject project;
 
 
