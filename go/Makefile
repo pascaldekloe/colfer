@@ -14,7 +14,7 @@ build: install
 
 fuzz.zip: gen
 	go get github.com/dvyukov/go-fuzz/go-fuzz-build
-	go-fuzz-build -o fuzz.zip github.com/pascaldekloe/colfer/go
+	$(GOPATH)/bin/go-fuzz-build -o fuzz.zip github.com/pascaldekloe/colfer/go
 
 .PHONY: fuzz
 fuzz: fuzz.zip
@@ -22,7 +22,7 @@ fuzz: fuzz.zip
 	go test -run FuzzSeed
 
 	go get github.com/dvyukov/go-fuzz/go-fuzz
-	go-fuzz -bin fuzz.zip -workdir ../testdata
+	$(GOPATH)/bin/go-fuzz -bin fuzz.zip -workdir ../testdata
 
 .PHONY: clean
 clean:
