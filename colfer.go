@@ -46,6 +46,10 @@ type Package struct {
 	SizeMax string
 	// ListMax is the uper limit expression.
 	ListMax string
+	// SuperClass is the superclass.
+	SuperClass string
+	// SuperClassNative is the language specific superclass.
+	SuperClassNative string
 }
 
 // DocText returns the documentation lines prefixed with ident.
