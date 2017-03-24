@@ -20,6 +20,7 @@ var (
 
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n    \t`expression` is applied to the target language under the name\n    \tColferSizeMax.")
 	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\n    \tlist. The `expression` is applied to the target language under the\n    \tname ColferListMax.")
+	superClass = flag.String("c", "", "Adds a superclass. Java only. Use slash as a separator when nesting.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
@@ -121,6 +122,7 @@ func main() {
 		p.Name = path.Join(*prefix, p.Name)
 		p.SizeMax = *sizeMax
 		p.ListMax = *listMax
+		p.SuperClass = *superClass
 	}
 
 	if err := gen(*basedir, packages); err != nil {
@@ -157,7 +159,7 @@ func init() {
 	tail += "\twhen invoked without arguments.\n"
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./api/*.colf into ./src/ as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com/example -b src java api\n\n"
+	tail += "\t\t" + cmd + " -p com/example -c com/example/BaseClass -b src java api\n\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
 	tail += "\t\t" + cmd + " -s 2048 -l 96 c io.colf\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
