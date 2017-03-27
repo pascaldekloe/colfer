@@ -101,9 +101,18 @@ SEE ALSO
 
 
 It is recommended to commit the generated source code to the respective version
-control.
-Maven users may [disagree](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
+control. Modern developers may disagree and use the Maven plugin.
 
+```xml
+<plugin>
+	<groupId>net.quies.colfer</groupId>
+	<artifactId>colfer-maven-plugin</artifactId>
+	<version>1.7</version>
+	<configuration>
+		<packagePrefix>com/example</packagePrefix>
+	</configuration>
+</plugin>
+```
 
 
 ## Schema
