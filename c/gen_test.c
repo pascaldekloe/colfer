@@ -76,12 +76,12 @@ void gen_o_dump(const gen_o o) {
 
 	printf("{ ");
 	if (o.b) printf("b=true ");
-        if (o.u8) printf("u8=%" PRIu8 " ", o.u8);
-        if (o.u16) printf("u16=%" PRIu16 " ", o.u16);
-        if (o.u32) printf("u32=%" PRIu32 " ", o.u32);
-        if (o.i64) printf("i64=%" PRId64 " ", o.i64);
-        if (o.i32) printf("i32=%" PRId32 " ", o.i32);
-        if (o.i64) printf("i64=%" PRId64 " ", o.i64);
+	if (o.u8) printf("u8=%" PRIu8 " ", o.u8);
+	if (o.u16) printf("u16=%" PRIu16 " ", o.u16);
+	if (o.u32) printf("u32=%" PRIu32 " ", o.u32);
+	if (o.i64) printf("i64=%" PRId64 " ", o.i64);
+	if (o.i32) printf("i32=%" PRId32 " ", o.i32);
+	if (o.i64) printf("i64=%" PRId64 " ", o.i64);
 	if (o.f32) printf("f32=%f ", o.f32);
 	if (o.f32s.len) {
 		printf("f32s=[");

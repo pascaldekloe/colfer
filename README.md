@@ -1,7 +1,7 @@
 # Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
 
-Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec) optimized for speed and
-size.
+Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec)
+optimized for speed and size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
 to marshal and unmarshall data structures.
@@ -31,7 +31,7 @@ The format is inspired by Proto**col** Buf**fer**.
 #### TODO's
 
 * Rust and Python
-* RMI (WIP
+* RMI (WIP)
 [![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
 )
 * List type support for integers and timestamps
@@ -170,8 +170,10 @@ Lists may contain floating points, text, binaries or data structures.
 
 ## Compatibility
 
-Name changes do not affect the serialization format. Deprecated fields can be
-renamed to clearly discourage its use.
+Name changes do not affect the serialization format. Deprecated fields should be
+renamed to clearly discourage their use. For backwards compatibility new fields
+must be added to the end of colfer structs. Thus the number of fields can be
+seen as the schema version.
 
 The following changes are backward compatible.
 * New fields at the end of Colfer structs

@@ -34,7 +34,7 @@ func (p packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 type Package struct {
 	// Name is the identification token.
 	Name string
-	// NameNative is the language specific identification token
+	// NameNative is the language specific Name.
 	NameNative string
 	// Docs are the documentation texts.
 	Docs []string
@@ -48,7 +48,7 @@ type Package struct {
 	ListMax string
 	// SuperClass is the fully qualified path.
 	SuperClass string
-	// SuperClassNative is the language specific fully qualified path.
+	// SuperClassNative is the language specific SuperClass.
 	SuperClassNative string
 }
 
@@ -123,7 +123,7 @@ type Struct struct {
 	Pkg *Package
 	// Name is the identification token.
 	Name string
-	// NameNative is the language specific identification token
+	// NameNative is the language specific Name.
 	NameNative string
 	// Docs are the documentation texts.
 	Docs []string
@@ -216,13 +216,13 @@ type Field struct {
 	Index int
 	// Name is the identification token.
 	Name string
-	// NameNative is the language specific identification token
+	// NameNative is the language specific Name.
 	NameNative string
 	// Docs are the documentation texts.
 	Docs []string
 	// Type is the datatype.
 	Type string
-	// TypeNative is the language specific datatype placeholder.
+	// TypeNative is the language specific Type.
 	TypeNative string
 	// TypeRef is the Colfer data structure reference.
 	TypeRef *Struct

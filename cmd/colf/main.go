@@ -123,13 +123,13 @@ func main() {
 				log.Fatal(err)
 			}
 			if changed {
-				log.Println("colfer: formatted", file)
+				log.Println("colf: formatted", file)
 			}
 		}
 	}
 
 	if len(packages) == 0 {
-		log.Fatal("colfer: no struct definitons found")
+		log.Fatal("colf: no struct definitons found")
 	}
 
 	for _, p := range packages {
