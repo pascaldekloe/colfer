@@ -46,9 +46,9 @@ type Package struct {
 	SizeMax string
 	// ListMax is the uper limit expression.
 	ListMax string
-	// SuperClass is the superclass.
+	// SuperClass is the fully qualified path.
 	SuperClass string
-	// SuperClassNative is the language specific superclass.
+	// SuperClassNative is the language specific fully qualified path.
 	SuperClassNative string
 }
 

@@ -66,8 +66,8 @@ OPTIONS
   -f	Normalizes schemas on the fly.
   -l expression
     	Sets the default upper limit for the number of elements in a
-    	list. The expression is applied to the target language under the
-    	name ColferListMax. (default "64 * 1024")
+    	list. The expression is applied to the target language under
+    	the name ColferListMax. (default "64 * 1024")
   -p prefix
     	Adds a package prefix. Use slash as a separator when nesting.
   -s expression
@@ -75,19 +75,22 @@ OPTIONS
     	expression is applied to the target language under the name
     	ColferSizeMax. (default "16 * 1024 * 1024")
   -v	Enables verbose reporting to the standard error.
+  -x class
+    	Makes all generated classes extend a super class. Use slash as
+    	a package separator. Java only.
 
 EXIT STATUS
 	The command exits 0 on succes, 1 on compilation failure and 2
 	when invoked without arguments.
 
 EXAMPLES
-	Compile ./api/*.colf into ./src/ as Java:
-
-		colf -p com/example -b src java api
-
 	Compile ./io.colf with compact limits as C:
 
-		colf -s 2048 -l 96 c io.colf
+		colf -b src -s 2048 -l 96 C io.colf
+
+	Compile ./api/*.colf ./src/ as Java:
+
+		colf -p com/example -x com/example/Parent Java api
 
 BUGS
 	Report bugs at https://github.com/pascaldekloe/colfer/issues

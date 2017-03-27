@@ -19,8 +19,9 @@ var (
 	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard error.")
 
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n    \t`expression` is applied to the target language under the name\n    \tColferSizeMax.")
-	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\n    \tlist. The `expression` is applied to the target language under the\n    \tname ColferListMax.")
-	superClass = flag.String("c", "", "Adds a superclass. Java only. Use slash as a separator when nesting.")
+	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\n    \tlist. The `expression` is applied to the target language under\n    \tthe name ColferListMax.")
+
+	superClass = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\n    \ta package separator. Java only.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
@@ -50,15 +51,28 @@ func main() {
 	case "c":
 		report.Println("Set up for C")
 		gen = colfer.GenerateC
+		if *superClass != "" {
+			log.Fatal("colf: super class not supported with C")
+		}
+
 	case "go":
 		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
+		if *superClass != "" {
+			log.Fatal("colf: super class not supported with Go")
+		}
+
 	case "java":
 		report.Println("Set up for Java")
 		gen = colfer.GenerateJava
+
 	case "javascript", "js", "ecmascript":
 		report.Println("Set up for ECMAScript")
 		gen = colfer.GenerateECMA
+		if *superClass != "" {
+			log.Fatal("colf: super class not supported with ECMAScript")
+		}
+
 	default:
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
@@ -158,10 +172,10 @@ func init() {
 	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
 	tail += "\twhen invoked without arguments.\n"
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
-	tail += "\tCompile ./api/*.colf into ./src/ as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com/example -c com/example/BaseClass -b src java api\n\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
-	tail += "\t\t" + cmd + " -s 2048 -l 96 c io.colf\n"
+	tail += "\t\t" + cmd + " -b src -s 2048 -l 96 C io.colf\n\n"
+	tail += "\tCompile ./api/*.colf ./src/ as Java:\n\n"
+	tail += "\t\t" + cmd + " -p com/example -x com/example/Parent Java api\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
 	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
