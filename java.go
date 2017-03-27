@@ -164,6 +164,9 @@ import java.nio.BufferUnderflowException;
 {{if .HasList}}
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = {{.Pkg.ListMax}};
+
+	/** The {@link java.io.Serializable} version number. */
+	private static final long serialVersionUID = {{len .Fields}}L;
 {{end}}
 {{- if .HasBinary}}
 	private static final byte[] _zeroBytes = new byte[0];

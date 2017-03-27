@@ -86,7 +86,7 @@ EXAMPLES
 
 		colf -b src -s 2048 -l 96 C io.colf
 
-	Compile ./api/*.colf ./src/ as Java:
+	Compile ./api/*.colf in package com.example as Java:
 
 		colf -p com/example -x com/example/Parent Java api
 

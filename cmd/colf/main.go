@@ -174,7 +174,7 @@ func init() {
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
 	tail += "\t\t" + cmd + " -b src -s 2048 -l 96 C io.colf\n\n"
-	tail += "\tCompile ./api/*.colf ./src/ as Java:\n\n"
+	tail += "\tCompile ./api/*.colf in package com.example as Java:\n\n"
 	tail += "\t\t" + cmd + " -p com/example -x com/example/Parent Java api\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
