@@ -32,8 +32,6 @@ The format is inspired by Proto**col** Buf**fer**.
 
 * Rust and Python
 * RMI (WIP)
-[![GoDoc](https://godoc.org/github.com/pascaldekloe/colfer/rpc?status.svg)](https://godoc.org/github.com/pascaldekloe/colfer/rpc)
-)
 * List type support for integers and timestamps
 * Please [share](https://github.com/pascaldekloe/colfer/wiki/Users#production-use) your experiences
 
@@ -115,6 +113,7 @@ control. Modern developers may disagree and use the Maven plugin.
 ```
 
 
+
 ## Schema
 
 Data structures are defined in `.colf` files. The format is quite conventional.
@@ -177,6 +176,7 @@ The following table shows how Colfer data types are applied per language.
 Lists may contain floating points, text, binaries or data structures.
 
 
+
 ## Compatibility
 
 Name changes do not affect the serialization format. Deprecated fields should be
@@ -184,13 +184,9 @@ renamed to clearly discourage their use. For backwards compatibility new fields
 must be added to the end of colfer structs. Thus the number of fields can be
 seen as the schema version.
 
-The following changes are backward compatible.
-* New fields at the end of Colfer structs
-* Change datatype int32 into int64
-* Change datatype text into binary
-
 
 
 ## Performance
 
 Colfer aims to be the fastest and the smallest format while still resilient to malicious input. See the [benchmark wiki](https://github.com/pascaldekloe/colfer/wiki/Benchmark) for a comparison.
+Suboptimal performance is treated like a bug.
