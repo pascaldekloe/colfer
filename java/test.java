@@ -2,6 +2,8 @@ import gen.O;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -9,6 +11,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -35,6 +38,8 @@ public class test {
 			unmarshalTextMax();
 			unmarshalBinaryMax();
 			unmarshalListMax();
+
+			serializable();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -140,11 +145,11 @@ public class test {
 
 	static void marshal() throws Exception {
 		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			byte[] buf = new byte[e.getKey().length() / 2];
-			int i = e.getValue().marshal(buf, 0);
-			if (i != buf.length)
-				fail("marshal: got write index %d for serial 0x%s", i, e.getKey());
-			String got = toHex(buf);
+			byte[] buf = new byte[O.colferSizeMax];
+			int n = e.getValue().marshal(buf, 0);
+			if (n != e.getKey().length() / 2)
+				fail("marshal: got write index %d for serial 0x%s", n, e.getKey());
+			String got = toHex(Arrays.copyOf(buf, n));
 			if (! got.equals(e.getKey()))
 				fail("marshal: got serial 0x%s, want %s", got, e.getKey());
 		}
@@ -314,6 +319,26 @@ public class test {
 				fail("unmarshal list max error: %s\nwant: %s", e.getMessage(), want);
 		} finally {
 			O.colferListMax = origMax;
+		}
+	}
+
+	static void serializable() throws Exception {
+		Set<Entry<String, O>> cases = newGoldenCases().entrySet();
+		ByteArrayOutputStream buf = new ByteArrayOutputStream();
+
+		ObjectOutputStream out = new ObjectOutputStream(buf);
+		for (Entry<String, O> e : cases)
+			out.writeObject(e.getValue());
+		out.close();
+
+		ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(buf.toByteArray()));
+		for (Entry<String, O> e : cases) {
+			O got = (O) in.readObject();
+			O want = e.getValue();
+			if (want.equals(got)) continue;
+			byte[] serial = new byte[O.colferSizeMax];
+			int n = got.marshal(serial, 0);
+			fail("got 0x%s, want 0x%s", toHex(Arrays.copyOf(serial, n)), e.getKey());
 		}
 	}
 
