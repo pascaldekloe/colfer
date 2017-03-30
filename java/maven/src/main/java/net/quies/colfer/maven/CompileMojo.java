@@ -147,19 +147,25 @@ throws MojoExecutionException {
 		Files.createDirectories(path.getParent());
 		Files.copy(stream, path);
 		stream.close();
-
-		// ensure execution permission
-		Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path);
-		if (!perms.contains(PosixFilePermission.OWNER_EXECUTE)) {
-			perms.add(PosixFilePermission.OWNER_EXECUTE);
-			Files.setPosixFilePermissions(path, perms);
-		}
-
-		return path;
 	} catch (Exception e) {
 		getLog().error("compiler command installation", e);
 		throw new MojoExecutionException(path.toString() + ": installation failed");
 	}
+
+	try {
+		if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+			// ensure execution permission
+			Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path);
+			if (!perms.contains(PosixFilePermission.OWNER_EXECUTE)) {
+				perms.add(PosixFilePermission.OWNER_EXECUTE);
+				Files.setPosixFilePermissions(path, perms);
+			}
+		}
+	} catch (Exception e) {
+		getLog().warn("compiler executable permission", e);
+	}
+
+	return path;
 }
 
 }
