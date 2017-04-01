@@ -123,7 +123,9 @@ struct gen_o {
 	} f64s;
 };
 
-// gen_o_marshal_len returns the Colfer serial octet size.
+// gen_o_marshal_len returns the Colfer serial octet size. When the
+// return is zero then errno is set to ERANGE to indicate a breach of either
+// colfer_size_max or colfer_list_max.
 size_t gen_o_marshal_len(const gen_o* o);
 
 // gen_o_marshal encodes o as Colfer into buf and returns the number

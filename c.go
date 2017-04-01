@@ -162,7 +162,9 @@ typedef struct {{.NameNative}} {{.NameNative}};
 {{- end}}
 };
 
-// {{.NameNative}}_marshal_len returns the Colfer serial octet size.
+// {{.NameNative}}_marshal_len returns the Colfer serial octet size. When the
+// return is zero then errno is set to ERANGE to indicate a breach of either
+// colfer_size_max or colfer_list_max.
 size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o);
 
 // {{.NameNative}}_marshal encodes o as Colfer into buf and returns the number
@@ -267,7 +269,13 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
  {{- else}}
 	{
 		size_t n = o->{{.NameNative}}.len;
-		if (n) for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
+		if (n) {
+			if (n > colfer_list_max) {
+				errno = ERANGE;
+				return 0;
+			}
+			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
+		}
 	}
  {{- end}}
 {{else if eq .Type "float64"}}
@@ -276,7 +284,13 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
  {{- else}}
 	{
 		size_t n = o->{{.NameNative}}.len;
-		if (n) for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
+		if (n) {
+			if (n > colfer_list_max) {
+				errno = ERANGE;
+				return 0;
+			}
+			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
+		}
 	}
  {{- end}}
 {{else if eq .Type "timestamp"}}
@@ -300,6 +314,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 	{
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
+			if (n > colfer_list_max) {
+				errno = ERANGE;
+				return 0;
+			}
 			colfer_text* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) {
 				size_t len = a[i].len;
@@ -319,6 +337,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 	{
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
+			if (n > colfer_list_max) {
+				errno = ERANGE;
+				return 0;
+			}
 			colfer_binary* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) {
 				size_t len = a[i].len;
@@ -337,6 +359,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 	{
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
+			if (n > colfer_list_max) {
+				errno = ERANGE;
+				return 0;
+			}
 			{{.TypeRef.NameNative}}* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) l += {{.TypeRef.NameNative}}_marshal_len(&a[i]);
 			for (l += 2; n > 127; n >>= 7, ++l);
@@ -918,6 +944,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (n > colfer_list_max) {
+			errno = ERANGE;
+			return 0;
+		}
 		if (p+n*4 >= end) {
 			errno = enderr;
 			return 0;
@@ -987,6 +1017,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (n > colfer_list_max) {
+			errno = ERANGE;
+			return 0;
 		}
 		if (p+n*8 >= end) {
 			errno = enderr;
@@ -1110,6 +1144,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (n > colfer_list_max) {
+			errno = ERANGE;
+			return 0;
+		}
 
 		colfer_text* text = malloc(n * sizeof(colfer_text));
 		o->{{.NameNative}}.len = n;
@@ -1211,6 +1249,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (n > colfer_list_max) {
+			errno = ERANGE;
+			return 0;
+		}
 
 		colfer_binary* binary = malloc(n * sizeof(colfer_binary));
 		o->{{.NameNative}}.len = n;
@@ -1293,6 +1335,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (n > colfer_list_max) {
+			errno = ERANGE;
+			return 0;
 		}
 
 		{{.TypeRef.NameNative}}* a = calloc(n, sizeof({{.TypeRef.NameNative}}));
