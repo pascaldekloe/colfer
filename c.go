@@ -165,16 +165,17 @@ typedef struct {{.NameNative}} {{.NameNative}};
 // {{.NameNative}}_marshal_len returns the Colfer serial octet size.
 size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o);
 
-// {{.NameNative}}_marshal encodes O as Colfer into buf and returns the number of octets written.
-// The marshaller writes never more than colfer_size_max octets.
+// {{.NameNative}}_marshal encodes o as Colfer into buf and returns the number
+// of octets written. The marshaller never writes more than colfer_size_max.
 size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf);
 
-// {{.NameNative}}_unmarshal decodes data as Colfer and returns the number of octets read.
-// The data is read up to datalen or colfer_size_max, whichever occurs first.
-// When the return is zero then errno is set to one of the following 3 values.
-// EWOULDBLOCK means incomplete data. It is safe to reuse o for this case without initiation.
-// ERANGE implies a breach of either colfer_size_max or colfer_list_max.
-// EILSEQ means a schema mismatch.
+// {{.NameNative}}_unmarshal decodes data as Colfer into o and returns the
+// number of octets read. The data is read up to a maximum of datalen or
+// colfer_size_max, whichever occurs first.
+//
+// When the return is zero then errno is set to one of the following 3 values:
+// enderr on incomplete data, ERANGE on a breach of either colfer_size_max
+// or colfer_list_max and EILSEQ on schema mismatch.
 size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t datalen);
 {{end}}{{end}}
 
@@ -694,36 +695,72 @@ size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf) {
 size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t datalen) {
 	// octet pointer navigation
 	const uint8_t* p = data;
-	const uint8_t* end = p + datalen;
+	const uint8_t* end;
+	int enderr;
+	if (datalen < colfer_size_max) {
+		end = p + datalen;
+		enderr = EWOULDBLOCK;
+	} else {
+		end = p + colfer_size_max;
+		enderr = ERANGE;
+	}
 
+	if (p >= end) {
+		errno = enderr;
+		return 0;
+	}
 	uint_fast8_t header = *p++;
 {{range .Fields}}{{if eq .Type "bool"}}
 	if (header == {{.Index}}) {
 		o->{{.NameNative}} = 1;
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 {{else if eq .Type "uint8"}}
 	if (header == {{.Index}}) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		o->{{.NameNative}} = *p++;
 		header = *p++;
 	}
 {{else if eq .Type "uint16"}}
 	if (header == {{.Index}}) {
+		if (p+2 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast16_t x = *p++;
 		x <<= 8;
 		o->{{.NameNative}} = x | *p++;
 		header = *p++;
 	} else if (header == ({{.Index}} | 128)) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		o->{{.NameNative}} = *p++;
 		header = *p++;
 	}
 {{else if eq .Type "uint32"}}
 	if (header == {{.Index}}) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast32_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -734,6 +771,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		o->{{.NameNative}} = x;
 		header = *p++;
 	} else if (header == ({{.Index}} | 128)) {
+		if (p+4 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		x <<= 24;
 		x |= (uint_fast32_t) *p++ << 16;
@@ -744,11 +785,19 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
 {{else if eq .Type "uint64"}}
 	if (header == {{.Index}}) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast64_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -759,6 +808,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		o->{{.NameNative}} = x;
 		header = *p++;
 	} else if (header == ({{.Index}} | 128)) {
+		if (p+8 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		x <<= 56;
 		x |= (uint_fast64_t) *p++ << 48;
@@ -773,11 +826,19 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
 {{else if eq .Type "int32"}}
 	if ((header & 127) == {{.Index}}) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; shift < 35; shift += 7) {
 				uint_fast32_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -791,11 +852,19 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
 {{else if eq .Type "int64"}}
 	if ((header & 127) == {{.Index}}) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast64_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127 || shift == 56) {
 					x |= b << shift;
 					break;
@@ -810,6 +879,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 {{else if eq .Type "float32"}}
  {{- if not .TypeList}}
 	if (header == {{.Index}}) {
+		if (p+4 >= end) {
+			errno = enderr;
+			return 0;
+		}
 #ifdef COLFER_ENDIAN
 		memcpy(&o->{{.NameNative}}, p, 4);
 		p += 4;
@@ -825,10 +898,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
  {{- else}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -836,6 +917,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (p+n*4 >= end) {
+			errno = enderr;
+			return 0;
 		}
 
 		float* fp = malloc(n * 4);
@@ -860,6 +945,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 {{else if eq .Type "float64"}}
  {{- if not .TypeList}}
 	if (header == {{.Index}}) {
+		if (p+8 >= end) {
+			errno = enderr;
+			return 0;
+		}
 #ifdef COLFER_ENDIAN
 		memcpy(&o->{{.NameNative}}, p, 8);
 		p += 8;
@@ -879,10 +968,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
  {{- else}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -890,6 +987,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (p+n*8 >= end) {
+			errno = enderr;
+			return 0;
 		}
 
 		double* fp = malloc(n * 8);
@@ -918,6 +1019,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 {{else if eq .Type "timestamp"}}
 	if ((header & 127) == {{.Index}}) {
 		if (header & 128) {
+			if (p+12 >= end) {
+				errno = enderr;
+				return 0;
+			}
 			uint_fast64_t x = *p++;
 			x <<= 56;
 			x |= (uint_fast64_t) *p++ << 48;
@@ -929,6 +1034,10 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			x |= (uint_fast64_t) *p++;
 			o->{{.NameNative}}.sec = x;
 		} else {
+			if (p+8 >= end) {
+				errno = enderr;
+				return 0;
+			}
 			uint_fast32_t x = *p++;
 			x <<= 24;
 			x |= (uint_fast32_t) *p++ << 16;
@@ -947,10 +1056,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 {{else if eq .Type "text"}}
  {{- if not .TypeList}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; shift < sizeof(size_t) * CHAR_BIT; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -959,6 +1076,11 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (p+n >= end) {
+			errno = enderr;
+			return 0;
+		}
+
 		void* a = malloc(n);
 		memcpy(a, p, n);
 		p += n;
@@ -968,10 +1090,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
  {{- else}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -985,10 +1115,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = text;
 		for (; n != 0; --n, ++text) {
+			if (p >= end) {
+				errno = enderr;
+				return 0;
+			}
 			size_t len = *p++;
 			if (len > 127) {
 				len &= 127;
 				for (int shift = 7; ; shift += 7) {
+					if (p >= end) {
+						errno = enderr;
+						return 0;
+					}
 					size_t c = *p++;
 					if (c <= 127) {
 						len |= c << shift;
@@ -997,11 +1135,21 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 					len |= (c & 127) << shift;
 				}
 			}
+			if (p+len >= end) {
+				errno = enderr;
+				return 0;
+			}
+
 			char* a = malloc(len);
 			memcpy(a, p, len);
 			p += len;
 			text->len = len;
 			text->utf8 = a;
+		}
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
 		}
 		header = *p++;
 	}
@@ -1009,10 +1157,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 {{else if eq .Type "binary"}}
  {{- if not .TypeList}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -1021,6 +1177,11 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (p+n >= end) {
+			errno = enderr;
+			return 0;
+		}
+
 		void* a = malloc(n);
 		memcpy(a, p, n);
 		p += n;
@@ -1030,10 +1191,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	}
  {{- else}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -1047,10 +1216,18 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = binary;
 		for (; n != 0; --n, ++binary) {
+			if (p >= end) {
+				errno = enderr;
+				return 0;
+			}
 			size_t len = *p++;
 			if (len > 127) {
 				len &= 127;
 				for (int shift = 7; ; shift += 7) {
+					if (p >= end) {
+						errno = enderr;
+						return 0;
+					}
 					size_t c = *p++;
 					if (c <= 127) {
 						len |= c << shift;
@@ -1059,11 +1236,21 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 					len |= (c & 127) << shift;
 				}
 			}
+			if (p+len >= end) {
+				errno = enderr;
+				return 0;
+			}
+
 			uint8_t* a = malloc(len);
 			memcpy(a, p, len);
 			p += len;
 			binary->len = len;
 			binary->octets = a;
+		}
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
 		}
 		header = *p++;
 	}
@@ -1073,16 +1260,32 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 	if (header == {{.Index}}) {
 		o->{{.NameNative}} = calloc(1, sizeof({{.TypeRef.NameNative}}));
 		size_t read = {{.TypeRef.NameNative}}_unmarshal(o->{{.NameNative}}, p, (size_t) (end - p));
-		if (!read) return read;
+		if (!read) {
+			if (errno == EWOULDBLOCK) errno = enderr;
+			return read;
+		}
 		p += read;
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
  {{- else}}
 	if (header == {{.Index}}) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -1091,14 +1294,23 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+
 		{{.TypeRef.NameNative}}* a = calloc(n, sizeof({{.TypeRef.NameNative}}));
 		for (size_t i = 0; i < n; ++i) {
 			size_t read = {{.TypeRef.NameNative}}_unmarshal(&a[i], p, (size_t) (end - p));
-			if (!read) return read;
+			if (!read) {
+				if (errno == EWOULDBLOCK) errno = enderr;
+				return read;
+			}
 			p += read;
 		}
 		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = a;
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
  {{- end}}

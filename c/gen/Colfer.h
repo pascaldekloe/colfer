@@ -126,16 +126,17 @@ struct gen_o {
 // gen_o_marshal_len returns the Colfer serial octet size.
 size_t gen_o_marshal_len(const gen_o* o);
 
-// gen_o_marshal encodes O as Colfer into buf and returns the number of octets written.
-// The marshaller writes never more than colfer_size_max octets.
+// gen_o_marshal encodes o as Colfer into buf and returns the number
+// of octets written. The marshaller never writes more than colfer_size_max.
 size_t gen_o_marshal(const gen_o* o, void* buf);
 
-// gen_o_unmarshal decodes data as Colfer and returns the number of octets read.
-// The data is read up to datalen or colfer_size_max, whichever occurs first.
-// When the return is zero then errno is set to one of the following 3 values.
-// EWOULDBLOCK means incomplete data. It is safe to reuse o for this case without initiation.
-// ERANGE implies a breach of either colfer_size_max or colfer_list_max.
-// EILSEQ means a schema mismatch.
+// gen_o_unmarshal decodes data as Colfer into o and returns the
+// number of octets read. The data is read up to a maximum of datalen or
+// colfer_size_max, whichever occurs first.
+//
+// When the return is zero then errno is set to one of the following 3 values:
+// enderr on incomplete data, ERANGE on a breach of either colfer_size_max
+// or colfer_list_max and EILSEQ on schema mismatch.
 size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen);
 
 

@@ -485,21 +485,45 @@ size_t gen_o_marshal(const gen_o* o, void* buf) {
 size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	// octet pointer navigation
 	const uint8_t* p = data;
-	const uint8_t* end = p + datalen;
+	const uint8_t* end;
+	int enderr;
+	if (datalen < colfer_size_max) {
+		end = p + datalen;
+		enderr = EWOULDBLOCK;
+	} else {
+		end = p + colfer_size_max;
+		enderr = ERANGE;
+	}
 
+	if (p >= end) {
+		errno = enderr;
+		return 0;
+	}
 	uint_fast8_t header = *p++;
 
 	if (header == 0) {
 		o->b = 1;
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 
 	if (header == 1) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast32_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -510,6 +534,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 		o->u32 = x;
 		header = *p++;
 	} else if (header == (1 | 128)) {
+		if (p+4 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		x <<= 24;
 		x |= (uint_fast32_t) *p++ << 16;
@@ -520,11 +548,19 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 2) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast64_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -535,6 +571,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 		o->u64 = x;
 		header = *p++;
 	} else if (header == (2 | 128)) {
+		if (p+8 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		x <<= 56;
 		x |= (uint_fast64_t) *p++ << 48;
@@ -549,11 +589,19 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if ((header & 127) == 3) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast32_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; shift < 35; shift += 7) {
 				uint_fast32_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127) {
 					x |= b << shift;
 					break;
@@ -567,11 +615,19 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if ((header & 127) == 4) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast64_t x = *p++;
 		if (x > 127) {
 			x &= 127;
 			for (int shift = 7; ; shift += 7) {
 				uint_fast64_t b = *p++;
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				if (b <= 127 || shift == 56) {
 					x |= b << shift;
 					break;
@@ -585,6 +641,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 5) {
+		if (p+4 >= end) {
+			errno = enderr;
+			return 0;
+		}
 #ifdef COLFER_ENDIAN
 		memcpy(&o->f32, p, 4);
 		p += 4;
@@ -600,6 +660,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 6) {
+		if (p+8 >= end) {
+			errno = enderr;
+			return 0;
+		}
 #ifdef COLFER_ENDIAN
 		memcpy(&o->f64, p, 8);
 		p += 8;
@@ -620,6 +684,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 
 	if ((header & 127) == 7) {
 		if (header & 128) {
+			if (p+12 >= end) {
+				errno = enderr;
+				return 0;
+			}
 			uint_fast64_t x = *p++;
 			x <<= 56;
 			x |= (uint_fast64_t) *p++ << 48;
@@ -631,6 +699,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			x |= (uint_fast64_t) *p++;
 			o->t.sec = x;
 		} else {
+			if (p+8 >= end) {
+				errno = enderr;
+				return 0;
+			}
 			uint_fast32_t x = *p++;
 			x <<= 24;
 			x |= (uint_fast32_t) *p++ << 16;
@@ -648,10 +720,18 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 8) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; shift < sizeof(size_t) * CHAR_BIT; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -660,6 +740,11 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				n |= (c & 127) << shift;
 			}
 		}
+		if (p+n >= end) {
+			errno = enderr;
+			return 0;
+		}
+
 		void* a = malloc(n);
 		memcpy(a, p, n);
 		p += n;
@@ -669,10 +754,18 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 9) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -681,6 +774,11 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				n |= (c & 127) << shift;
 			}
 		}
+		if (p+n >= end) {
+			errno = enderr;
+			return 0;
+		}
+
 		void* a = malloc(n);
 		memcpy(a, p, n);
 		p += n;
@@ -692,16 +790,32 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	if (header == 10) {
 		o->o = calloc(1, sizeof(gen_o));
 		size_t read = gen_o_unmarshal(o->o, p, (size_t) (end - p));
-		if (!read) return read;
+		if (!read) {
+			if (errno == EWOULDBLOCK) errno = enderr;
+			return read;
+		}
 		p += read;
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 
 	if (header == 11) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -710,22 +824,39 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				n |= (c & 127) << shift;
 			}
 		}
+
 		gen_o* a = calloc(n, sizeof(gen_o));
 		for (size_t i = 0; i < n; ++i) {
 			size_t read = gen_o_unmarshal(&a[i], p, (size_t) (end - p));
-			if (!read) return read;
+			if (!read) {
+				if (errno == EWOULDBLOCK) errno = enderr;
+				return read;
+			}
 			p += read;
 		}
 		o->os.len = n;
 		o->os.list = a;
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 
 	if (header == 12) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -739,10 +870,18 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 		o->ss.len = n;
 		o->ss.list = text;
 		for (; n != 0; --n, ++text) {
+			if (p >= end) {
+				errno = enderr;
+				return 0;
+			}
 			size_t len = *p++;
 			if (len > 127) {
 				len &= 127;
 				for (int shift = 7; ; shift += 7) {
+					if (p >= end) {
+						errno = enderr;
+						return 0;
+					}
 					size_t c = *p++;
 					if (c <= 127) {
 						len |= c << shift;
@@ -751,20 +890,38 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 					len |= (c & 127) << shift;
 				}
 			}
+			if (p+len >= end) {
+				errno = enderr;
+				return 0;
+			}
+
 			char* a = malloc(len);
 			memcpy(a, p, len);
 			p += len;
 			text->len = len;
 			text->utf8 = a;
 		}
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 
 	if (header == 13) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -778,10 +935,18 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 		o->as.len = n;
 		o->as.list = binary;
 		for (; n != 0; --n, ++binary) {
+			if (p >= end) {
+				errno = enderr;
+				return 0;
+			}
 			size_t len = *p++;
 			if (len > 127) {
 				len &= 127;
 				for (int shift = 7; ; shift += 7) {
+					if (p >= end) {
+						errno = enderr;
+						return 0;
+					}
 					size_t c = *p++;
 					if (c <= 127) {
 						len |= c << shift;
@@ -790,35 +955,65 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 					len |= (c & 127) << shift;
 				}
 			}
+			if (p+len >= end) {
+				errno = enderr;
+				return 0;
+			}
+
 			uint8_t* a = malloc(len);
 			memcpy(a, p, len);
 			p += len;
 			binary->len = len;
 			binary->octets = a;
 		}
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		header = *p++;
 	}
 
 	if (header == 14) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		o->u8 = *p++;
 		header = *p++;
 	}
 
 	if (header == 15) {
+		if (p+2 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		uint_fast16_t x = *p++;
 		x <<= 8;
 		o->u16 = x | *p++;
 		header = *p++;
 	} else if (header == (15 | 128)) {
+		if (p+1 >= end) {
+			errno = enderr;
+			return 0;
+		}
 		o->u16 = *p++;
 		header = *p++;
 	}
 
 	if (header == 16) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -826,6 +1021,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (p+n*4 >= end) {
+			errno = enderr;
+			return 0;
 		}
 
 		float* fp = malloc(n * 4);
@@ -848,10 +1047,18 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	}
 
 	if (header == 17) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
 		size_t n = *p++;
 		if (n > 127) {
 			n &= 127;
 			for (int shift = 7; ; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
 				size_t c = *p++;
 				if (c <= 127) {
 					n |= c << shift;
@@ -859,6 +1066,10 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				}
 				n |= (c & 127) << shift;
 			}
+		}
+		if (p+n*8 >= end) {
+			errno = enderr;
+			return 0;
 		}
 
 		double* fp = malloc(n * 8);

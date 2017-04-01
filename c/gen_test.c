@@ -184,7 +184,10 @@ int main() {
 
 		gen_o got = {0};
 		size_t read = gen_o_unmarshal(&got, buf, wrote);
-		if (read == 0) perror("unmarshal error");
+		if (errno != 0) {
+			perror("unmarshal error");
+			errno = 0;
+		}
 		if (read != wrote || !gen_o_equal(&got, &g.o)) {
 			printf("0x%s: unmarshal read %zu bytes:\n\tgot: ", g.hex, read);
 			gen_o_dump(got);
@@ -192,6 +195,40 @@ int main() {
 			gen_o_dump(g.o);
 			putchar('\n');
 		}
+	}
+
+	printf("TEST unmarshal limits...\n");
+	for (int i = 0; i < n; ++i) {
+		golden g = golden_cases[i];
+		size_t len = gen_o_marshal(&g.o, buf);
+		if (!len) {
+			printf("0x%s: skip due marshal fail\n", g.hex);
+			continue;
+		}
+
+		// buffer length:
+		for (size_t lim = 0; lim < len; lim++) {
+			gen_o o = {0};
+			size_t read = gen_o_unmarshal(&o, buf, lim);
+			if (read)
+				printf("0x%s[0:%zu]: unmarshal success with %zu bytes\n", g.hex, lim, read);
+			if (errno != EWOULDBLOCK)
+				printf("0x%s[0:%zu]: unmarshal errno %d\n", g.hex, lim, errno);
+			errno = 0;
+		}
+
+		// size maximum:
+		for (size_t lim = 0; lim < len; lim++) {
+			colfer_size_max = lim;
+			gen_o o = {0};
+			size_t read = gen_o_unmarshal(&o, buf, len);
+			if (read)
+				printf("0x%s: unmarshal success with %zu bytes and Colfer size maximum %zu\n", g.hex, read, lim);
+			if (errno != ERANGE)
+				printf("0x%s: unmarshal errno %d with Colfer size maximum %zu\n", g.hex, errno, lim);
+			errno = 0;
+		}
+		colfer_size_max = 16 * 1024 * 1024;
 	}
 
 	free(buf);
