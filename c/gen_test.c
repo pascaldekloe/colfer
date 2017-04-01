@@ -171,7 +171,7 @@ int main() {
 		// size maximum
 		for (colfer_size_max = 0; colfer_size_max < want; ++colfer_size_max) {
 			got = gen_o_marshal_len(&g.o);
-			if (got || errno != ERANGE)
+			if (got || errno != EFBIG)
 				printf("0x%s: got marshal length %zu and errno %d with Colfer size maximum %zu\n", g.hex, got, errno, colfer_size_max);
 
 
@@ -231,7 +231,7 @@ int main() {
 		for (colfer_size_max = 0; colfer_size_max < len; ++colfer_size_max) {
 			gen_o o = {0};
 			size_t read = gen_o_unmarshal(&o, buf, len);
-			if (read || errno != ERANGE)
+			if (read || errno != EFBIG)
 				printf("0x%s: unmarshal read %zu with errno %d for size maximum %zu\n", g.hex, read, errno, colfer_size_max);
 
 			errno = 0;

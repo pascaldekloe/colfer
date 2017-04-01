@@ -124,7 +124,7 @@ struct gen_o {
 };
 
 // gen_o_marshal_len returns the Colfer serial octet size. When the
-// return is zero then errno is set to ERANGE to indicate a breach of either
+// return is zero then errno is set to EFBIG to indicate a breach of either
 // colfer_size_max or colfer_list_max.
 size_t gen_o_marshal_len(const gen_o* o);
 
@@ -137,7 +137,7 @@ size_t gen_o_marshal(const gen_o* o, void* buf);
 // colfer_size_max, whichever occurs first.
 //
 // When the return is zero then errno is set to one of the following 3 values:
-// EWOULDBLOCK on incomplete data, ERANGE on a breach of either colfer_size_max
+// EWOULDBLOCK on incomplete data, EFBIG on a breach of either colfer_size_max
 // or colfer_list_max and EILSEQ on schema mismatch.
 size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen);
 

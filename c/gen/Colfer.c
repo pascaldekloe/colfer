@@ -98,14 +98,14 @@ size_t gen_o_marshal_len(const gen_o* o) {
 		size_t n = o->os.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			gen_o* a = o->os.list;
 			for (size_t i = 0; i < n; ++i) l += gen_o_marshal_len(&a[i]);
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -115,7 +115,7 @@ size_t gen_o_marshal_len(const gen_o* o) {
 		size_t n = o->ss.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			colfer_text* a = o->ss.list;
@@ -125,7 +125,7 @@ size_t gen_o_marshal_len(const gen_o* o) {
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -135,7 +135,7 @@ size_t gen_o_marshal_len(const gen_o* o) {
 		size_t n = o->as.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			colfer_binary* a = o->as.list;
@@ -145,7 +145,7 @@ size_t gen_o_marshal_len(const gen_o* o) {
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -162,13 +162,13 @@ size_t gen_o_marshal_len(const gen_o* o) {
 		size_t n = o->f32s.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
 		}
 		if (l > colfer_size_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 	}
@@ -177,19 +177,19 @@ size_t gen_o_marshal_len(const gen_o* o) {
 		size_t n = o->f64s.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
 		}
 		if (l > colfer_size_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 	}
 
 	if (l > colfer_size_max) {
-		errno = ERANGE;
+		errno = EFBIG;
 		return 0;
 	}
 	return l;
@@ -540,7 +540,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 		enderr = EWOULDBLOCK;
 	} else {
 		end = p + colfer_size_max;
-		enderr = ERANGE;
+		enderr = EFBIG;
 	}
 
 	if (p >= end) {
@@ -873,7 +873,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
@@ -918,7 +918,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
@@ -987,7 +987,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
@@ -1083,7 +1083,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 		if (p+n*4 >= end) {
@@ -1132,7 +1132,7 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 		if (p+n*8 >= end) {

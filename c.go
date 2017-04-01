@@ -163,7 +163,7 @@ typedef struct {{.NameNative}} {{.NameNative}};
 };
 
 // {{.NameNative}}_marshal_len returns the Colfer serial octet size. When the
-// return is zero then errno is set to ERANGE to indicate a breach of either
+// return is zero then errno is set to EFBIG to indicate a breach of either
 // colfer_size_max or colfer_list_max.
 size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o);
 
@@ -176,7 +176,7 @@ size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf);
 // colfer_size_max, whichever occurs first.
 //
 // When the return is zero then errno is set to one of the following 3 values:
-// EWOULDBLOCK on incomplete data, ERANGE on a breach of either colfer_size_max
+// EWOULDBLOCK on incomplete data, EFBIG on a breach of either colfer_size_max
 // or colfer_list_max and EILSEQ on schema mismatch.
 size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t datalen);
 {{end}}{{end}}
@@ -271,13 +271,13 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
 		}
 		if (l > colfer_size_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 	}
@@ -290,13 +290,13 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
 		}
 		if (l > colfer_size_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 	}
@@ -323,7 +323,7 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			colfer_text* a = o->{{.NameNative}}.list;
@@ -333,7 +333,7 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -350,7 +350,7 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			colfer_binary* a = o->{{.NameNative}}.list;
@@ -360,7 +360,7 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -376,14 +376,14 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 		size_t n = o->{{.NameNative}}.len;
 		if (n) {
 			if (n > colfer_list_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 			{{.TypeRef.NameNative}}* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) l += {{.TypeRef.NameNative}}_marshal_len(&a[i]);
 			for (l += 2; n > 127; n >>= 7, ++l);
 			if (l > colfer_size_max) {
-				errno = ERANGE;
+				errno = EFBIG;
 				return 0;
 			}
 		}
@@ -391,7 +391,7 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
  {{- end}}
 {{end}}{{end}}
 	if (l > colfer_size_max) {
-		errno = ERANGE;
+		errno = EFBIG;
 		return 0;
 	}
 	return l;
@@ -752,7 +752,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 		enderr = EWOULDBLOCK;
 	} else {
 		end = p + colfer_size_max;
-		enderr = ERANGE;
+		enderr = EFBIG;
 	}
 
 	if (p >= end) {
@@ -969,7 +969,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 		if (p+n*4 >= end) {
@@ -1043,7 +1043,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 		if (p+n*8 >= end) {
@@ -1169,7 +1169,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
@@ -1274,7 +1274,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
@@ -1361,7 +1361,7 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			}
 		}
 		if (n > colfer_list_max) {
-			errno = ERANGE;
+			errno = EFBIG;
 			return 0;
 		}
 
