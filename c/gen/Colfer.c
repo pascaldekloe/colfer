@@ -104,6 +104,10 @@ size_t gen_o_marshal_len(const gen_o* o) {
 			gen_o* a = o->os.list;
 			for (size_t i = 0; i < n; ++i) l += gen_o_marshal_len(&a[i]);
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
 
@@ -120,6 +124,10 @@ size_t gen_o_marshal_len(const gen_o* o) {
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
 
@@ -136,6 +144,10 @@ size_t gen_o_marshal_len(const gen_o* o) {
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
 
@@ -155,6 +167,10 @@ size_t gen_o_marshal_len(const gen_o* o) {
 			}
 			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
 		}
+		if (l > colfer_size_max) {
+			errno = ERANGE;
+			return 0;
+		}
 	}
 
 	{
@@ -166,8 +182,16 @@ size_t gen_o_marshal_len(const gen_o* o) {
 			}
 			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
 		}
+		if (l > colfer_size_max) {
+			errno = ERANGE;
+			return 0;
+		}
 	}
 
+	if (l > colfer_size_max) {
+		errno = ERANGE;
+		return 0;
+	}
 	return l;
 }
 

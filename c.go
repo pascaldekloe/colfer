@@ -168,7 +168,7 @@ typedef struct {{.NameNative}} {{.NameNative}};
 size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o);
 
 // {{.NameNative}}_marshal encodes o as Colfer into buf and returns the number
-// of octets written. The marshaller never writes more than colfer_size_max.
+// of octets written.
 size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf);
 
 // {{.NameNative}}_unmarshal decodes data as Colfer into o and returns the
@@ -176,7 +176,7 @@ size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf);
 // colfer_size_max, whichever occurs first.
 //
 // When the return is zero then errno is set to one of the following 3 values:
-// enderr on incomplete data, ERANGE on a breach of either colfer_size_max
+// EWOULDBLOCK on incomplete data, ERANGE on a breach of either colfer_size_max
 // or colfer_list_max and EILSEQ on schema mismatch.
 size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t datalen);
 {{end}}{{end}}
@@ -276,6 +276,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			}
 			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
 		}
+		if (l > colfer_size_max) {
+			errno = ERANGE;
+			return 0;
+		}
 	}
  {{- end}}
 {{else if eq .Type "float64"}}
@@ -290,6 +294,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 				return 0;
 			}
 			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
+		}
+		if (l > colfer_size_max) {
+			errno = ERANGE;
+			return 0;
 		}
 	}
  {{- end}}
@@ -324,6 +332,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
  {{- end}}
@@ -347,6 +359,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
  {{- end}}
@@ -366,10 +382,18 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			{{.TypeRef.NameNative}}* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) l += {{.TypeRef.NameNative}}_marshal_len(&a[i]);
 			for (l += 2; n > 127; n >>= 7, ++l);
+			if (l > colfer_size_max) {
+				errno = ERANGE;
+				return 0;
+			}
 		}
 	}
  {{- end}}
 {{end}}{{end}}
+	if (l > colfer_size_max) {
+		errno = ERANGE;
+		return 0;
+	}
 	return l;
 }
 

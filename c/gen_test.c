@@ -167,6 +167,17 @@ int main() {
 		size_t want = strlen(g.hex) / 2;
 		if (got != want)
 			printf("0x%s: got marshal length %zu, want %zu\n", g.hex, got, want);
+
+		// size maximum
+		for (colfer_size_max = 0; colfer_size_max < want; ++colfer_size_max) {
+			got = gen_o_marshal_len(&g.o);
+			if (got || errno != ERANGE)
+				printf("0x%s: got marshal length %zu and errno %d with Colfer size maximum %zu\n", g.hex, got, errno, colfer_size_max);
+
+
+			errno = 0;
+		}
+		colfer_size_max = 16 * 1024 * 1024;
 	}
 
 	void* buf = malloc(colfer_size_max);
@@ -210,22 +221,19 @@ int main() {
 		for (size_t lim = 0; lim < len; lim++) {
 			gen_o o = {0};
 			size_t read = gen_o_unmarshal(&o, buf, lim);
-			if (read)
-				printf("0x%s[0:%zu]: unmarshal success with %zu bytes\n", g.hex, lim, read);
-			if (errno != EWOULDBLOCK)
-				printf("0x%s[0:%zu]: unmarshal errno %d\n", g.hex, lim, errno);
+			if (read || errno != EWOULDBLOCK)
+				printf("0x%s[0:%zu]: unmarshal read %zu and errno %d\n", g.hex, lim, read, errno);
+
 			errno = 0;
 		}
 
 		// size maximum:
-		for (size_t lim = 0; lim < len; lim++) {
-			colfer_size_max = lim;
+		for (colfer_size_max = 0; colfer_size_max < len; ++colfer_size_max) {
 			gen_o o = {0};
 			size_t read = gen_o_unmarshal(&o, buf, len);
-			if (read)
-				printf("0x%s: unmarshal success with %zu bytes and Colfer size maximum %zu\n", g.hex, read, lim);
-			if (errno != ERANGE)
-				printf("0x%s: unmarshal errno %d with Colfer size maximum %zu\n", g.hex, errno, lim);
+			if (read || errno != ERANGE)
+				printf("0x%s: unmarshal read %zu with errno %d for size maximum %zu\n", g.hex, read, errno, colfer_size_max);
+
 			errno = 0;
 		}
 		colfer_size_max = 16 * 1024 * 1024;

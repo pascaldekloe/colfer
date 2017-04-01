@@ -13,7 +13,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### Language Support
 
-* C, C99 compliant, C++11 compliant, WIP
+* C, C99 compliant, C++11 compliant
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
