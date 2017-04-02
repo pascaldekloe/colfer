@@ -146,8 +146,11 @@ type hole struct {
 }
 ```
 
-[See](https://gist.github.com/pascaldekloe/f5f15729cceefe430c9858d58e0dd1a3)
-what the generated code looks like.
+See what the generated code looks like in
+[C](https://gist.github.com/pascaldekloe/05e903f12a4f02a995f71d0c18872b65),
+[Go](https://gist.github.com/pascaldekloe/786fd46e6e4710c14fee7da1f480c2d4),
+[Java](https://gist.github.com/pascaldekloe/b54326e6b7c5e9f036911a8cbea6ccbf) or
+[JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
 The following table shows how Colfer data types are applied per language.
 
