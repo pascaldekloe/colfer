@@ -105,7 +105,7 @@ control. Modern developers may disagree and use the Maven plugin.
 <plugin>
 	<groupId>net.quies.colfer</groupId>
 	<artifactId>colfer-maven-plugin</artifactId>
-	<version>1.8</version>
+	<version>1.9</version>
 	<configuration>
 		<packagePrefix>com/example</packagePrefix>
 	</configuration>
