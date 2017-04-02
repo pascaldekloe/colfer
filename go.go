@@ -184,7 +184,7 @@ func (o *{{.NameTitle}}) Unmarshal(data []byte) (int, error) {
 	}
 eof:
 	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} size exceeds %d bytes", ColferSizeMax))
+		return 0, ColferMax(fmt.Sprintf("colfer: struct {{.String}} size exceeds %d bytes", ColferSizeMax))
 	}
 	return 0, io.EOF
 }
@@ -433,32 +433,26 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 	if x := o.{{.NameTitle}}; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
-		l += 2
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 {{else if eq .Type "uint64"}}
 	if x := o.{{.NameTitle}}; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-		l += 2
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 {{else if eq .Type "int32"}}
 	if v := o.{{.NameTitle}}; v != 0 {
-		l += 2
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 {{else if eq .Type "int64"}}
@@ -476,10 +470,11 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 {{else if eq .Type "float32"}}
  {{- if .TypeList}}
 	if x := len(o.{{.NameTitle}}); x != 0 {
-		l += 2 + x*4
-		for x >= 0x80 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2+x*4; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
  {{- else}}
@@ -490,10 +485,11 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 {{else if eq .Type "float64"}}
  {{- if .TypeList}}
 	if x := len(o.{{.NameTitle}}); x != 0 {
-		l += 2 + x*8
-		for x >= 0x80 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2+x*8; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
  {{- else}}
@@ -513,41 +509,40 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 	if x := len(o.{{.NameTitle}}); x != 0 {
  {{- if .TypeList}}
 		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
-		l += 2
 		for _, a := range o.{{.NameTitle}} {
 			x = len(a)
-			l += x
-			for x >= 0x80 {
-				x >>= 7
-				l++
+			if x > ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d bytes", ColferSizeMax))
 			}
-			l++
+			for l += x+1; x >= 0x80; l++ {
+				x >>= 7
+			}
+		}
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
  {{- else}}
-		l += x
-		for x >= 0x80 {
-			x >>= 7
-			l++
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d bytes", ColferSizeMax))
 		}
-		l += 2
+		for l += x+2; x >= 0x80; l++ {
+			x >>= 7
+		}
  {{- end}}
 	}
 {{else if .TypeList}}
 	if x := len(o.{{.NameTitle}}); x != 0 {
 		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
-		l += 2
 		for _, v := range o.{{.NameTitle}} {
 			if v == nil {
 				l++
@@ -555,16 +550,19 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			}
 			vl, err := v.MarshalLen()
 			if err != nil {
-				return -1, err
+				return 0, err
 			}
 			l += vl
+		}
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 {{else}}
 	if v := o.{{.NameTitle}}; v != nil {
 		vl, err := v.MarshalLen()
 		if err != nil {
-			return -1, err
+			return 0, err
 		}
 		l += vl + 1
 	}

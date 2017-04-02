@@ -364,32 +364,26 @@ func (o *O) MarshalLen() (int, error) {
 	if x := o.U32; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
-		l += 2
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 
 	if x := o.U64; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
-		l += 2
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 
 	if v := o.I32; v != 0 {
-		l += 2
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 
@@ -422,40 +416,38 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.S); x != 0 {
-		l += x
-		for x >= 0x80 {
-			x >>= 7
-			l++
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.s exceeds %d bytes", ColferSizeMax))
 		}
-		l += 2
+		for l += x + 2; x >= 0x80; l++ {
+			x >>= 7
+		}
 	}
 
 	if x := len(o.A); x != 0 {
-		l += x
-		for x >= 0x80 {
-			x >>= 7
-			l++
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.a exceeds %d bytes", ColferSizeMax))
 		}
-		l += 2
+		for l += x + 2; x >= 0x80; l++ {
+			x >>= 7
+		}
 	}
 
 	if v := o.O; v != nil {
 		vl, err := v.MarshalLen()
 		if err != nil {
-			return -1, err
+			return 0, err
 		}
 		l += vl + 1
 	}
 
 	if x := len(o.Os); x != 0 {
 		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field gen.o.os exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.os exceeds %d elements", ColferListMax))
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
-		l += 2
 		for _, v := range o.Os {
 			if v == nil {
 				l++
@@ -463,49 +455,54 @@ func (o *O) MarshalLen() (int, error) {
 			}
 			vl, err := v.MarshalLen()
 			if err != nil {
-				return -1, err
+				return 0, err
 			}
 			l += vl
+		}
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct gen.o size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 
 	if x := len(o.Ss); x != 0 {
 		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field gen.o.ss exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.ss exceeds %d elements", ColferListMax))
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
-		l += 2
 		for _, a := range o.Ss {
 			x = len(a)
-			l += x
-			for x >= 0x80 {
-				x >>= 7
-				l++
+			if x > ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.ss exceeds %d bytes", ColferSizeMax))
 			}
-			l++
+			for l += x + 1; x >= 0x80; l++ {
+				x >>= 7
+			}
+		}
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct gen.o size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 
 	if x := len(o.As); x != 0 {
 		if x > ColferListMax {
-			return -1, ColferMax(fmt.Sprintf("colfer: field gen.o.as exceeds %d elements", ColferListMax))
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.as exceeds %d elements", ColferListMax))
 		}
-		for x >= 0x80 {
+		for l += 2; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
-		l += 2
 		for _, a := range o.As {
 			x = len(a)
-			l += x
-			for x >= 0x80 {
-				x >>= 7
-				l++
+			if x > ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.as exceeds %d bytes", ColferSizeMax))
 			}
-			l++
+			for l += x + 1; x >= 0x80; l++ {
+				x >>= 7
+			}
+		}
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct gen.o size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 
@@ -520,18 +517,20 @@ func (o *O) MarshalLen() (int, error) {
 	}
 
 	if x := len(o.F32s); x != 0 {
-		l += 2 + x*4
-		for x >= 0x80 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.f32s exceeds %d elements", ColferListMax))
+		}
+		for l += 2 + x*4; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 
 	if x := len(o.F64s); x != 0 {
-		l += 2 + x*8
-		for x >= 0x80 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.o.f64s exceeds %d elements", ColferListMax))
+		}
+		for l += 2 + x*8; x >= 0x80; l++ {
 			x >>= 7
-			l++
 		}
 	}
 
@@ -1235,7 +1234,7 @@ func (o *O) Unmarshal(data []byte) (int, error) {
 	}
 eof:
 	if i >= ColferSizeMax {
-		return 0, ColferMax(fmt.Sprintf("colfer: gen.o size exceeds %d bytes", ColferSizeMax))
+		return 0, ColferMax(fmt.Sprintf("colfer: struct gen.o size exceeds %d bytes", ColferSizeMax))
 	}
 	return 0, io.EOF
 }

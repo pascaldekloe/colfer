@@ -274,10 +274,6 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			}
 			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
 		}
-		if (l > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
 	}
  {{- end}}
 {{else if eq .Type "float64"}}
@@ -292,10 +288,6 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 				return 0;
 			}
 			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
-		}
-		if (l > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
 		}
 	}
  {{- end}}
@@ -314,6 +306,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
  {{- if not .TypeList}}
 	{
 		size_t n = o->{{.NameNative}}.len;
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
 		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
 	}
  {{- else}}
@@ -327,6 +323,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			colfer_text* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) {
 				size_t len = a[i].len;
+				if (len > colfer_size_max) {
+					errno = EFBIG;
+					return 0;
+				}
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
@@ -341,6 +341,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
  {{- if not .TypeList}}
 	{
 		size_t n = o->{{.NameNative}}.len;
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
 		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
 	}
  {{- else}}
@@ -354,6 +358,10 @@ size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o) {
 			colfer_binary* a = o->{{.NameNative}}.list;
 			for (size_t i = 0; i < n; ++i) {
 				size_t len = a[i].len;
+				if (len > colfer_size_max) {
+					errno = EFBIG;
+					return 0;
+				}
 				for (l += len + 1; len > 127; len >>= 7, ++l);
 			}
 			for (l += 2; n > 127; n >>= 7, ++l);
