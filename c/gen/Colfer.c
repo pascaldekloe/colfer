@@ -70,13 +70,13 @@ size_t gen_o_marshal_len(const gen_o* o) {
 	if (o->f64 != 0.0) l += 9;
 
 	{
-		time_t s = o->t.sec;
-		time_t ns = o->t.nanos;
+		int_fast64_t s = o->t.sec;
+		int_fast64_t ns = o->t.nanos;
 		if (s || ns) {
-			const time_t nano = 1000000000;
+			static const int_fast64_t nano = 1000000000;
 			s += ns / nano;
 			if (ns % nano < 0) --s;
-			l += s >= (time_t) 1 << 32 || s < 0 ? 13 : 9;
+			l += s >= (int_fast64_t) 1 << 32 || s < 0 ? 13 : 9;
 		}
 	}
 
@@ -313,10 +313,10 @@ size_t gen_o_marshal(const gen_o* o, void* buf) {
 	}
 
 	{
-		time_t s = o->t.sec;
-		time_t ns = o->t.nanos;
+		int_fast64_t s = o->t.sec;
+		int_fast64_t ns = o->t.nanos;
 		if (s || ns) {
-			const time_t nano = 1000000000;
+			static const int_fast64_t nano = 1000000000;
 			s += ns / nano;
 			ns %= nano;
 			if (ns < 0) {

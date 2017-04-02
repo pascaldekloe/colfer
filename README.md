@@ -162,16 +162,15 @@ The following table shows how Colfer data types are applied per language.
 | int64		| int64_t	| int64		| long		| Number ‡	|
 | float32	| float		| float32	| float		| Number	|
 | float64	| double	| float64	| double	| Number	|
-| timestamp	| 2 × time_t	| Time ††	| Instant	| Date + Number	|
-| text		| char* †‡	| string	| String ‡‡	| String ‡‡	|
-| binary	| uint8_t* †‡ 	| []byte	| byte[]	| Uint8Array	|
-| list		| †‡		| slice		| array		| Array		|
+| timestamp	| 2 × int_fast64_t	| Time ††	| Instant	| Date + Number	|
+| text		| char*, size_t	| string	| String †‡	| String †‡	|
+| binary	| uint8_t*, size_t	| []byte	| byte[]	| Uint8Array	|
+| list		| struct*, size_t	| slice	| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)
 * †† timezone not preserved
-* †‡ struct of pointer + size_t
-* ‡‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
+* †‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
 
 Lists may contain floating points, text, binaries or data structures.
 

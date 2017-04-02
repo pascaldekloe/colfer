@@ -46,7 +46,7 @@ const struct golden golden_cases[] = {
 	{"067fefffffffffffff7f", {.f64 = 1.7976931348623157e+308}},
 	{"067ff80000000000007f", {.f64 = NAN}},
 	{"0755ef312a2e5da4e77f", {.t = {.sec = 1441739050, .nanos = 777888999}}},
-	{"870000000100000000000000007f", {.t = {.sec = (time_t) UINT32_MAX + 1}}},
+	{"870000000100000000000000007f", {.t = {.sec = (int_fast64_t) UINT32_MAX + 1}}},
 	{"87ffffffffffffffff2e5da4e77f", {.t = {.sec = -1, .nanos = 777888999}}},
 	{"87fffffff14f443f00000000007f", {.t = {.sec = -63094636800}}},
 	{"0801417f", {.s = {.utf8 = "A", .len = 1}}},

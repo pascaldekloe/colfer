@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
-#include <time.h>
 
 
 #if CHAR_BIT != 8
@@ -28,9 +27,9 @@ extern size_t colfer_list_max;
 
 typedef struct {
 	// sec is the Unix time.
-	time_t sec;
+	int_fast64_t sec;
 	// nanos is the nanosecond adjustment.
-	time_t nanos;
+	int_fast64_t nanos;
 } colfer_timestamp;
 
 // colfer_text is a UTF-8 CLOB.
