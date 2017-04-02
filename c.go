@@ -113,24 +113,24 @@ typedef struct {
 
 // colfer_text is a UTF-8 CLOB.
 typedef struct {
-	char* utf8;
+	char*  utf8;
 	size_t len;
 } colfer_text;
 
 // colfer_binary is a BLOB.
 typedef struct {
 	uint8_t* octets;
-	size_t len;
+	size_t   len;
 } colfer_binary;
 
 {{range .}}{{range .Structs}}
 typedef struct {{.NameNative}} {{.NameNative}};
 {{end}}{{end}}
-
 {{range .}}{{range .Structs}}
-{{.DocText "//"}}struct {{.NameNative}} {
+{{.DocText "// "}}
+struct {{.NameNative}} {
 {{- range .Fields}}
-{{.DocText "\t//"}}{{- if .TypeList}}
+{{.DocText "\t// "}}{{- if .TypeList}}
  {{- if eq .Type "float32"}}
 	struct {
 		float* list;
@@ -162,9 +162,9 @@ typedef struct {{.NameNative}} {{.NameNative}};
 {{- end}}
 };
 
-// {{.NameNative}}_marshal_len returns the Colfer serial octet size. When the
-// return is zero then errno is set to EFBIG to indicate a breach of either
-// colfer_size_max or colfer_list_max.
+// {{.NameNative}}_marshal_len returns the Colfer serial octet size.
+// When the return is zero then errno is set to EFBIG to indicate a breach of
+// either colfer_size_max or colfer_list_max.
 size_t {{.NameNative}}_marshal_len(const {{.NameNative}}* o);
 
 // {{.NameNative}}_marshal encodes o as Colfer into buf and returns the number
@@ -174,7 +174,6 @@ size_t {{.NameNative}}_marshal(const {{.NameNative}}* o, void* buf);
 // {{.NameNative}}_unmarshal decodes data as Colfer into o and returns the
 // number of octets read. The data is read up to a maximum of datalen or
 // colfer_size_max, whichever occurs first.
-//
 // When the return is zero then errno is set to one of the following 3 values:
 // EWOULDBLOCK on incomplete data, EFBIG on a breach of either colfer_size_max
 // or colfer_list_max and EILSEQ on schema mismatch.

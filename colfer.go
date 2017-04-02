@@ -251,14 +251,16 @@ func docText(docs []string, indent string) string {
 	}
 
 	var buf bytes.Buffer
-	for _, s := range docs {
-		if !strings.HasPrefix(s, "//") {
+	for i, s := range docs {
+		if i != 0 {
+			buf.WriteByte('\n')
+		}
+		if !strings.HasPrefix(s, "// ") {
 			continue
 		}
 
 		buf.WriteString(indent)
-		buf.WriteString(s[2:])
-		buf.WriteByte('\n')
+		buf.WriteString(s[3:])
 	}
 
 	return buf.String()
