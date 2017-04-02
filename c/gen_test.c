@@ -9,8 +9,8 @@
 const unsigned char hex_table[] = "0123456789abcdef";
 
 // hexstr maps data into buf as a null terminated hex string.
-void hexstr(char* buf, void* data, size_t datalen) {
-	uint8_t* p = data;
+void hexstr(char* buf, const void* data, size_t datalen) {
+	const uint8_t* p = data;
 	for (; datalen-- != 0; p++) {
 		uint8_t c = *p;
 		*buf++ = hex_table[c >> 4];

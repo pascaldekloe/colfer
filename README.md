@@ -163,7 +163,7 @@ The following table shows how Colfer data types are applied per language.
 | float32	| float		| float32	| float		| Number	|
 | float64	| double	| float64	| double	| Number	|
 | timestamp	| 2 × int_fast64_t	| Time ††	| Instant	| Date + Number	|
-| text		| char*, size_t	| string	| String †‡	| String †‡	|
+| text		| const char*, size_t	| string	| String †‡	| String †‡	|
 | binary	| uint8_t*, size_t	| []byte	| byte[]	| Uint8Array	|
 | list		| struct*, size_t	| slice	| array		| Array		|
 

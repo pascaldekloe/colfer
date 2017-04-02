@@ -112,8 +112,8 @@ typedef struct {
 
 // colfer_text is a UTF-8 CLOB.
 typedef struct {
-	char*  utf8;
-	size_t len;
+	const char*  utf8;
+	size_t       len;
 } colfer_text;
 
 // colfer_binary is a BLOB.
