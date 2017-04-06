@@ -5,3 +5,7 @@ go:
 
 sudo: required
 dist: trusty
+
+
+after_failure:
+  - cat java/maven/src/it/demo/build.log
