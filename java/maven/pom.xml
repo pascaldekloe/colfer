@@ -77,15 +77,6 @@
 </plugin>
 <plugin>
 	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-plugin-plugin</artifactId>
-	<version>3.5</version>
-	<configuration>
-		<!-- workaround issue MNG-5346 -->
-		<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-	</configuration>
-</plugin>
-<plugin>
-	<groupId>org.apache.maven.plugins</groupId>
 	<artifactId>maven-invoker-plugin</artifactId>
 	<version>1.10</version>
 	<executions>
