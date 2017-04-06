@@ -1015,6 +1015,7 @@ import java.nio.BufferUnderflowException;
 					System.arraycopy(buf, start, e, 0, size);
 					a[ai] = e;
 				}
+				this.{{.NameNative}} = a;
 
 				header = buf[i++];
 			}
