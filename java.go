@@ -1191,7 +1191,7 @@ import java.nio.BufferUnderflowException;
 {{- else if eq .Type "binary"}}
 			&& java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
 {{- else}}
-			&& this.{{.NameNative}} == null ? o.{{.NameNative}} == null : this.{{.NameNative}}.equals(o.{{.NameNative}})
+			&& (this.{{.NameNative}} == null ? o.{{.NameNative}} == null : this.{{.NameNative}}.equals(o.{{.NameNative}}))
 {{- end}}{{end}};
 	}
 {{if .HasBinaryList}}
