@@ -12,6 +12,7 @@ test: install
 	make -C go
 	make -C java
 	make -C rpc
+	mvn -f java/maven integration-test
 
 .PHONY: bench
 bench: install
@@ -28,3 +29,4 @@ build:
 clean:
 	go clean -i ./cmd/...
 	rm -fr build
+	mvn -f java/maven clean
