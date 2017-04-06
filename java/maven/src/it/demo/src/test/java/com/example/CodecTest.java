@@ -1,9 +1,10 @@
 package com.example;
 
-import com.example.demo.*;
+import com.example.demo.Course;
 
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -17,6 +18,7 @@ public class CodecTest {
 	public void pluginConfiguration() {
 		assertEquals("size maximum", 2048, Course.colferSizeMax);
 		assertEquals("list maximum", 99, Course.colferListMax);
+		assertTrue("super class interface", new Course() instanceof Colferable);
 	}
 
 	/** Runs a full serialiazation cycle. */

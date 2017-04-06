@@ -29,7 +29,9 @@ import java.util.Set;
 @Mojo(name="compile", defaultPhase=LifecyclePhase.GENERATE_SOURCES)
 public class CompileMojo extends AbstractMojo {
 
-/** The target language. */
+/**
+ * The target language.
+ */
 @Parameter(defaultValue="Java", required=true)
 String lang;
 
@@ -40,11 +42,15 @@ String lang;
 @Parameter(defaultValue="src/main/colfer", required=true)
 File[] schemas;
 
-/** Normalizes schemas on the fly. */
+/**
+ * Normalizes schemas on the fly.
+ */
 @Parameter
 boolean formatSchemas;
 
-/** Adds a package prefix. Use slash as a separator when nesting. */
+/**
+ * Adds a package prefix. Use slash as a separator when nesting.
+ */
 @Parameter
 String packagePrefix;
 
@@ -58,13 +64,22 @@ String sizeMax;
 
 /**
  * Sets the default upper limit for the number of elements in a
- * list. The expression is applied to the target language under the
- * name ColferListMax. (default "64 * 1024")
+ * list. The expression is applied to the target language under
+ * the name ColferListMax. (default "64 * 1024")
  */
 @Parameter
 String listMax;
 
-/** Use a specific destination base directory. */
+/**
+ * Makes all generated classes extend a super class. Use slash as
+ * a package separator. Java only.
+ */
+@Parameter
+String superClass;
+
+/**
+ * Use a specific destination base directory.
+ */
 @Parameter(defaultValue="${project.build.directory}/generated-sources/colfer", required=true)
 File sourceTarget;
 
@@ -103,6 +118,8 @@ throws IOException {
 		args.add("-s=" + sizeMax);
 	if (listMax != null)
 		args.add("-l=" + listMax);
+	if (superClass != null)
+		args.add("-x=" + superClass);
 	if (formatSchemas)
 		args.add("-f");
 	args.add(lang);

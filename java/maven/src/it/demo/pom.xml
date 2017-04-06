@@ -42,6 +42,7 @@
 		<goals><goal>compile</goal></goals>
 		<configuration>
 			<packagePrefix>com/example</packagePrefix>
+			<superClass>com/example/BeanParent</superClass>
 		</configuration>
 	</execution>
 	<execution>
