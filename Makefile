@@ -23,6 +23,7 @@ bench: install
 build:
 	GOARCH=amd64 GOOS=linux go build -o build/colf-linux ./cmd/colf
 	GOARCH=amd64 GOOS=darwin go build -o build/colf-darwin ./cmd/colf
+	GOARCH=amd64 GOOS=openbsd go build -o build/colf-openbsd ./cmd/colf
 	GOARCH=amd64 GOOS=windows go build -o build/colf.exe ./cmd/colf
 
 .PHONY: clean
