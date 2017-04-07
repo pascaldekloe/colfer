@@ -99,13 +99,13 @@ SEE ALSO
 
 
 It is recommended to commit the generated source code to the respective version
-control. Modern developers may disagree and use the Maven plugin.
+control. Modern developers may disagree and use the [Maven plugin](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
 
 ```xml
 <plugin>
 	<groupId>net.quies.colfer</groupId>
 	<artifactId>colfer-maven-plugin</artifactId>
-	<version>1.9</version>
+	<version>1.10</version>
 	<configuration>
 		<packagePrefix>com/example</packagePrefix>
 	</configuration>
