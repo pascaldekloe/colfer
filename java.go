@@ -1124,6 +1124,16 @@ import java.nio.BufferUnderflowException;
 	public void set{{.NameTitle}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
 		this.{{.NameNative}} = value;
 	}
+
+	/**
+	 * Sets {{.String}}.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public {{$class}} with{{.NameTitle}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
+		this.{{.NameNative}} = value;
+		return this;
+	}
 {{end}}
 	@Override
 	public final int hashCode() {

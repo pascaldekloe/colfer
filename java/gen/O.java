@@ -1052,6 +1052,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.b.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withB(boolean value) {
+		this.b = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.u32.
 	 * @return the value.
 	 */
@@ -1065,6 +1075,16 @@ public class O implements Serializable {
 	 */
 	public void setU32(int value) {
 		this.u32 = value;
+	}
+
+	/**
+	 * Sets gen.o.u32.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withU32(int value) {
+		this.u32 = value;
+		return this;
 	}
 
 	/**
@@ -1084,6 +1104,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.u64.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withU64(long value) {
+		this.u64 = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.i32.
 	 * @return the value.
 	 */
@@ -1097,6 +1127,16 @@ public class O implements Serializable {
 	 */
 	public void setI32(int value) {
 		this.i32 = value;
+	}
+
+	/**
+	 * Sets gen.o.i32.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withI32(int value) {
+		this.i32 = value;
+		return this;
 	}
 
 	/**
@@ -1116,6 +1156,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.i64.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withI64(long value) {
+		this.i64 = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.f32.
 	 * @return the value.
 	 */
@@ -1129,6 +1179,16 @@ public class O implements Serializable {
 	 */
 	public void setF32(float value) {
 		this.f32 = value;
+	}
+
+	/**
+	 * Sets gen.o.f32.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withF32(float value) {
+		this.f32 = value;
+		return this;
 	}
 
 	/**
@@ -1148,6 +1208,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.f64.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withF64(double value) {
+		this.f64 = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.t.
 	 * @return the value.
 	 */
@@ -1161,6 +1231,16 @@ public class O implements Serializable {
 	 */
 	public void setT(java.time.Instant value) {
 		this.t = value;
+	}
+
+	/**
+	 * Sets gen.o.t.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withT(java.time.Instant value) {
+		this.t = value;
+		return this;
 	}
 
 	/**
@@ -1180,6 +1260,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.s.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withS(String value) {
+		this.s = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.a.
 	 * @return the value.
 	 */
@@ -1193,6 +1283,16 @@ public class O implements Serializable {
 	 */
 	public void setA(byte[] value) {
 		this.a = value;
+	}
+
+	/**
+	 * Sets gen.o.a.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withA(byte[] value) {
+		this.a = value;
+		return this;
 	}
 
 	/**
@@ -1212,6 +1312,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.o.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withO(O value) {
+		this.o = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.os.
 	 * @return the value.
 	 */
@@ -1225,6 +1335,16 @@ public class O implements Serializable {
 	 */
 	public void setOs(O[] value) {
 		this.os = value;
+	}
+
+	/**
+	 * Sets gen.o.os.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withOs(O[] value) {
+		this.os = value;
+		return this;
 	}
 
 	/**
@@ -1244,6 +1364,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.ss.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withSs(String[] value) {
+		this.ss = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.as.
 	 * @return the value.
 	 */
@@ -1257,6 +1387,16 @@ public class O implements Serializable {
 	 */
 	public void setAs(byte[][] value) {
 		this.as = value;
+	}
+
+	/**
+	 * Sets gen.o.as.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withAs(byte[][] value) {
+		this.as = value;
+		return this;
 	}
 
 	/**
@@ -1276,6 +1416,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.u8.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withU8(byte value) {
+		this.u8 = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.u16.
 	 * @return the value.
 	 */
@@ -1289,6 +1439,16 @@ public class O implements Serializable {
 	 */
 	public void setU16(short value) {
 		this.u16 = value;
+	}
+
+	/**
+	 * Sets gen.o.u16.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withU16(short value) {
+		this.u16 = value;
+		return this;
 	}
 
 	/**
@@ -1308,6 +1468,16 @@ public class O implements Serializable {
 	}
 
 	/**
+	 * Sets gen.o.f32s.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withF32s(float[] value) {
+		this.f32s = value;
+		return this;
+	}
+
+	/**
 	 * Gets gen.o.f64s.
 	 * @return the value.
 	 */
@@ -1321,6 +1491,16 @@ public class O implements Serializable {
 	 */
 	public void setF64s(double[] value) {
 		this.f64s = value;
+	}
+
+	/**
+	 * Sets gen.o.f64s.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public O withF64s(double[] value) {
+		this.f64s = value;
+		return this;
 	}
 
 	@Override
