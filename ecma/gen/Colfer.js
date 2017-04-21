@@ -346,6 +346,8 @@ var gen = new function() {
 			header = data[i++];
 		}
 
+		var view = new DataView(data.buffer);
+
 		var readVarint = function() {
 			var pos = 0, result = 0;
 			while (pos != 8) {
@@ -386,7 +388,6 @@ var gen = new function() {
 			readHeader();
 		} else if (header == (2 | 128)) {
 			if (i + 8 > data.length) throw EOF;
-			var view = new DataView(data.buffer);
 			var x = view.getUint32(i) * 0x100000000;
 			x += view.getUint32(i + 4);
 			if (x > Number.MAX_SAFE_INTEGER)
@@ -436,7 +437,6 @@ var gen = new function() {
 
 		if (header == 7) {
 			if (i + 8 > data.length) throw EOF;
-			var view = new DataView(data.buffer);
 			var ms = view.getUint32(i) * 1000;
 			var ns = view.getUint32(i + 4);
 			ms += ns / 1E6;
@@ -451,7 +451,7 @@ var gen = new function() {
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
 
-			var int64 = new Uint8Array(data.subarray(i, i + 8));
+			var int64 = data.slice(i, i + 8);
 			if (int64[0] > 127) {	// two's complement
 				var carry = 1;
 				for (var j = 7; j >= 0; j--) {
@@ -462,11 +462,11 @@ var gen = new function() {
 			}
 			if (int64[0] != 0 || int64[1] > 31)
 				throw 'colfer: gen/O field t second value exceeds Number.MAX_SAFE_INTEGER';
-			var view = new DataView(int64.buffer);
-			var s = (view.getUint32(0) * 0x100000000) + view.getUint32(4);
+			var v = new DataView(int64.buffer);
+			var s = (v.getUint32(0) * 0x100000000) + v.getUint32(4);
 			if (data[i] > 127) s = -s;
 
-			var ns = new DataView(data.buffer).getUint32(i + 8);
+			var ns = view.getUint32(i + 8);
 			var ms = (s * 1E3);
 			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
 				throw 'colfer: gen/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
@@ -600,7 +600,6 @@ var gen = new function() {
 			if (i + l * 4 > data.length) throw EOF;
 
 			this.f32s = new Array(l);
-			var view = new DataView(data.buffer);
 			for (var n = 0; n < l; ++n) {
 				this.f32s[n] = view.getFloat32(i);
 				i += 4;
@@ -616,7 +615,6 @@ var gen = new function() {
 			if (i + l * 8 > data.length) throw EOF;
 
 			this.f64s = new Array(l);
-			var view = new DataView(data.buffer);
 			for (var n = 0; n < l; ++n) {
 				this.f64s[n] = view.getFloat64(i);
 				i += 8;
