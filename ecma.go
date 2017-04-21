@@ -557,16 +557,16 @@ const ecmaUnmarshal = `
 {{else if eq .Type "float32"}}
 		if (header == {{.Index}}) {
  {{- if .TypeList}}
-			var length = readVarint();
-			if (length < 0)
-				throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
-			if (length > colferListMax)
-				throw 'colfer: {{.String}} length ' + length + ' exceeds ' + colferListMax + ' elements';
-			if (i + length * 4 > data.length) throw EOF;
+			var l = readVarint();
+			if (l < 0) throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
+			if (l > colferListMax)
+				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
+			if (i + l * 4 > data.length) throw EOF;
 
+			this.{{.NameNative}} = new Array(l);
 			var view = new DataView(data.buffer);
-			while (--length >= 0) {
-				this.{{.NameNative}}.push(view.getFloat32(i));
+			for (var n = 0; n < l; ++n) {
+				this.{{.NameNative}}[n] = view.getFloat32(i);
 				i += 4;
 			}
  {{- else}}
@@ -579,16 +579,16 @@ const ecmaUnmarshal = `
 {{else if eq .Type "float64"}}
 		if (header == {{.Index}}) {
  {{- if .TypeList}}
-			var length = readVarint();
-			if (length < 0)
-				throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
-			if (length > colferListMax)
-				throw 'colfer: {{.String}} length ' + length + ' exceeds ' + colferListMax + ' elements';
-			if (i + length * 8 > data.length) throw EOF;
+			var l = readVarint();
+			if (l < 0) throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
+			if (l > colferListMax)
+				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
+			if (i + l * 8 > data.length) throw EOF;
 
+			this.{{.NameNative}} = new Array(l);
 			var view = new DataView(data.buffer);
-			while (--length >= 0) {
-				this.{{.NameNative}}.push(view.getFloat64(i));
+			for (var n = 0; n < l; ++n) {
+				this.{{.NameNative}}[n] = view.getFloat64(i);
 				i += 8;
 			}
  {{- else}}
@@ -650,21 +650,23 @@ const ecmaUnmarshal = `
 {{else if eq .Type "text"}}
 		if (header == {{.Index}}) {
  {{- if .TypeList}}
-			var length = readVarint();
-			if (length < 0)
-				throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
-			if (length > colferListMax)
-				throw 'colfer: {{.String}} length ' + length + ' exceeds ' + colferListMax + ' elements';
-			while (--length >= 0) {
+			var l = readVarint();
+			if (l < 0) throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
+			if (l > colferListMax)
+				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
+
+			this.{{.NameNative}} = new Array(l);
+			for (var n = 0; n < l; ++n) {
 				var size = readVarint();
 				if (size < 0)
 					throw 'colfer: {{.String}} element ' + this.{{.NameNative}}.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
 					throw 'colfer: {{.String}} element ' + this.{{.NameNative}}.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
-				var to = i + size;
-				if (to > data.length) throw EOF;
-				this.{{.NameNative}}.push(decodeUTF8(data.subarray(i, to)));
-				i = to;
+
+				var start = i;
+				i += size;
+				if (i > data.length) throw EOF;
+				this.{{.NameNative}}[n] = decodeUTF8(data.subarray(start, i));
 			}
  {{- else}}
 			var size = readVarint();
@@ -672,31 +674,34 @@ const ecmaUnmarshal = `
 				throw 'colfer: {{.String}} size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
 				throw 'colfer: {{.String}} size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
-			var to = i + size;
-			if (to > data.length) throw EOF;
-			this.{{.NameNative}} = decodeUTF8(data.subarray(i, to));
-			i = to;
+
+			var start = i;
+			i += size;
+			if (i > data.length) throw EOF;
+			this.{{.NameNative}} = decodeUTF8(data.subarray(start, i));
  {{- end}}
 			readHeader();
 		}
 {{else if eq .Type "binary"}}
 		if (header == {{.Index}}) {
  {{- if .TypeList}}
-			var length = readVarint();
-			if (length < 0)
-				throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
-			if (length > colferListMax)
-				throw 'colfer: {{.String}} length ' + length + ' exceeds ' + colferListMax + ' elements';
-			while (--length >= 0) {
+			var l = readVarint();
+			if (l < 0) throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
+			if (l > colferListMax)
+				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
+
+			this.{{.NameNative}} = new Array(l);
+			for (var n = 0; n < l; ++n) {
 				var size = readVarint();
 				if (size < 0)
 					throw 'colfer: {{.String}} element ' + this.{{.NameNative}}.length + ' size exceeds Number.MAX_SAFE_INTEGER';
 				else if (size > colferSizeMax)
 					throw 'colfer: {{.String}} element ' + this.{{.NameNative}}.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
-				var to = i + size;
-				if (to > data.length) throw EOF;
-				this.{{.NameNative}}.push(data.subarray(i, to));
-				i = to;
+
+				var start = i;
+				i += size;
+				if (i > data.length) throw EOF;
+				this.{{.NameNative}}[n] = data.slice(start, i);
 			}
  {{- else}}
 			var size = readVarint();
@@ -704,24 +709,25 @@ const ecmaUnmarshal = `
 				throw 'colfer: {{.String}} size exceeds Number.MAX_SAFE_INTEGER';
 			else if (size > colferSizeMax)
 				throw 'colfer: {{.String}} size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
-			var to = i + size;
-			if (to > data.length) throw EOF;
-			this.{{.NameNative}} = data.subarray(i, to);
-			i = to;
+
+			var start = i;
+			i += size;
+			if (i > data.length) throw EOF;
+			this.{{.NameNative}} = data.slice(start, i);
  {{- end}}
 			readHeader();
 		}
 {{else if .TypeList}}
 		if (header == {{.Index}}) {
-			var length = readVarint();
-			if (length < 0)
-				throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
-			if (length > colferListMax)
-				throw 'colfer: {{.String}} length ' + length + ' exceeds ' + colferListMax + ' elements';
-			while (--length >= 0) {
+			var l = readVarint();
+			if (l < 0) throw 'colfer: {{.String}} length exceeds Number.MAX_SAFE_INTEGER';
+			if (l > colferListMax)
+				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
+
+			for (var n = 0; n < l; ++n) {
 				var o = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}();
 				i += o.unmarshal(data.subarray(i));
-				this.{{.NameNative}}.push(o);
+				this.{{.NameNative}}[n] = o;
 			}
 			readHeader();
 		}
