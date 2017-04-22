@@ -119,8 +119,8 @@ var gen = new function() {
 			var seg = [4];
 			if (this.i64 < 0) {
 				seg[0] |= 128;
-				if (this.i64 < -Number.MAX_SAFE_INTEGER)
-					throw 'colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+				if (this.i64 < Number.MIN_SAFE_INTEGER)
+					throw 'colfer: gen/O field i64 exceeds Number.MIN_SAFE_INTEGER';
 				encodeVarint(seg, -this.i64);
 			} else {
 				if (this.i64 > Number.MAX_SAFE_INTEGER)
@@ -148,8 +148,6 @@ var gen = new function() {
 
 		if ((this.t && this.t.getTime()) || this.t_ns) {
 			var ms = this.t ? this.t.getTime() : 0;
-			if (ms < -Number.MAX_SAFE_INTEGER || ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: gen/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var s = ms / 1E3;
 
 			var ns = this.t_ns || 0;
@@ -437,46 +435,24 @@ var gen = new function() {
 
 		if (header == 7) {
 			if (i + 8 > data.length) throw EOF;
-			var ms = view.getUint32(i) * 1000;
+
+			var ms = view.getUint32(i) * 1E3;
 			var ns = view.getUint32(i + 4);
-			ms += ns / 1E6;
-			ns %= 1E6;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: gen/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
+			ms += Math.floor(ns / 1E6);
+			this.t = new Date(ms);
+			this.t_ns = ns % 1E6;
+
 			i += 8;
-			this.t = new Date();
-			this.t.setTime(ms);
-			this.t_ns = ns;
 			readHeader();
 		} else if (header == (7 | 128)) {
 			if (i + 12 > data.length) throw EOF;
 
-			var int64 = data.slice(i, i + 8);
-			if (int64[0] > 127) {	// two's complement
-				var carry = 1;
-				for (var j = 7; j >= 0; j--) {
-					var b = (int64[j] ^ 255) + carry;
-					int64[j] = b & 255;
-					carry = b >> 8;
-				}
-			}
-			if (int64[0] != 0 || int64[1] > 31)
-				throw 'colfer: gen/O field t second value exceeds Number.MAX_SAFE_INTEGER';
-			var v = new DataView(int64.buffer);
-			var s = (v.getUint32(0) * 0x100000000) + v.getUint32(4);
-			if (data[i] > 127) s = -s;
-
+			var ms = decodeInt64(data, i) * 1E3;
 			var ns = view.getUint32(i + 8);
-			var ms = (s * 1E3);
-			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: gen/O field t millisecond value exceeds Number.MAX_SAFE_INTEGER';
-			var msa = Math.floor(ns / 1E6);
-			if (msa > 0) {
-				if (s < 0) ms = (ms + 1000) - (1000 - msa);
-				else ms += msa;
-			}
-			this.t = new Date();
-			this.t.setTime(ms);
+			ms += Math.floor(ns / 1E6);
+			if (ms < -864E13 || ms > 864E13)
+				throw 'colfer: gen/ field t exceeds ECMA Date range';
+			this.t = new Date(ms);
 			this.t_ns = ns % 1E6;
 
 			i += 12;
@@ -637,6 +613,23 @@ var gen = new function() {
 		}
 		bytes.push(x&127);
 		return bytes;
+	}
+
+	function decodeInt64(data, i) {
+		var v = 0, j = i + 7, m = 1;
+		if (data[i] & 128) {
+			// two's complement
+			for (var carry = 1; j >= i; --j, m *= 256) {
+				var b = (data[j] ^ 255) + carry;
+				carry = b >> 8;
+				v += (b & 255) * m;
+			}
+			v = -v;
+		} else {
+			for (; j >= i; --j, m *= 256)
+				v += data[j] * m;
+		}
+		return v;
 	}
 
 	var encodeUTF8 = function(s) {

@@ -6,12 +6,6 @@ QUnit.test('constructor', function(assert) {
 });
 
 function newGoldenCases() {
-	var date1 = new Date(), date2 = new Date(), date3 = new Date(), date4 = new Date();
-	date1.setTime(1441739050777);
-	date2.setTime(0x100000000 * 1000);
-	date3.setTime(-223);
-	date4.setTime(-63094636800000);
-
 	return {
 		'7f': {},
 		'007f': {b: true},
@@ -48,10 +42,10 @@ function newGoldenCases() {
 		'0600000000000000017f': {f64: Number.MIN_VALUE},
 		'067fefffffffffffff7f': {f64: Number.MAX_VALUE},
 		'067ff80000000000007f': {f64: NaN},
-		'0755ef312a2e5da4e77f': {t: date1, t_ns: 888999},
-		'870000000100000000000000007f': {t: date2, t_ns: 0},
-		'87ffffffffffffffff2e5da4e77f': {t: date3, t_ns: 888999},
-		'87fffffff14f443f00000000007f': {t: date4, t_ns: 0},
+		'0755ef312a2e5da4e77f': {t: new Date(1441739050777), t_ns: 888999},
+		'87000007dba8218000000003e87f': {t: new Date(864E13), t_ns: 1000},
+		'87fffff82457de8000000003e97f': {t: new Date(-864E13), t_ns: 1001},
+		'87ffffffffffffffff2e5da4e77f': {t: new Date(-223), t_ns: 888999},
 		'0801417f': {s: 'A'},
 		'080261007f': {s: 'a\x00'},
 		'0809c280e0a080f09080807f': {s: '\u0080\u0800\u{10000}'},
@@ -93,7 +87,7 @@ QUnit.test('unmarshal', function(assert) {
 	var golden = newGoldenCases();
 	for (hex in golden) {
 		var want = golden[hex];
-		var desc = hex + ': ' + JSON.stringify(want)
+		var desc = hex + ': ' + JSON.stringify(want);
 		try {
 			var got = new gen.O();
 			got.unmarshal(decodeHex(hex));

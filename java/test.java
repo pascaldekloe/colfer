@@ -93,9 +93,9 @@ public class test {
 		newCase(goldenCases, "067fefffffffffffff7f").f64 = Double.MAX_VALUE;
 		newCase(goldenCases, "067ff80000000000007f").f64 = Double.NaN;
 		newCase(goldenCases, "0755ef312a2e5da4e77f").t = Instant.ofEpochSecond(1441739050L, 777888999);
-		newCase(goldenCases, "870000000100000000000000007f").t = Instant.ofEpochSecond(1L << 32, 0);
+		newCase(goldenCases, "87000007dba8218000000003e87f").t = Instant.ofEpochSecond((long) 864E10, 1000);
+		newCase(goldenCases, "87fffff82457de8000000003e97f").t = Instant.ofEpochSecond((long) -864E10, 1001);
 		newCase(goldenCases, "87ffffffffffffffff2e5da4e77f").t = Instant.ofEpochSecond(-1L, 777888999);
-		newCase(goldenCases, "87fffffff14f443f00000000007f").t = Instant.ofEpochSecond(-63094636800L, 0);
 		newCase(goldenCases, "0801417f").s = "A";
 		newCase(goldenCases, "080261007f").s = "a\0";
 		newCase(goldenCases, "0809c280e0a080f09080807f").s = "\u0080\u0800\ud800\udc00";

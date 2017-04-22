@@ -100,7 +100,24 @@ var {{.NameNative}} = new function() {
 		bytes.push(x&127);
 		return bytes;
 	}
-
+{{if .HasTimestamp}}
+	function decodeInt64(data, i) {
+		var v = 0, j = i + 7, m = 1;
+		if (data[i] & 128) {
+			// two's complement
+			for (var carry = 1; j >= i; --j, m *= 256) {
+				var b = (data[j] ^ 255) + carry;
+				carry = b >> 8;
+				v += (b & 255) * m;
+			}
+			v = -v;
+		} else {
+			for (; j >= i; --j, m *= 256)
+				v += data[j] * m;
+		}
+		return v;
+	}
+{{end}}
 	var encodeUTF8 = function(s) {
 		var i = 0;
 		var bytes = new Uint8Array(s.length * 4);
@@ -244,8 +261,8 @@ const ecmaMarshal = `
 			var seg = [4];
 			if (this.{{.NameNative}} < 0) {
 				seg[0] |= 128;
-				if (this.{{.NameNative}} < -Number.MAX_SAFE_INTEGER)
-					throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER';
+				if (this.{{.NameNative}} < Number.MIN_SAFE_INTEGER)
+					throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MIN_SAFE_INTEGER';
 				encodeVarint(seg, -this.{{.NameNative}});
 			} else {
 				if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
@@ -311,8 +328,6 @@ const ecmaMarshal = `
 {{else if eq .Type "timestamp"}}
 		if ((this.{{.NameNative}} && this.{{.NameNative}}.getTime()) || this.{{.NameNative}}_ns) {
 			var ms = this.{{.NameNative}} ? this.{{.NameNative}}.getTime() : 0;
-			if (ms < -Number.MAX_SAFE_INTEGER || ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} millisecond value exceeds Number.MAX_SAFE_INTEGER';
 			var s = ms / 1E3;
 
 			var ns = this.{{.NameNative}}_ns || 0;
@@ -600,46 +615,24 @@ const ecmaUnmarshal = `
 {{else if eq .Type "timestamp"}}
 		if (header == {{.Index}}) {
 			if (i + 8 > data.length) throw EOF;
-			var ms = view.getUint32(i) * 1000;
+
+			var ms = view.getUint32(i) * 1E3;
 			var ns = view.getUint32(i + 4);
-			ms += ns / 1E6;
-			ns %= 1E6;
-			if (ms > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} millisecond value exceeds Number.MAX_SAFE_INTEGER';
+			ms += Math.floor(ns / 1E6);
+			this.{{.NameNative}} = new Date(ms);
+			this.{{.NameNative}}_ns = ns % 1E6;
+
 			i += 8;
-			this.{{.NameNative}} = new Date();
-			this.{{.NameNative}}.setTime(ms);
-			this.{{.NameNative}}_ns = ns;
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
 			if (i + 12 > data.length) throw EOF;
 
-			var int64 = data.slice(i, i + 8);
-			if (int64[0] > 127) {	// two's complement
-				var carry = 1;
-				for (var j = 7; j >= 0; j--) {
-					var b = (int64[j] ^ 255) + carry;
-					int64[j] = b & 255;
-					carry = b >> 8;
-				}
-			}
-			if (int64[0] != 0 || int64[1] > 31)
-				throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} second value exceeds Number.MAX_SAFE_INTEGER';
-			var v = new DataView(int64.buffer);
-			var s = (v.getUint32(0) * 0x100000000) + v.getUint32(4);
-			if (data[i] > 127) s = -s;
-
+			var ms = decodeInt64(data, i) * 1E3;
 			var ns = view.getUint32(i + 8);
-			var ms = (s * 1E3);
-			if (Math.abs(ms) > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} millisecond value exceeds Number.MAX_SAFE_INTEGER';
-			var msa = Math.floor(ns / 1E6);
-			if (msa > 0) {
-				if (s < 0) ms = (ms + 1000) - (1000 - msa);
-				else ms += msa;
-			}
-			this.{{.NameNative}} = new Date();
-			this.{{.NameNative}}.setTime(ms);
+			ms += Math.floor(ns / 1E6);
+			if (ms < -864E13 || ms > 864E13)
+				throw 'colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds ECMA Date range';
+			this.{{.NameNative}} = new Date(ms);
 			this.{{.NameNative}}_ns = ns % 1E6;
 
 			i += 12;
