@@ -48,9 +48,9 @@ var gen = new function() {
 		// U16 tests unsigned 16-bit integers.
 		this.u16 = 0;
 		// F32s tests 32-bit floating point lists.
-		this.f32s = [];
+		this.f32s = new Float32Array(0);
 		// F64s tests 64-bit floating point lists.
-		this.f64s = [];
+		this.f64s = new Float64Array(0);
 
 		for (var p in init) this[p] = init[p];
 	}
@@ -374,7 +374,7 @@ var gen = new function() {
 			readHeader();
 		} else if (header == (1 | 128)) {
 			if (i + 4 > data.length) throw EOF;
-			this.u32 = new DataView(data.buffer).getUint32(i);
+			this.u32 = view.getUint32(i);
 			i += 4;
 			readHeader();
 		}
@@ -421,14 +421,14 @@ var gen = new function() {
 
 		if (header == 5) {
 			if (i + 4 > data.length) throw EOF;
-			this.f32 = new DataView(data.buffer).getFloat32(i);
+			this.f32 = view.getFloat32(i);
 			i += 4;
 			readHeader();
 		}
 
 		if (header == 6) {
 			if (i + 8 > data.length) throw EOF;
-			this.f64 = new DataView(data.buffer).getFloat64(i);
+			this.f64 = view.getFloat64(i);
 			i += 8;
 			readHeader();
 		}
@@ -575,7 +575,7 @@ var gen = new function() {
 				throw 'colfer: gen.o.f32s length ' + l + ' exceeds ' + colferListMax + ' elements';
 			if (i + l * 4 > data.length) throw EOF;
 
-			this.f32s = new Array(l);
+			this.f32s = new Float32Array(l);
 			for (var n = 0; n < l; ++n) {
 				this.f32s[n] = view.getFloat32(i);
 				i += 4;
@@ -590,7 +590,7 @@ var gen = new function() {
 				throw 'colfer: gen.o.f64s length ' + l + ' exceeds ' + colferListMax + ' elements';
 			if (i + l * 8 > data.length) throw EOF;
 
-			this.f64s = new Array(l);
+			this.f64s = new Float64Array(l);
 			for (var n = 0; n < l; ++n) {
 				this.f64s[n] = view.getFloat64(i);
 				i += 8;

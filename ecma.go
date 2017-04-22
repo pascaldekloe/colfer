@@ -75,14 +75,15 @@ var {{.NameNative}} = new function() {
 	this.{{.NameTitle}} = function(init) {
 {{- range .Fields}}
 {{.DocText "\t\t// "}}
-		this.{{.NameNative}} = {{if .TypeList}}[]
-{{- else if eq .Type "bool"}}false
-{{- else if eq .Type "timestamp"}}null;
+		this.{{.NameNative}} =
+{{- if .TypeList}} {{if eq .Type "float32"}}new Float32Array(0){{else if eq .Type "float64"}}new Float64Array(0){{else}}[]{{end}}
+{{- else if eq .Type "bool"}} false
+{{- else if eq .Type "timestamp"}} null;
 		this.{{.NameNative}}_ns = 0
-{{- else if eq .Type "text"}}''
-{{- else if eq .Type "binary"}}new Uint8Array(0)
-{{- else if .TypeRef}}null
-{{- else}}0
+{{- else if eq .Type "text"}} ''
+{{- else if eq .Type "binary"}} new Uint8Array(0)
+{{- else if .TypeRef}} null
+{{- else}} 0
 {{- end}};{{end}}
 
 		for (var p in init) this[p] = init[p];
@@ -526,7 +527,7 @@ const ecmaUnmarshal = `
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
 			if (i + 4 > data.length) throw EOF;
-			this.{{.NameNative}} = new DataView(data.buffer).getUint32(i);
+			this.{{.NameNative}} = view.getUint32(i);
 			i += 4;
 			readHeader();
 		}
@@ -579,14 +580,14 @@ const ecmaUnmarshal = `
 				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
 			if (i + l * 4 > data.length) throw EOF;
 
-			this.{{.NameNative}} = new Array(l);
+			this.{{.NameNative}} = new Float32Array(l);
 			for (var n = 0; n < l; ++n) {
 				this.{{.NameNative}}[n] = view.getFloat32(i);
 				i += 4;
 			}
  {{- else}}
 			if (i + 4 > data.length) throw EOF;
-			this.{{.NameNative}} = new DataView(data.buffer).getFloat32(i);
+			this.{{.NameNative}} = view.getFloat32(i);
 			i += 4;
  {{- end}}
 			readHeader();
@@ -600,14 +601,14 @@ const ecmaUnmarshal = `
 				throw 'colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements';
 			if (i + l * 8 > data.length) throw EOF;
 
-			this.{{.NameNative}} = new Array(l);
+			this.{{.NameNative}} = new Float64Array(l);
 			for (var n = 0; n < l; ++n) {
 				this.{{.NameNative}}[n] = view.getFloat64(i);
 				i += 8;
 			}
  {{- else}}
 			if (i + 8 > data.length) throw EOF;
-			this.{{.NameNative}} = new DataView(data.buffer).getFloat64(i);
+			this.{{.NameNative}} = view.getFloat64(i);
 			i += 8;
  {{- end}}
 			readHeader();
