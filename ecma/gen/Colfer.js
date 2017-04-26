@@ -5,6 +5,10 @@
 var gen = new function() {
 	const EOF = 'colfer: EOF';
 
+	function fail(reason) {
+		throw new Error(reason);
+	}
+
 	// The upper limit for serial byte sizes.
 	var colferSizeMax = 16 * 1024 * 1024;
 	// The upper limit for the number of elements in a list.
@@ -67,7 +71,7 @@ var gen = new function() {
 
 		if (this.u32) {
 			if (this.u32 > 4294967295 || this.u32 < 0)
-				throw 'colfer: gen/O field u32 out of reach: ' + this.u32;
+				fail('colfer: gen/O field u32 out of reach: ' + this.u32);
 			if (this.u32 < 0x200000) {
 				var seg = [1];
 				encodeVarint(seg, this.u32);
@@ -83,9 +87,9 @@ var gen = new function() {
 
 		if (this.u64) {
 			if (this.u64 < 0)
-				throw 'colfer: gen/O field u64 out of reach: ' + this.u64;
+				fail('colfer: gen/O field u64 out of reach: ' + this.u64);
 			if (this.u64 > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+				fail('colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER');
 			if (this.u64 < 0x2000000000000) {
 				var seg = [2];
 				encodeVarint(seg, this.u64);
@@ -105,11 +109,11 @@ var gen = new function() {
 			if (this.i32 < 0) {
 				seg[0] |= 128;
 				if (this.i32 < -2147483648)
-					throw 'colfer: gen/O field i32 exceeds 32-bit range';
+					fail('colfer: gen/O field i32 exceeds 32-bit range');
 				encodeVarint(seg, -this.i32);
 			} else {
 				if (this.i32 > 2147483647)
-					throw 'colfer: gen/O field i32 exceeds 32-bit range';
+					fail('colfer: gen/O field i32 exceeds 32-bit range');
 				encodeVarint(seg, this.i32);
 			}
 			segs.push(seg);
@@ -120,11 +124,11 @@ var gen = new function() {
 			if (this.i64 < 0) {
 				seg[0] |= 128;
 				if (this.i64 < Number.MIN_SAFE_INTEGER)
-					throw 'colfer: gen/O field i64 exceeds Number.MIN_SAFE_INTEGER';
+					fail('colfer: gen/O field i64 exceeds Number.MIN_SAFE_INTEGER');
 				encodeVarint(seg, -this.i64);
 			} else {
 				if (this.i64 > Number.MAX_SAFE_INTEGER)
-					throw 'colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+					fail('colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER');
 				encodeVarint(seg, this.i64);
 			}
 			segs.push(seg);
@@ -132,7 +136,7 @@ var gen = new function() {
 
 		if (this.f32 || Number.isNaN(this.f32)) {
 			if (this.f32 > 3.4028234663852886E38 || this.f32 < -3.4028234663852886E38)
-				throw 'colfer: gen/O field f32 exceeds 32-bit range';
+				fail('colfer: gen/O field f32 exceeds 32-bit range');
 			var bytes = new Uint8Array(5);
 			bytes[0] = 5;
 			new DataView(bytes.buffer).setFloat32(1, this.f32);
@@ -152,7 +156,7 @@ var gen = new function() {
 
 			var ns = this.t_ns || 0;
 			if (ns < 0 || ns >= 1E6)
-				throw 'colfer: gen/O field t_ns not in range (0, 1ms>';
+				fail('colfer: gen/O field t_ns not in range (0, 1ms>');
 			var msf = ms % 1E3;
 			if (ms < 0 && msf) {
 				s--
@@ -213,7 +217,7 @@ var gen = new function() {
 		if (this.os && this.os.length) {
 			var a = this.os;
 			if (a.length > colferListMax)
-				throw 'colfer: gen.o.os length exceeds colferListMax';
+				fail('colfer: gen.o.os length exceeds colferListMax');
 			var seg = [11];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -230,7 +234,7 @@ var gen = new function() {
 		if (this.ss && this.ss.length) {
 			var a = this.ss;
 			if (a.length > colferListMax)
-				throw 'colfer: gen.o.ss length exceeds colferListMax';
+				fail('colfer: gen.o.ss length exceeds colferListMax');
 			var seg = [12];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -251,7 +255,7 @@ var gen = new function() {
 		if (this.as && this.as.length) {
 			var a = this.as;
 			if (a.length > colferListMax)
-				throw 'colfer: gen.o.as length exceeds colferListMax';
+				fail('colfer: gen.o.as length exceeds colferListMax');
 			var seg = [13];
 			encodeVarint(seg, a.length);
 			segs.push(seg);
@@ -270,13 +274,13 @@ var gen = new function() {
 
 		if (this.u8) {
 			if (this.u8 > 255 || this.u8 < 0)
-				throw 'colfer: gen/O field u8 out of reach: ' + this.u8;
+				fail('colfer: gen/O field u8 out of reach: ' + this.u8);
 			segs.push([14, this.u8]);
 		}
 
 		if (this.u16) {
 			if (this.u16 > 65535 || this.u16 < 0)
-				throw 'colfer: gen/O field u16 out of reach: ' + this.u16;
+				fail('colfer: gen/O field u16 out of reach: ' + this.u16);
 			if (this.u16 < 256)
 				segs.push([15 | 128, this.u16]);
 			else
@@ -285,7 +289,7 @@ var gen = new function() {
 
 		if (this.f32s && this.f32s.length) {
 			if (this.f32s.length > colferListMax)
-				throw 'colfer: gen.o.f32s length exceeds colferListMax';
+				fail('colfer: gen.o.f32s length exceeds colferListMax');
 			var seg = [16];
 			encodeVarint(seg, this.f32s.length);
 			segs.push(seg);
@@ -296,14 +300,14 @@ var gen = new function() {
 			var view = new DataView(bytes.buffer);
 			this.f32s.forEach(function(f, i) {
 				if (f > 3.4028234663852886E38 || f < -3.4028234663852886E38)
-					throw 'colfer: gen.o.f32s[' + i + '] exceeds 32-bit range';
+					fail('colfer: gen.o.f32s[' + i + '] exceeds 32-bit range');
 				view.setFloat32(i * 4, f);
 			});
 		}
 
 		if (this.f64s && this.f64s.length) {
 			if (this.f64s.length > colferListMax)
-				throw 'colfer: gen.o.f64s length exceeds colferListMax';
+				fail('colfer: gen.o.f64s length exceeds colferListMax');
 			var seg = [17];
 			encodeVarint(seg, this.f64s.length);
 			segs.push(seg);
@@ -322,7 +326,7 @@ var gen = new function() {
 			size += seg.length;
 		});
 		if (size > colferSizeMax)
-			throw 'colfer: gen.o serial size ' + size + ' exceeds ' + colferListMax + ' bytes';
+			fail('colfer: gen.o serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
 
 		var bytes = new Uint8Array(size);
 		var i = 0;
@@ -336,11 +340,11 @@ var gen = new function() {
 
 	// Deserializes the object from an Uint8Array and returns the number of bytes read.
 	this.O.prototype.unmarshal = function(data) {
-		if (!data || ! data.length) throw EOF;
+		if (!data || ! data.length) fail(EOF);
 		var header = data[0];
 		var i = 1;
 		var readHeader = function() {
-			if (i >= data.length) throw EOF;
+			if (i >= data.length) fail(EOF);
 			header = data[i++];
 		}
 
@@ -357,7 +361,7 @@ var gen = new function() {
 					if (result > Number.MAX_SAFE_INTEGER) break;
 					return result;
 				}
-				if (pos == data.length) throw EOF;
+				if (pos == data.length) fail(EOF);
 			}
 			return -1;
 		}
@@ -369,11 +373,11 @@ var gen = new function() {
 
 		if (header == 1) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field u32 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field u32 exceeds Number.MAX_SAFE_INTEGER');
 			this.u32 = x;
 			readHeader();
 		} else if (header == (1 | 128)) {
-			if (i + 4 > data.length) throw EOF;
+			if (i + 4 > data.length) fail(EOF);
 			this.u32 = view.getUint32(i);
 			i += 4;
 			readHeader();
@@ -381,15 +385,15 @@ var gen = new function() {
 
 		if (header == 2) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER');
 			this.u64 = x;
 			readHeader();
 		} else if (header == (2 | 128)) {
-			if (i + 8 > data.length) throw EOF;
+			if (i + 8 > data.length) fail(EOF);
 			var x = view.getUint32(i) * 0x100000000;
 			x += view.getUint32(i + 4);
 			if (x > Number.MAX_SAFE_INTEGER)
-				throw 'colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER';
+				fail('colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER');
 			this.u64 = x;
 			i += 8;
 			readHeader();
@@ -397,44 +401,44 @@ var gen = new function() {
 
 		if (header == 3) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field i32 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field i32 exceeds Number.MAX_SAFE_INTEGER');
 			this.i32 = x;
 			readHeader();
 		} else if (header == (3 | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field i32 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field i32 exceeds Number.MAX_SAFE_INTEGER');
 			this.i32 = -1 * x;
 			readHeader();
 		}
 
 		if (header == 4) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER');
 			this.i64 = x;
 			readHeader();
 		} else if (header == (4 | 128)) {
 			var x = readVarint();
-			if (x < 0) throw 'colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER';
+			if (x < 0) fail('colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER');
 			this.i64 = -1 * x;
 			readHeader();
 		}
 
 		if (header == 5) {
-			if (i + 4 > data.length) throw EOF;
+			if (i + 4 > data.length) fail(EOF);
 			this.f32 = view.getFloat32(i);
 			i += 4;
 			readHeader();
 		}
 
 		if (header == 6) {
-			if (i + 8 > data.length) throw EOF;
+			if (i + 8 > data.length) fail(EOF);
 			this.f64 = view.getFloat64(i);
 			i += 8;
 			readHeader();
 		}
 
 		if (header == 7) {
-			if (i + 8 > data.length) throw EOF;
+			if (i + 8 > data.length) fail(EOF);
 
 			var ms = view.getUint32(i) * 1E3;
 			var ns = view.getUint32(i + 4);
@@ -445,13 +449,13 @@ var gen = new function() {
 			i += 8;
 			readHeader();
 		} else if (header == (7 | 128)) {
-			if (i + 12 > data.length) throw EOF;
+			if (i + 12 > data.length) fail(EOF);
 
 			var ms = decodeInt64(data, i) * 1E3;
 			var ns = view.getUint32(i + 8);
 			ms += Math.floor(ns / 1E6);
 			if (ms < -864E13 || ms > 864E13)
-				throw 'colfer: gen/ field t exceeds ECMA Date range';
+				fail('colfer: gen/ field t exceeds ECMA Date range');
 			this.t = new Date(ms);
 			this.t_ns = ns % 1E6;
 
@@ -462,13 +466,13 @@ var gen = new function() {
 		if (header == 8) {
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: gen.o.s size exceeds Number.MAX_SAFE_INTEGER';
+				fail('colfer: gen.o.s size exceeds Number.MAX_SAFE_INTEGER');
 			else if (size > colferSizeMax)
-				throw 'colfer: gen.o.s size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+				fail('colfer: gen.o.s size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes');
 
 			var start = i;
 			i += size;
-			if (i > data.length) throw EOF;
+			if (i > data.length) fail(EOF);
 			this.s = decodeUTF8(data.subarray(start, i));
 			readHeader();
 		}
@@ -476,13 +480,13 @@ var gen = new function() {
 		if (header == 9) {
 			var size = readVarint();
 			if (size < 0)
-				throw 'colfer: gen.o.a size exceeds Number.MAX_SAFE_INTEGER';
+				fail('colfer: gen.o.a size exceeds Number.MAX_SAFE_INTEGER');
 			else if (size > colferSizeMax)
-				throw 'colfer: gen.o.a size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+				fail('colfer: gen.o.a size ' + size + ' exceeds ' + colferSizeMax + ' bytes');
 
 			var start = i;
 			i += size;
-			if (i > data.length) throw EOF;
+			if (i > data.length) fail(EOF);
 			this.a = data.slice(start, i);
 			readHeader();
 		}
@@ -496,9 +500,9 @@ var gen = new function() {
 
 		if (header == 11) {
 			var l = readVarint();
-			if (l < 0) throw 'colfer: gen.o.os length exceeds Number.MAX_SAFE_INTEGER';
+			if (l < 0) fail('colfer: gen.o.os length exceeds Number.MAX_SAFE_INTEGER');
 			if (l > colferListMax)
-				throw 'colfer: gen.o.os length ' + l + ' exceeds ' + colferListMax + ' elements';
+				fail('colfer: gen.o.os length ' + l + ' exceeds ' + colferListMax + ' elements');
 
 			for (var n = 0; n < l; ++n) {
 				var o = new gen.O();
@@ -510,21 +514,21 @@ var gen = new function() {
 
 		if (header == 12) {
 			var l = readVarint();
-			if (l < 0) throw 'colfer: gen.o.ss length exceeds Number.MAX_SAFE_INTEGER';
+			if (l < 0) fail('colfer: gen.o.ss length exceeds Number.MAX_SAFE_INTEGER');
 			if (l > colferListMax)
-				throw 'colfer: gen.o.ss length ' + l + ' exceeds ' + colferListMax + ' elements';
+				fail('colfer: gen.o.ss length ' + l + ' exceeds ' + colferListMax + ' elements');
 
 			this.ss = new Array(l);
 			for (var n = 0; n < l; ++n) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: gen.o.ss element ' + this.ss.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					fail('colfer: gen.o.ss element ' + this.ss.length + ' size exceeds Number.MAX_SAFE_INTEGER');
 				else if (size > colferSizeMax)
-					throw 'colfer: gen.o.ss element ' + this.ss.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					fail('colfer: gen.o.ss element ' + this.ss.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes');
 
 				var start = i;
 				i += size;
-				if (i > data.length) throw EOF;
+				if (i > data.length) fail(EOF);
 				this.ss[n] = decodeUTF8(data.subarray(start, i));
 			}
 			readHeader();
@@ -532,48 +536,48 @@ var gen = new function() {
 
 		if (header == 13) {
 			var l = readVarint();
-			if (l < 0) throw 'colfer: gen.o.as length exceeds Number.MAX_SAFE_INTEGER';
+			if (l < 0) fail('colfer: gen.o.as length exceeds Number.MAX_SAFE_INTEGER');
 			if (l > colferListMax)
-				throw 'colfer: gen.o.as length ' + l + ' exceeds ' + colferListMax + ' elements';
+				fail('colfer: gen.o.as length ' + l + ' exceeds ' + colferListMax + ' elements');
 
 			this.as = new Array(l);
 			for (var n = 0; n < l; ++n) {
 				var size = readVarint();
 				if (size < 0)
-					throw 'colfer: gen.o.as element ' + this.as.length + ' size exceeds Number.MAX_SAFE_INTEGER';
+					fail('colfer: gen.o.as element ' + this.as.length + ' size exceeds Number.MAX_SAFE_INTEGER');
 				else if (size > colferSizeMax)
-					throw 'colfer: gen.o.as element ' + this.as.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes';
+					fail('colfer: gen.o.as element ' + this.as.length + ' size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes');
 
 				var start = i;
 				i += size;
-				if (i > data.length) throw EOF;
+				if (i > data.length) fail(EOF);
 				this.as[n] = data.slice(start, i);
 			}
 			readHeader();
 		}
 
 		if (header == 14) {
-			if (i + 1 >= data.length) throw EOF;
+			if (i + 1 >= data.length) fail(EOF);
 			this.u8 = data[i++];
 			header = data[i++];
 		}
 
 		if (header == 15) {
-			if (i + 2 >= data.length) throw EOF;
+			if (i + 2 >= data.length) fail(EOF);
 			this.u16 = (data[i++] << 8) | data[i++];
 			header = data[i++];
 		} else if (header == (15 | 128)) {
-			if (i + 1 >= data.length) throw EOF;
+			if (i + 1 >= data.length) fail(EOF);
 			this.u16 = data[i++];
 			header = data[i++];
 		}
 
 		if (header == 16) {
 			var l = readVarint();
-			if (l < 0) throw 'colfer: gen.o.f32s length exceeds Number.MAX_SAFE_INTEGER';
+			if (l < 0) fail('colfer: gen.o.f32s length exceeds Number.MAX_SAFE_INTEGER');
 			if (l > colferListMax)
-				throw 'colfer: gen.o.f32s length ' + l + ' exceeds ' + colferListMax + ' elements';
-			if (i + l * 4 > data.length) throw EOF;
+				fail('colfer: gen.o.f32s length ' + l + ' exceeds ' + colferListMax + ' elements');
+			if (i + l * 4 > data.length) fail(EOF);
 
 			this.f32s = new Float32Array(l);
 			for (var n = 0; n < l; ++n) {
@@ -585,10 +589,10 @@ var gen = new function() {
 
 		if (header == 17) {
 			var l = readVarint();
-			if (l < 0) throw 'colfer: gen.o.f64s length exceeds Number.MAX_SAFE_INTEGER';
+			if (l < 0) fail('colfer: gen.o.f64s length exceeds Number.MAX_SAFE_INTEGER');
 			if (l > colferListMax)
-				throw 'colfer: gen.o.f64s length ' + l + ' exceeds ' + colferListMax + ' elements';
-			if (i + l * 8 > data.length) throw EOF;
+				fail('colfer: gen.o.f64s length ' + l + ' exceeds ' + colferListMax + ' elements');
+			if (i + l * 8 > data.length) fail(EOF);
 
 			this.f64s = new Float64Array(l);
 			for (var n = 0; n < l; ++n) {
@@ -598,9 +602,9 @@ var gen = new function() {
 			readHeader();
 		}
 
-		if (header != 127) throw 'colfer: unknown header at byte ' + (i - 1);
+		if (header != 127) fail('colfer: unknown header at byte ' + (i - 1));
 		if (i > colferSizeMax)
-			throw 'colfer: gen.o serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes';
+			fail('colfer: gen.o serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes');
 		return i;
 	}
 
@@ -645,9 +649,9 @@ var gen = new function() {
 				bytes[i++] = c >> 6 | 192;
 			} else {
 				if (c > 0xd7ff && c < 0xdc00) {
-					if (++ci == s.length) throw 'UTF-8 encode: incomplete surrogate pair';
+					if (++ci == s.length) fail('UTF-8 encode: incomplete surrogate pair');
 					var c2 = s.charCodeAt(ci);
-					if (c2 < 0xdc00 || c2 > 0xdfff) throw 'UTF-8 encode: second char code 0x' + c2.toString(16) + ' at index ' + ci + ' in surrogate pair out of range';
+					if (c2 < 0xdc00 || c2 > 0xdfff) fail('UTF-8 encode: second char code 0x' + c2.toString(16) + ' at index ' + ci + ' in surrogate pair out of range');
 					c = 0x10000 + ((c & 0x03ff) << 10) + (c2 & 0x03ff);
 					bytes[i++] = c >> 18 | 240;
 					bytes[i++] = c>> 12 & 63 | 128;
@@ -668,15 +672,15 @@ var gen = new function() {
 			var c = bytes[i++];
 			if (c > 127) {
 				if (c > 191 && c < 224) {
-					if (i >= bytes.length) throw 'UTF-8 decode: incomplete 2-byte sequence';
+					if (i >= bytes.length) fail('UTF-8 decode: incomplete 2-byte sequence');
 					c = (c & 31) << 6 | bytes[i] & 63;
 				} else if (c > 223 && c < 240) {
-					if (i + 1 >= bytes.length) throw 'UTF-8 decode: incomplete 3-byte sequence';
+					if (i + 1 >= bytes.length) fail('UTF-8 decode: incomplete 3-byte sequence');
 					c = (c & 15) << 12 | (bytes[i] & 63) << 6 | bytes[++i] & 63;
 				} else if (c > 239 && c < 248) {
-					if (i+2 >= bytes.length) throw 'UTF-8 decode: incomplete 4-byte sequence';
+					if (i+2 >= bytes.length) fail('UTF-8 decode: incomplete 4-byte sequence');
 					c = (c & 7) << 18 | (bytes[i] & 63) << 12 | (bytes[++i] & 63) << 6 | bytes[++i] & 63;
-				} else throw 'UTF-8 decode: unknown multibyte start 0x' + c.toString(16) + ' at index ' + (i - 1);
+				} else fail('UTF-8 decode: unknown multibyte start 0x' + c.toString(16) + ' at index ' + (i - 1));
 				++i;
 			}
 
@@ -685,7 +689,7 @@ var gen = new function() {
 				c -= 0x10000;
 				s += String.fromCharCode(c >> 10 | 0xd800)
 				s += String.fromCharCode(c & 0x3FF | 0xdc00)
-			} else throw 'UTF-8 decode: code point 0x' + c.toString(16) + ' exceeds UTF-16 reach';
+			} else fail('UTF-8 decode: code point 0x' + c.toString(16) + ' exceeds UTF-16 reach');
 		}
 		return s;
 	}
