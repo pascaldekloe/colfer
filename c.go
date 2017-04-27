@@ -982,15 +982,15 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			errno = enderr;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		float* fp = malloc(n * 4);
 		o->{{.NameNative}}.list = fp;
-		o->{{.NameNative}}.len = n;
 #ifdef COLFER_ENDIAN
 		memcpy(fp, p, n * 4);
 		p += n * 4;
 #else
-		for (; n != 0; --n, ++fp) {
+		for (; n; --n, ++fp) {
 			uint_fast32_t x = *p++;
 			x <<= 24;
 			x |= (uint_fast32_t) *p++ << 16;
@@ -1056,15 +1056,15 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			errno = enderr;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		double* fp = malloc(n * 8);
-		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = fp;
 #ifdef COLFER_ENDIAN
 		memcpy(fp, p, n * 8);
 		p += n * 8;
 #else
-		for (; n != 0; --n, ++fp) {
+		for (; n; --n, ++fp) {
 			uint_fast64_t x = *p++;
 			x <<= 56;
 			x |= (uint_fast64_t) *p++ << 48;
@@ -1140,16 +1140,22 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
 		if (p+n >= end) {
 			errno = enderr;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		void* a = malloc(n);
-		memcpy(a, p, n);
-		p += n;
-		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.utf8 = (char*) a;
+		if (n) {
+			memcpy(a, p, n);
+			p += n;
+		}
 		header = *p++;
 	}
  {{- else}}
@@ -1178,11 +1184,11 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			errno = EFBIG;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		colfer_text* text = malloc(n * sizeof(colfer_text));
-		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = text;
-		for (; n != 0; --n, ++text) {
+		for (; n; --n, ++text) {
 			if (p >= end) {
 				errno = enderr;
 				return 0;
@@ -1203,16 +1209,22 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 					len |= (c & 127) << shift;
 				}
 			}
+			if (len > colfer_size_max) {
+				errno = EFBIG;
+				return 0;
+			}
 			if (p+len >= end) {
 				errno = enderr;
 				return 0;
 			}
+			text->len = len;
 
 			char* a = malloc(len);
-			memcpy(a, p, len);
-			p += len;
-			text->len = len;
 			text->utf8 = a;
+			if (len) {
+				memcpy(a, p, len);
+				p += len;
+			}
 		}
 
 		if (p >= end) {
@@ -1245,16 +1257,22 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 				n |= (c & 127) << shift;
 			}
 		}
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
 		if (p+n >= end) {
 			errno = enderr;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		void* a = malloc(n);
-		memcpy(a, p, n);
-		p += n;
-		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.octets = (uint8_t*) a;
+		if (n) {
+			memcpy(a, p, n);
+			p += n;
+		}
 		header = *p++;
 	}
  {{- else}}
@@ -1283,11 +1301,11 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 			errno = EFBIG;
 			return 0;
 		}
+		o->{{.NameNative}}.len = n;
 
 		colfer_binary* binary = malloc(n * sizeof(colfer_binary));
-		o->{{.NameNative}}.len = n;
 		o->{{.NameNative}}.list = binary;
-		for (; n != 0; --n, ++binary) {
+		for (; n; --n, ++binary) {
 			if (p >= end) {
 				errno = enderr;
 				return 0;
@@ -1308,16 +1326,22 @@ size_t {{.NameNative}}_unmarshal({{.NameNative}}* o, const void* data, size_t da
 					len |= (c & 127) << shift;
 				}
 			}
+			if (len > colfer_size_max) {
+				errno = EFBIG;
+				return 0;
+			}
 			if (p+len >= end) {
 				errno = enderr;
 				return 0;
 			}
+			binary->len = len;
 
 			uint8_t* a = malloc(len);
-			memcpy(a, p, len);
-			p += len;
-			binary->len = len;
 			binary->octets = a;
+			if (len) {
+				memcpy(a, p, len);
+				p += len;
+			}
 		}
 
 		if (p >= end) {
