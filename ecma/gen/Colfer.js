@@ -348,7 +348,7 @@ var gen = new function() {
 			header = data[i++];
 		}
 
-		var view = new DataView(data.buffer);
+		var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
 		var readVarint = function() {
 			var pos = 0, result = 0;
