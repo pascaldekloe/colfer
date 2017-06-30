@@ -21,7 +21,7 @@ func IsJavaKeyword(s string) bool {
 }
 
 // GenerateJava writes the code into the respective ".java" files.
-func GenerateJava(basedir string, packages []*Package) error {
+func GenerateJava(basedir string, packages Packages) error {
 	packageTemplate := template.New("java-package")
 	template.Must(packageTemplate.Parse(javaPackage))
 	codeTemplate := template.New("java-code")

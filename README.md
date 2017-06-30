@@ -13,7 +13,7 @@ The format is inspired by Proto**col** Buf**fer**.
 
 #### Language Support
 
-* C, C99 compliant, C++11 compliant
+* C, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
@@ -154,21 +154,21 @@ See what the generated code looks like in
 
 The following table shows how Colfer data types are applied per language.
 
-| Colfer	| C		| Go		| Java		| JavaScript	|
-|:--------------|:--------------|:--------------|:--------------|:--------------|
-| bool		| char		| bool		| boolean	| Boolean	|
-| uint8		| uint8_t	| uint8		| byte †	| Number	|
-| uint16	| uint16_t	| uint16	| short †	| Number	|
-| uint32	| uint32_t	| uint32	| int †		| Number	|
-| uint64	| uint64_t	| uint64	| long †	| Number ‡	|
-| int32		| int32_t	| int32		| int		| Number	|
-| int64		| int64_t	| int64		| long		| Number ‡	|
-| float32	| float		| float32	| float		| Number	|
-| float64	| double	| float64	| double	| Number	|
-| timestamp	| 2 × int_fast64_t	| Time ††	| Instant	| Date + Number	|
+| Colfer	| C			| Go		| Java		| JavaScript	|
+|:--------------|:----------------------|:--------------|:--------------|:--------------|
+| bool		| char			| bool		| boolean	| Boolean	|
+| uint8		| uint8_t		| uint8		| byte †	| Number	|
+| uint16	| uint16_t		| uint16	| short †	| Number	|
+| uint32	| uint32_t		| uint32	| int †		| Number	|
+| uint64	| uint64_t		| uint64	| long †	| Number ‡	|
+| int32		| int32_t		| int32		| int		| Number	|
+| int64		| int64_t		| int64		| long		| Number ‡	|
+| float32	| float			| float32	| float		| Number	|
+| float64	| double		| float64	| double	| Number	|
+| timestamp	| timespec		| time.Time ††	| time.Instant	| Date + Number	|
 | text		| const char*, size_t	| string	| String †‡	| String †‡	|
 | binary	| uint8_t*, size_t	| []byte	| byte[]	| Uint8Array	|
-| list		| struct*, size_t	| slice	| array		| Array		|
+| list		| struct*, size_t	| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)

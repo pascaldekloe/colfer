@@ -24,11 +24,21 @@ var datatypes = map[string]struct{}{
 	"binary":    {},
 }
 
-type packages []*Package
+type Packages []*Package
 
-func (p packages) Len() int           { return len(p) }
-func (p packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
-func (p packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p Packages) Len() int           { return len(p) }
+func (p Packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
+func (p Packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// HasTimestamp returns whether any of the packages has one or more timestamp fields.
+func (p Packages) HasTimestamp() bool {
+	for _, o := range p {
+		if o.HasTimestamp() {
+			return true
+		}
+	}
+	return false
+}
 
 // Package is a named definition bundle.
 type Package struct {
@@ -70,7 +80,7 @@ func (p *Package) SchemaFileList() string {
 }
 
 // Refs returns all direct references sorted by name.
-func (p *Package) Refs() []*Package {
+func (p *Package) Refs() Packages {
 	found := make(map[*Package]struct{})
 	for _, s := range p.Structs {
 		for _, f := range s.Fields {
@@ -80,7 +90,7 @@ func (p *Package) Refs() []*Package {
 		}
 	}
 
-	var refs packages
+	var refs Packages
 	for r := range found {
 		refs = append(refs, r)
 	}

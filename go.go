@@ -10,7 +10,7 @@ import (
 )
 
 // GenerateGo writes the code into file "Colfer.go".
-func GenerateGo(basedir string, packages []*Package) error {
+func GenerateGo(basedir string, packages Packages) error {
 	t := template.New("go-code")
 	template.Must(t.Parse(goCode))
 	template.Must(t.New("marshal-field").Parse(goMarshalField))

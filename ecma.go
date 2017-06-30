@@ -20,7 +20,7 @@ func IsECMAKeyword(s string) bool {
 }
 
 // GenerateECMA writes the code into file "Colfer.js".
-func GenerateECMA(basedir string, packages []*Package) error {
+func GenerateECMA(basedir string, packages Packages) error {
 	for _, p := range packages {
 		p.NameNative = strings.Replace(p.Name, "/", "_", -1)
 		if IsECMAKeyword(p.NameNative) {

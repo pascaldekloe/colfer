@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 
 #if CHAR_BIT != 8
@@ -24,13 +25,6 @@ extern size_t colfer_size_max;
 // colfer_list_max is the upper limit for the number of elements in a list.
 extern size_t colfer_list_max;
 
-
-typedef struct {
-	// sec is the Unix time.
-	int_fast64_t sec;
-	// nanos is the nanosecond adjustment.
-	int_fast64_t nanos;
-} colfer_timestamp;
 
 // colfer_text is a UTF-8 CLOB.
 typedef struct {
@@ -65,7 +59,7 @@ struct gen_o {
 	// F64 tests 64-bit floating points.
 	double f64;
 	// T tests timestamps.
-	colfer_timestamp t;
+	struct timespec t;
 	// S tests text.
 	colfer_text s;
 	// A tests binaries.

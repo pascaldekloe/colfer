@@ -35,7 +35,7 @@ int gen_o_equal(const gen_o* pa, const gen_o* pb) {
 		&& a.f32s.len == b.f32s.len
 		&& (a.f64 == b.f64 || (a.f64 != a.f64 && b.f64 != b.f64))
 		&& a.f64s.len == b.f64s.len
-		&& !memcmp(&a.t, &b.t, sizeof(colfer_timestamp))
+		&& !memcmp(&a.t, &b.t, sizeof(struct timespec))
 		&& a.s.len == b.s.len && !memcmp(a.s.utf8, b.s.utf8, a.s.len)
 		&& a.ss.len == b.ss.len
 		&& a.a.len == b.a.len && !memcmp(a.a.octets, b.a.octets, a.a.len)
@@ -96,8 +96,8 @@ void gen_o_dump(const gen_o o) {
 			printf(" %f", o.f64s.list[i]);
 		printf(" ] ");
 	}
-	if (o.t.sec) printf("t.sec=%zd ", o.t.sec);
-	if (o.t.nanos) printf("t.nanos=%zd ", o.t.nanos);
+	if (o.t.tv_sec) printf("t.tv_sec=%zd ", o.t.tv_sec);
+	if (o.t.tv_nsec) printf("t.tv_nsec=%zd ", o.t.tv_nsec);
 	if (o.s.len) {
 		hexstr(buf, o.s.utf8, o.s.len);
 		printf("s=0x%s", buf);

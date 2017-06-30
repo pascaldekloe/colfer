@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// select language
-	var gen func(string, []*colfer.Package) error
+	var gen func(string, colfer.Packages) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "c":
 		report.Println("Set up for C")

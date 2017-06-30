@@ -4,6 +4,7 @@
 #include "Colfer.h"
 #include <errno.h>
 #include <stdlib.h>
+#include <time.h>
 
 
 #if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
@@ -70,13 +71,11 @@ size_t gen_o_marshal_len(const gen_o* o) {
 	if (o->f64 != 0.0) l += 9;
 
 	{
-		int_fast64_t s = o->t.sec;
-		int_fast64_t ns = o->t.nanos;
+		time_t s = o->t.tv_sec;
+		long ns = o->t.tv_nsec;
 		if (s || ns) {
-			static const int_fast64_t nano = 1000000000;
-			s += ns / nano;
-			if (ns % nano < 0) --s;
-			l += s >= (int_fast64_t) 1 << 32 || s < 0 ? 13 : 9;
+			s += ns / 1000000000;
+			l += s >= (time_t) 1 << 32 || s < 0 ? 13 : 9;
 		}
 	}
 
@@ -321,8 +320,8 @@ size_t gen_o_marshal(const gen_o* o, void* buf) {
 	}
 
 	{
-		int_fast64_t s = o->t.sec;
-		int_fast64_t ns = o->t.nanos;
+		time_t s = o->t.tv_sec;
+		long ns = o->t.tv_nsec;
 		if (s || ns) {
 			static const int_fast64_t nano = 1000000000;
 			s += ns / nano;
@@ -744,16 +743,16 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 				errno = enderr;
 				return 0;
 			}
-			uint_fast64_t x = *p++;
+			uint64_t x = *p++;
 			x <<= 56;
-			x |= (uint_fast64_t) *p++ << 48;
-			x |= (uint_fast64_t) *p++ << 40;
-			x |= (uint_fast64_t) *p++ << 32;
-			x |= (uint_fast64_t) *p++ << 24;
-			x |= (uint_fast64_t) *p++ << 16;
-			x |= (uint_fast64_t) *p++ << 8;
-			x |= (uint_fast64_t) *p++;
-			o->t.sec = x;
+			x |= (uint64_t) *p++ << 48;
+			x |= (uint64_t) *p++ << 40;
+			x |= (uint64_t) *p++ << 32;
+			x |= (uint64_t) *p++ << 24;
+			x |= (uint64_t) *p++ << 16;
+			x |= (uint64_t) *p++ << 8;
+			x |= (uint64_t) *p++;
+			o->t.tv_sec = (time_t)(int64_t) x;
 		} else {
 			if (p+8 >= end) {
 				errno = enderr;
@@ -764,14 +763,14 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 			x |= (uint_fast32_t) *p++ << 16;
 			x |= (uint_fast32_t) *p++ << 8;
 			x |= (uint_fast32_t) *p++;
-			o->t.sec = x;
+			o->t.tv_sec = (time_t) x;
 		}
 		uint_fast32_t x = *p++;
 		x <<= 24;
 		x |= (uint_fast32_t) *p++ << 16;
 		x |= (uint_fast32_t) *p++ << 8;
 		x |= (uint_fast32_t) *p++;
-		o->t.nanos = x;
+		o->t.tv_nsec = (long) x;
 		header = *p++;
 	}
 
