@@ -111,7 +111,7 @@ Alternatively, you may use the
 <plugin>
 	<groupId>net.quies.colfer</groupId>
 	<artifactId>colfer-maven-plugin</artifactId>
-	<version>1.10</version>
+	<version>1.11</version>
 	<configuration>
 		<packagePrefix>com/example</packagePrefix>
 	</configuration>
