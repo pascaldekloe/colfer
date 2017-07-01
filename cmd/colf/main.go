@@ -178,6 +178,10 @@ func init() {
 	tail += "\t\t" + cmd + " -p com/example -x com/example/Parent Java api\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at https://github.com/pascaldekloe/colfer/issues\n\n"
+	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
+	tail += "\tprocess. C and Go just pass any malformed UTF-8 characters. Java\n"
+	tail += "\tand JavaScript replace unmappable content with the '?' character\n"
+	tail += "\t(ASCII 63).\n\n"
 	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1)\n"
 
 	flag.Usage = func() {
