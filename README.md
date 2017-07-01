@@ -31,9 +31,7 @@ The format is inspired by Proto**col** Buf**fer**.
 #### TODO's
 
 * Rust and Python
-* RMI (WIP)
-* List type support for integers and timestamps
-* Please [share](https://github.com/pascaldekloe/colfer/wiki/Users#production-use) your experiences
+* List support for integers and timestamps
 
 
 
@@ -99,7 +97,10 @@ SEE ALSO
 
 
 It is recommended to commit the generated source code to the respective version
-control. Modern developers may disagree and use the [Maven plugin](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
+control.
+
+Alternatively, you may use the
+[Maven plugin](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
 
 ```xml
 <plugin>
@@ -166,9 +167,9 @@ The following table shows how Colfer data types are applied per language.
 | float32	| float			| float32	| float		| Number	|
 | float64	| double		| float64	| double	| Number	|
 | timestamp	| timespec		| time.Time ††	| time.Instant	| Date + Number	|
-| text		| const char*, size_t	| string	| String †‡	| String †‡	|
-| binary	| uint8_t*, size_t	| []byte	| byte[]	| Uint8Array	|
-| list		| struct*, size_t	| slice		| array		| Array		|
+| text		| const char* + size_t	| string	| String †‡	| String †‡	|
+| binary	| uint8_t* + size_t	| []byte	| byte[]	| Uint8Array	|
+| list		| * + size_t		| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)
