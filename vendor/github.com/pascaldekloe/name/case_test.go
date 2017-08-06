@@ -1,66 +1,103 @@
 package name
 
 import (
-	"strings"
 	"testing"
 )
 
-var goldenCamelSnakes = map[string]string{
-	"":      "",
-	"name":  "name",
-	"Label": "label",
-	"ID":    "ID",
-
-	"loFi": "lo_fi",
-	"HiFi": "hi_fi",
-
-	// inner abbreviation
-	"rawURLQuery": "raw_URL_query",
-
-	// single outer abbreviation
-	"vitaminC": "vitamin_C",
-	"TCell":    "T_cell",
-
-	// double outer abbreviation
-	"masterDB": "master_DB",
-	"IOBounds": "IO_bounds",
-
-	// tripple outer abbreviation
-	"mainAPI": "main_API",
-	"TCPConn": "TCP_conn",
-
-	// numbers
-	"b2b":  "b2b",
-	"4x4":  "4x4",
-	"No5":  "no5",
-	"DB2":  "DB2",
-	"3M":   "3M",
-	"7Up":  "7_up",
-	"20th": "20th",
+type goldenCase struct {
+	snake, lowerCamel, upperCamel string
 }
 
-func TestCamelToSnake(t *testing.T) {
-	for camel, snake := range goldenCamelSnakes {
-		if got := SnakeCase(camel); got != snake {
-			t.Errorf("snake case %q got %q, want %q", camel, got, snake)
-		}
-	}
+var goldenCases = []goldenCase{
+	{"", "", ""},
+	{"i", "i", "I"},
+	{"name", "name", "Name"},
+	{"ID", "ID", "ID"},
+	{"wi_fi", "wiFi", "WiFi"},
+
+	// single outer abbreviation
+	{"vitamin_C", "vitaminC", "VitaminC"},
+	{"T_cell", "TCell", "TCell"},
+
+	// double outer abbreviation
+	{"master_DB", "masterDB", "MasterDB"},
+	{"IO_bounds", "IOBounds", "IOBounds"},
+
+	// tripple outer abbreviation
+	{"main_API", "mainAPI", "MainAPI"},
+	{"TCP_conn", "TCPConn", "TCPConn"},
+
+	// inner abbreviation
+	{"raw_URL_query", "rawURLQuery", "RawURLQuery"},
+
+	// numbers
+	{"4x4", "4x4", "4x4"},
+	{"no5", "no5", "No5"},
+	{"DB2", "DB2", "DB2"},
+	{"3M", "3M", "3M"},
+	{"7_up", "7Up", "7Up"},
+	{"20th", "20th", "20th"},
 }
 
 func TestSnakeToSnake(t *testing.T) {
-	for _, s := range goldenCamelSnakes {
+	for _, golden := range goldenCases {
+		s := golden.snake
 		if got := SnakeCase(s); got != s {
-			t.Errorf("snake case %q got %q", s, got)
+			t.Errorf("%q: got %q", s, got)
 		}
 	}
 }
 
-func TestSnakeToCamel(t *testing.T) {
-	for camel, snake := range goldenCamelSnakes {
-		want := strings.Title(camel)
-		got := CamelCase(snake, true)
-		if got != want {
-			t.Errorf("camel case %q titled got %q, want %q", snake, got, camel)
+func TestLowerCamelToLowerCamel(t *testing.T) {
+	for _, golden := range goldenCases {
+		s := golden.lowerCamel
+		if got := CamelCase(s, false); got != s {
+			t.Errorf("%q: got %q", s, got)
+		}
+	}
+}
+
+func TestUpperCamelToUpperCamel(t *testing.T) {
+	for _, golden := range goldenCases {
+		s := golden.upperCamel
+		if got := CamelCase(s, true); got != s {
+			t.Errorf("%q: got %q", s, got)
+		}
+	}
+}
+
+func TestSnakeToLowerCamel(t *testing.T) {
+	for _, golden := range goldenCases {
+		snake, want := golden.snake, golden.lowerCamel
+		if got := CamelCase(snake, false); got != want {
+			t.Errorf("%q: got %q, want %q", snake, got, want)
+		}
+	}
+}
+
+func TestSnakeToUpperCamel(t *testing.T) {
+	for _, golden := range goldenCases {
+		snake, want := golden.snake, golden.upperCamel
+		if got := CamelCase(snake, true); got != want {
+			t.Errorf("%q: got %q, want %q", snake, got, want)
+		}
+	}
+}
+
+func TestLowerCamelToSnake(t *testing.T) {
+	for _, golden := range goldenCases {
+		camel, want := golden.lowerCamel, golden.snake
+		if got := SnakeCase(camel); got != want {
+			t.Errorf("%q: got %q, want %q", camel, got, want)
+		}
+	}
+}
+
+func TestUpperCamelToSnake(t *testing.T) {
+	for _, golden := range goldenCases {
+		camel, want := golden.upperCamel, golden.snake
+		if got := SnakeCase(camel); got != want {
+			t.Errorf("%q: got %q, want %q", camel, got, want)
 		}
 	}
 }

@@ -1,22 +1,37 @@
-// Package name implements naming conventions like camel and snake case.
+// Package name implements naming conventions.
 package name
 
 import "unicode"
 
-// CamelCase returns the camel case of word sequence s.
+// CamelCase returns the medial capitals form of word sequence s.
 // The input can be any case or even just a bunch of words.
-// Upper case abbreviations are preserved. When upper is true
-// then the first rune is mapped to its upper case form.
+// Upper case sequences (abbreviations) are preserved.
+// Argument upper sets the letter case for the first rune. Use true for
+// UpperCamelCase and false for lowerCamelCase.
 func CamelCase(s string, upper bool) string {
-	out := make([]rune, 0, len(s)+5)
+	if s == "" {
+		return ""
+	}
+
+	out := make([]rune, 1, len(s)+5)
 	for i, r := range s {
-		switch {
-		case i == 0:
-			if !upper {
-				r = unicode.ToLower(r)
+		if i == 0 {
+			if upper {
+				r = unicode.ToUpper(r)
+			}
+			out[0] = r
+			continue
+		}
+
+		if i == 1 {
+			if !upper && unicode.Is(unicode.Lower, r) {
+				out[0] = unicode.ToLower(out[0])
 			}
 
-			fallthrough
+			upper = false
+		}
+
+		switch {
 		case unicode.IsLetter(r):
 			if upper {
 				r = unicode.ToUpper(r)
@@ -32,21 +47,24 @@ func CamelCase(s string, upper bool) string {
 
 		}
 	}
+
 	return string(out)
 }
 
-// SnakeCase returns the snake case of word sequence s.
-// The input can be any case or even just a bunch of words.
-// Upper case abbreviations are preserved. Use strings.ToLower
-// and strings.ToUpper to enforce a letter case.
+// SnakeCase is an alias for Delimit(s, '_').
 func SnakeCase(s string) string {
 	return Delimit(s, '_')
 }
 
-// Delimit returns word sequence s delimited with sep.
+// DotSeparated is an alias for Delimit(s, '.').
+func DotSeparated(s string) string {
+	return Delimit(s, '.')
+}
+
+// Delimit returns word sequence s delimited with separator sep.
 // The input can be any case or even just a bunch of words.
-// Upper case abbreviations are preserved. Use strings.ToLower
-// and strings.ToUpper to enforce a letter case.
+// Upper case sequences (abbreviations) are preserved. Use
+// strings.ToLower and strings.ToUpper to enforce a letter case.
 func Delimit(s string, sep rune) string {
 	out := make([]rune, 0, len(s)+5)
 
@@ -78,9 +96,17 @@ func Delimit(s string, sep rune) string {
 		out = append(out, r)
 	}
 
+	if len(out) == 0 {
+		return ""
+	}
+
 	// trim tailing separator
-	if i := len(out) - 1; i >= 0 && out[i] == sep {
+	if i := len(out) - 1; out[i] == sep {
 		out = out[:i]
+	}
+
+	if len(out) == 1 {
+		out[0] = unicode.ToLower(out[0])
 	}
 
 	return string(out)

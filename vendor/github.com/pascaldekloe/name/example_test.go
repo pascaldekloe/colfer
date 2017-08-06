@@ -6,21 +6,21 @@ import (
 )
 
 func ExampleCamelCase() {
-	fmt.Println(name.CamelCase("one name", true))
-	fmt.Println(name.CamelCase("GetCount", false))
-	// Output:
-	// OneName
-	// getCount
-}
+	fmt.Println(name.CamelCase("pascal case", true))
+	fmt.Println(name.CamelCase("snake_to_camel AND CamelToCamel?", false))
 
-func ExampleSnakeCase() {
-	fmt.Println(name.SnakeCase("CamelToSnake, snake_to_snake: Anything goes!"))
-	// Output: camel_to_snake_snake_to_snake_anything_goes
+	// Output:
+	// PascalCase
+	// snakeToCamelANDCamelToCamel
 }
 
 func ExampleDelimit() {
+	// Garbage to Lisp-case:
 	fmt.Println(name.Delimit("* All Hype is aGoodThing (TM)", '-'))
-	fmt.Println(name.Delimit("WebCrawler#socketTimeout", '.'))
+
+	// Builds a Java property key:
+	fmt.Println(name.DotSeparated("WebCrawler#socketTimeout"))
+
 	// Output:
 	// all-hype-is-a-good-thing-TM
 	// web.crawler.socket.timeout
