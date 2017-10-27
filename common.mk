@@ -1,4 +1,4 @@
-GOPATH?=../../..
+GOPATH?=$(HOME)/go
 COLF?=$(GOPATH)/bin/colf
 
 .PHONY: run
