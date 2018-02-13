@@ -1,11 +1,13 @@
+syntax = "proto3";
+
 package bench;
 
 message ProtoBuf {
-	required int64 key = 1;
-	required string host = 2;
-	required uint32 port = 4;
-	required int64 size = 5;
-	required fixed64 hash = 6;
-	required double ratio = 7;
-	required bool route = 8;
+	int64 key = 1;
+	string host = 2;
+	uint32 port = 4;
+	int64 size = 5;
+	fixed64 hash = 6;
+	double ratio = 7;
+	bool route = 8;
 }
