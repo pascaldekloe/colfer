@@ -2,8 +2,9 @@
 #include "build/gen/scheme.pb.h"
 #include "build/gen/scheme_generated.h"
 
-#include <chrono>
-#include <iostream>
+// https://github.com/google/benchmark
+#include <benchmark/benchmark.h>
+
 
 const bench_colfer test_data[] = {
         {1234567890L, (char*) "db003lz12", 9, 389, 452, 0x488b5c2428488918ULL, 0.99, 1},
@@ -14,87 +15,77 @@ const bench_colfer test_data[] = {
 
 const size_t test_data_len = sizeof(test_data) / sizeof(bench_colfer);
 
-// Rounds is the number of operations to run for each benchmark.
-size_t rounds = 10000000;
 
-// prevents compiler optimization:
-void* serial;
-size_t serial_size;
+static void BM_marshal_colfer(benchmark::State& state) {
+	void* buf = malloc(colfer_size_max);
 
-void marshal_colfer() {
-	auto start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i)
-		serial_size = bench_colfer_marshal(&test_data[i % test_data_len], serial);
-	auto end = std::chrono::high_resolution_clock::now();
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto data = &test_data[i % test_data_len];
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH Colfer " << rounds << " marshals avg " << took / rounds << "ns\n";
+                benchmark::DoNotOptimize(bench_colfer_marshal(data, buf));
+                benchmark::DoNotOptimize(buf);
+                benchmark::ClobberMemory();
+        }
 }
 
-void unmarshal_colfer() {
+static void BM_unmarshal_colfer(benchmark::State& state) {
 	void* serials[test_data_len];
-	size_t serial_sizes[test_data_len];
 	for (size_t i = 0; i < test_data_len; i++) {
 		serials[i] = malloc(colfer_size_max);
-		serial_sizes[i] = bench_colfer_marshal(&test_data[i], serials[i]);
+		bench_colfer_marshal(&test_data[i], serials[i]);
 	}
 
 	auto o = new bench_colfer;
 
-	auto start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i)
-		serial_size = bench_colfer_unmarshal(o, serials[i % test_data_len], colfer_size_max);
-	auto end = std::chrono::high_resolution_clock::now();
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto serial = serials[i % test_data_len];
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH Colfer " << rounds << " umarshals avg " << took / rounds << "ns\n";
+                benchmark::DoNotOptimize(bench_colfer_unmarshal(o, serial, colfer_size_max));
+                benchmark::DoNotOptimize(o);
+                benchmark::ClobberMemory();
+        }
 }
 
-void marshal_fb() {
-	flatbuffers::FlatBufferBuilder fbb;
+static void BM_marshal_flatbuffers(benchmark::State& state) {
+	flatbuffers::FlatBufferBuilder fbb(colfer_size_max);
 
-	auto start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i) {
-		auto item = test_data[i % test_data_len];
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto data = test_data[i % test_data_len];
 
-		fbb.Clear();
-		auto host = fbb.CreateString(item.host.utf8, item.host.len);
-		auto o = bench::CreateFlatBuffers(fbb, item.key, host, item.port, item.size, item.hash, item.ratio, item.route);
+		auto host = fbb.CreateString(data.host.utf8, data.host.len);
+		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data.route);
 		fbb.Finish(o);
 
-		serial = fbb.GetBufferPointer();
-		serial_size = fbb.GetSize();
-		fbb.ReleaseBufferPointer();
-	}
-	auto end = std::chrono::high_resolution_clock::now();
+                benchmark::DoNotOptimize(fbb.GetBufferPointer());
+                benchmark::DoNotOptimize(fbb.GetSize());
+                benchmark::ClobberMemory();
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH FlatBuffers " << rounds << " marshals avg " << took / rounds << "ns\n";
+		fbb.Clear();
+	}
 }
 
-void unmarshal_fb() {
-	flatbuffers::FlatBufferBuilder fbb;
+static void BM_unmarshal_flatbuffers(benchmark::State& state) {
+	flatbuffers::FlatBufferBuilder fbb(colfer_size_max);
 
 	void* serials[test_data_len];
-	size_t serial_sizes[test_data_len];
 	for (size_t i = 0; i < test_data_len; ++i) {
-		auto item = test_data[i % test_data_len];
+		auto data = test_data[i % test_data_len];
 
-		fbb.Clear();
-		auto host = fbb.CreateString(item.host.utf8, item.host.len);
-		auto o = bench::CreateFlatBuffers(fbb, item.key, host, item.port, item.size, item.hash, item.ratio, item.route);
+		auto host = fbb.CreateString(data.host.utf8, data.host.len);
+		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data.route);
 		fbb.Finish(o);
 
-		serial_sizes[i] = fbb.GetSize();
 		serials[i] = malloc(fbb.GetSize());
 		memcpy(serials[i], fbb.GetBufferPointer(), fbb.GetSize());
+		fbb.Clear();
 	}
 
 	bench_colfer o = {};
 
-	auto start = std::chrono::high_resolution_clock::now();
-	for (size_t i = 0; i < rounds; ++i) {
-		auto view = bench::GetFlatBuffers(serials[i % test_data_len]);
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto serial = serials[i % test_data_len];
+
+		auto view = bench::GetFlatBuffers(serial);
 		o.key = view->key();
 		auto s = view->host()->str();
 		o.host.utf8 = &s[0];
@@ -104,22 +95,18 @@ void unmarshal_fb() {
 		o.hash = view->hash();
 		o.ratio = view->ratio();
 		o.route = view->route();
-	}
-	auto end = std::chrono::high_resolution_clock::now();
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-	std::cout << "BENCH FlatBuffers " << rounds << " unmarshals avg " << took / rounds << "ns\n";
+                benchmark::DoNotOptimize(o);
+                benchmark::ClobberMemory();
+
+		fbb.Clear();
+	}
 }
 
-int main(int argc, char **argv) {
-	if (argc >= 2) {
-		rounds = strtol(argv[1], NULL, 0);
-	}
 
-	serial = malloc(colfer_size_max);
+BENCHMARK(BM_marshal_colfer);
+BENCHMARK(BM_unmarshal_colfer);
+BENCHMARK(BM_marshal_flatbuffers);
+BENCHMARK(BM_unmarshal_flatbuffers);
 
-	marshal_colfer();
-	unmarshal_colfer();
-	marshal_fb();
-	unmarshal_fb();
-}
+BENCHMARK_MAIN();
