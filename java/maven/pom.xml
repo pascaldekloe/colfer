@@ -5,7 +5,7 @@
 
 <groupId>net.quies.colfer</groupId>
 <artifactId>colfer-maven-plugin</artifactId>
-<version>1.11.2</version>
+<version>1.12-SNAPSHOT</version>
 <packaging>maven-plugin</packaging>
 
 <name>Colfer Maven Plugin</name>
