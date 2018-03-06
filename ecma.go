@@ -265,7 +265,7 @@ const ecmaMarshal = `
 		}
 {{else if eq .Type "int64"}}
 		if (this.{{.NameNative}}) {
-			var seg = [4];
+			var seg = [{{.Index}}];
 			if (this.{{.NameNative}} < 0) {
 				seg[0] |= 128;
 				if (this.{{.NameNative}} < Number.MIN_SAFE_INTEGER)
