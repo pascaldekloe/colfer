@@ -97,13 +97,13 @@ var {{.NameNative}} = new function() {
 {{end}}
 	// private section
 
-	var encodeVarint = function(bytes, x) {
+	var encodeVarint = function(bytes, i, x) {
 		while (x > 127) {
-			bytes.push(x|128);
+			bytes[i++] = (x & 127) | 128;
 			x /= 128;
 		}
-		bytes.push(x&127);
-		return bytes;
+		bytes[i++] = x & 127;
+		return i;
 	}
 {{if .HasTimestamp}}
 	function decodeInt64(data, i) {
@@ -125,7 +125,7 @@ var {{.NameNative}} = new function() {
 {{end}}
 	var encodeUTF8 = function(s) {
 		var i = 0;
-		var bytes = new Uint8Array(s.length * 4);
+		var bytes = new Uint8Array(s.length * 3);
 		for (var ci = 0; ci != s.length; ci++) {
 			var c = s.charCodeAt(ci);
 			if (c < 128) {
@@ -193,40 +193,45 @@ const ecmaMarshal = `
 {{- range .Fields}}{{if .TypeList}}{{if eq .Type "float32" "float64"}}{{else}}
 	// All null entries in property {{.NameNative}} will be replaced with {{if eq .Type "text"}}an empty String{{else if eq .Type "binary"}}an empty Array{{else}}a new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}{{end}}.
 {{- end}}{{end}}{{end}}
-	this.{{.NameTitle}}.prototype.marshal = function() {
-		var segs = [];
+	this.{{.NameTitle}}.prototype.marshal = function(buf) {
+		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
+		var i = 0;
+		var view = new DataView(buf.buffer);
+
 {{range .Fields}}{{if eq .Type "bool"}}
 		if (this.{{.NameNative}})
-			segs.push([{{.Index}}]);
+			buf[i++] = {{.Index}};
 {{else if eq .Type "uint8"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 255 || this.{{.NameNative}} < 0)
 				fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
-			segs.push([{{.Index}}, this.{{.NameNative}}]);
+			buf[i++] = {{.Index}};
+			buf[i++] = this.{{.NameNative}};
 		}
 {{else if eq .Type "uint16"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 65535 || this.{{.NameNative}} < 0)
 				fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
-			if (this.{{.NameNative}} < 256)
-				segs.push([{{.Index}} | 128, this.{{.NameNative}}]);
-			else
-				segs.push([{{.Index}}, this.{{.NameNative}} >>> 8, this.{{.NameNative}} & 255]);
+			if (this.{{.NameNative}} < 256) {
+				buf[i++] = {{.Index}} | 128;
+				buf[i++] = this.{{.NameNative}};
+			} else {
+				buf[i++] = {{.Index}};
+				buf[i++] = this.{{.NameNative}} >>> 0;
+				buf[i++] = this.{{.NameNative}} & 255;
+			}
 		}
 {{else if eq .Type "uint32"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 4294967295 || this.{{.NameNative}} < 0)
 				fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
 			if (this.{{.NameNative}} < 0x200000) {
-				var seg = [{{.Index}}];
-				encodeVarint(seg, this.{{.NameNative}});
-				segs.push(seg);
+				buf[i++] = {{.Index}};
+				i = encodeVarint(buf, i, this.{{.NameNative}});
 			} else {
-				var bytes = new Uint8Array(5);
-				bytes[0] = {{.Index}} | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.{{.NameNative}});
-				segs.push(bytes)
+				buf[i++] = {{.Index}} | 128;
+				view.setUint32(i, this.{{.NameNative}});
+				i += 4;
 			}
 		}
 {{else if eq .Type "uint64"}}
@@ -236,100 +241,86 @@ const ecmaMarshal = `
 			if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
 				fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			if (this.{{.NameNative}} < 0x2000000000000) {
-				var seg = [{{.Index}}];
-				encodeVarint(seg, this.{{.NameNative}});
-				segs.push(seg);
+				buf[i++] = {{.Index}};
+				i = encodeVarint(buf, i, this.{{.NameNative}});
 			} else {
-				var bytes = new Uint8Array(9);
-				bytes[0] = {{.Index}} | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.{{.NameNative}} / 0x100000000);
-				view.setUint32(5, this.{{.NameNative}} % 0x100000000);
-				segs.push(bytes)
+				buf[i++] = {{.Index}} | 128;
+				view.setUint32(i, this.{{.NameNative}} / 0x100000000);
+				i += 4;
+				view.setUint32(i, this.{{.NameNative}} % 0x100000000);
+				i += 4;
 			}
 		}
 {{else if eq .Type "int32"}}
 		if (this.{{.NameNative}}) {
-			var seg = [{{.Index}}];
 			if (this.{{.NameNative}} < 0) {
-				seg[0] |= 128;
+				buf[i++] = {{.Index}} | 128;
 				if (this.{{.NameNative}} < -2147483648)
 					fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
-				encodeVarint(seg, -this.{{.NameNative}});
+				i = encodeVarint(buf, i, -this.{{.NameNative}});
 			} else {
+				buf[i++] = {{.Index}}; 
 				if (this.{{.NameNative}} > 2147483647)
 					fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
-				encodeVarint(seg, this.{{.NameNative}});
+				i = encodeVarint(buf, i, this.{{.NameNative}});
 			}
-			segs.push(seg);
 		}
 {{else if eq .Type "int64"}}
 		if (this.{{.NameNative}}) {
-			var seg = [{{.Index}}];
 			if (this.{{.NameNative}} < 0) {
-				seg[0] |= 128;
+				buf[i++] = {{.Index}} | 128;
 				if (this.{{.NameNative}} < Number.MIN_SAFE_INTEGER)
 					fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MIN_SAFE_INTEGER');
-				encodeVarint(seg, -this.{{.NameNative}});
+				i = encodeVarint(buf, i, -this.{{.NameNative}});
 			} else {
+				buf[i++] = {{.Index}}; 
 				if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
 					fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
-				encodeVarint(seg, this.{{.NameNative}});
+				i = encodeVarint(buf, i, this.{{.NameNative}});
 			}
-			segs.push(seg);
 		}
 {{else if eq .Type "float32"}}
  {{- if .TypeList}}
 		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
-			if (this.{{.NameNative}}.length > colferListMax)
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
 				fail('colfer: {{.String}} length exceeds colferListMax');
-			var seg = [{{.Index}}];
-			encodeVarint(seg, this.{{.NameNative}}.length);
-			segs.push(seg);
-
-			var bytes = new Uint8Array(this.{{.NameNative}}.length * 4);
-			segs.push(bytes);
-
-			var view = new DataView(bytes.buffer);
-			this.{{.NameNative}}.forEach(function(f, i) {
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f, fi) {
 				if (f > 3.4028234663852886E38 || f < -3.4028234663852886E38)
-					fail('colfer: {{.String}}[' + i + '] exceeds 32-bit range');
-				view.setFloat32(i * 4, f);
+					fail('colfer: {{.String}}[' + fi + '] exceeds 32-bit range');
+				view.setFloat32(i, f);
+				i += 4;
 			});
 		}
  {{- else}}
 		if (this.{{.NameNative}} || Number.isNaN(this.{{.NameNative}})) {
 			if (this.{{.NameNative}} > 3.4028234663852886E38 || this.{{.NameNative}} < -3.4028234663852886E38)
 				fail('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
-			var bytes = new Uint8Array(5);
-			bytes[0] = {{.Index}};
-			new DataView(bytes.buffer).setFloat32(1, this.{{.NameNative}});
-			segs.push(bytes);
+			buf[i++] = {{.Index}};
+			view.setFloat32(i, this.{{.NameNative}});
+			i += 4;
 		}
  {{- end}}
 {{else if eq .Type "float64"}}
  {{- if .TypeList}}
 		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
-			if (this.{{.NameNative}}.length > colferListMax)
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
 				fail('colfer: {{.String}} length exceeds colferListMax');
-			var seg = [{{.Index}}];
-			encodeVarint(seg, this.{{.NameNative}}.length);
-			segs.push(seg);
-
-			var bytes = new Uint8Array(this.{{.NameNative}}.length * 8);
-			segs.push(bytes);
-
-			var view = new DataView(bytes.buffer);
-			this.{{.NameNative}}.forEach(function(f, i) {
-				view.setFloat64(i * 8, f);
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f) {
+				view.setFloat64(i, f);
+				i += 8;
 			});
 		}
  {{- else}}
 		if (this.{{.NameNative}} || Number.isNaN(this.{{.NameNative}})) {
-			var bytes = new Uint8Array(9);
-			bytes[0] = {{.Index}};
-			new DataView(bytes.buffer).setFloat64(1, this.{{.NameNative}});
-			segs.push(bytes);
+			buf[i++] = {{.Index}};
+			view.setFloat64(i, this.{{.NameNative}});
+			i += 8;
 		}
  {{- end}}
 {{else if eq .Type "timestamp"}}
@@ -348,32 +339,29 @@ const ecmaMarshal = `
 			ns += msf * 1E6;
 
 			if (s > 0xffffffff || s < 0) {
-				var bytes = new Uint8Array(13);
-				bytes[0] = {{.Index}} | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(9, ns);
+				buf[i++] = {{.Index}} | 128;
 				if (s > 0) {
-					view.setUint32(1, s / 0x100000000);
-					view.setUint32(5, s);
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
 				} else {
 					s = -s;
-					view.setUint32(1, s / 0x100000000);
-					view.setUint32(5, s);
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
 					var carry = 1;
-					for (var j = 8; j > 0; j--) {
-						var b = (bytes[j] ^ 255) + carry;
-						bytes[j] = b & 255;
+					for (var j = i + 7; j >= i; j--) {
+						var b = (buf[j] ^ 255) + carry;
+						buf[j] = b & 255;
 						carry = b >> 8;
 					}
 				}
-				segs.push(bytes);
+				view.setUint32(i + 8, ns);
+				i += 12;
 			} else {
-				var bytes = new Uint8Array(9);
-				bytes[0] = {{.Index}};
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, s);
-				view.setUint32(5, ns);
-				segs.push(bytes);
+				buf[i++] = {{.Index}};
+				view.setUint32(i, s);
+				i += 4;
+				view.setUint32(i, ns);
+				i += 4;
 			}
 		}
 {{else if eq .Type "text"}}
@@ -382,29 +370,27 @@ const ecmaMarshal = `
 			var a = this.{{.NameNative}};
 			if (a.length > colferListMax)
 				fail('colfer: {{.String}} length exceeds colferListMax');
-			var seg = [{{.Index}}];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var s = a[i];
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+
+			a.forEach(function(s, si) {
 				if (s == null) {
 					s = "";
-					a[i] = s;
+					a[si] = s;
 				}
-				var utf = encodeUTF8(s);
-				seg = [];
-				encodeVarint(seg, utf.length);
-				segs.push(seg);
-				segs.push(utf)
-			}
+				var utf8 = encodeUTF8(s);
+				i = encodeVarint(buf, i, utf8.length);
+				buf.set(utf8, i);
+				i += utf8.length;
+			});
 		}
  {{- else}}
 		if (this.{{.NameNative}}) {
-			var utf = encodeUTF8(this.{{.NameNative}});
-			var seg = [{{.Index}}];
-			encodeVarint(seg, utf.length);
-			segs.push(seg);
-			segs.push(utf)
+			buf[i++] = {{.Index}};
+			var utf8 = encodeUTF8(this.{{.NameNative}});
+			i = encodeVarint(buf, i, utf8.length);
+			buf.set(utf8, i);
+			i += utf8.length;
 		}
  {{- end}}
 {{else if eq .Type "binary"}}
@@ -413,27 +399,25 @@ const ecmaMarshal = `
 			var a = this.{{.NameNative}};
 			if (a.length > colferListMax)
 				fail('colfer: {{.String}} length exceeds colferListMax');
-			var seg = [{{.Index}}];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var b = a[i];
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(b, bi) {
 				if (b == null) {
-					b = new Uint8Array(0);
-					a[i] = b;
+					b = "";
+					a[bi] = b;
 				}
-				seg = [];
-				encodeVarint(seg, b.length);
-				segs.push(seg);
-				segs.push(b)
-			}
+				i = encodeVarint(buf, i, b.length);
+				buf.set(b, i);
+				i += b.length;
+			});
 		}
  {{- else}}
 		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
-			var seg = [{{.Index}}];
-			encodeVarint(seg, this.{{.NameNative}}.length);
-			segs.push(seg);
-			segs.push(this.{{.NameNative}});
+			buf[i++] = {{.Index}};
+			var b = this.{{.NameNative}};
+			i = encodeVarint(buf, i, b.length);
+			buf.set(b, i);
+			i += b.length;
 		}
  {{- end}}
 {{else if .TypeList}}
@@ -441,39 +425,31 @@ const ecmaMarshal = `
 			var a = this.{{.NameNative}};
 			if (a.length > colferListMax)
 				fail('colfer: {{.String}} length exceeds colferListMax');
-			var seg = [{{.Index}}];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var v = a[i];
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(v, vi) {
 				if (v == null) {
 					v = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}();
-					a[i] = v;
+					a[vi] = v;
 				}
-				segs.push(v.marshal());
-			};
+				var b = v.marshal();
+				buf.set(b, i);
+				i += b.length;
+			});
 		}
 {{else}}
 		if (this.{{.NameNative}}) {
-			segs.push([{{.Index}}]);
-			segs.push(this.{{.NameNative}}.marshal());
+			buf[i++] = {{.Index}};
+			var b = this.{{.NameNative}}.marshal();
+			buf.set(b, i);
+			i += b.length;
 		}
 {{end}}{{end}}
-		var size = 1;
-		segs.forEach(function(seg) {
-			size += seg.length;
-		});
-		if (size > colferSizeMax)
-			fail('colfer: {{.String}} serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
 
-		var bytes = new Uint8Array(size);
-		var i = 0;
-		segs.forEach(function(seg) {
-			bytes.set(seg, i);
-			i += seg.length;
-		});
-		bytes[i] = 127;
-		return bytes;
+		buf[i++] = 127;
+		if (i >= colferSizeMax)
+			fail('colfer: {{.String}} serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
+		return buf.subarray(0, i);
 	}`
 
 const ecmaUnmarshal = `

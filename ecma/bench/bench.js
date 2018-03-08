@@ -22,12 +22,15 @@ testData.forEach(function(o, i) {
 	testJSON[i] = JSON.stringify(o);
 });
 
+// Reusable instance.
+var buffer = new Uint8Array(1024);
+
 var suite = new Benchmark.Suite;
 suite.add('marshal Colfer', function() {
-		testData[0].marshal();
-		testData[1].marshal();
-		testData[2].marshal();
-		testData[3].marshal();
+		testData[0].marshal(buffer);
+		testData[1].marshal(buffer);
+		testData[2].marshal(buffer);
+		testData[3].marshal(buffer);
 	})
 	.add('unmarshal Colfer', function() {
 		new Colfer.bench.Colfer().unmarshal(testColfer[0]);
@@ -53,4 +56,5 @@ suite.add('marshal Colfer', function() {
 	.on('cycle', function(event) {
 		console.log(String(event.target))
 	})
-	.run({async: true});
+	.run({async: true})
+;

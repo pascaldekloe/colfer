@@ -63,25 +63,25 @@ var gen = new function() {
 	// All null entries in property os will be replaced with a new gen.O.
 	// All null entries in property ss will be replaced with an empty String.
 	// All null entries in property as will be replaced with an empty Array.
-	this.O.prototype.marshal = function() {
-		var segs = [];
+	this.O.prototype.marshal = function(buf) {
+		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
+		var i = 0;
+		var view = new DataView(buf.buffer);
+
 
 		if (this.b)
-			segs.push([0]);
+			buf[i++] = 0;
 
 		if (this.u32) {
 			if (this.u32 > 4294967295 || this.u32 < 0)
 				fail('colfer: gen/O field u32 out of reach: ' + this.u32);
 			if (this.u32 < 0x200000) {
-				var seg = [1];
-				encodeVarint(seg, this.u32);
-				segs.push(seg);
+				buf[i++] = 1;
+				i = encodeVarint(buf, i, this.u32);
 			} else {
-				var bytes = new Uint8Array(5);
-				bytes[0] = 1 | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.u32);
-				segs.push(bytes)
+				buf[i++] = 1 | 128;
+				view.setUint32(i, this.u32);
+				i += 4;
 			}
 		}
 
@@ -91,63 +91,57 @@ var gen = new function() {
 			if (this.u64 > Number.MAX_SAFE_INTEGER)
 				fail('colfer: gen/O field u64 exceeds Number.MAX_SAFE_INTEGER');
 			if (this.u64 < 0x2000000000000) {
-				var seg = [2];
-				encodeVarint(seg, this.u64);
-				segs.push(seg);
+				buf[i++] = 2;
+				i = encodeVarint(buf, i, this.u64);
 			} else {
-				var bytes = new Uint8Array(9);
-				bytes[0] = 2 | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, this.u64 / 0x100000000);
-				view.setUint32(5, this.u64 % 0x100000000);
-				segs.push(bytes)
+				buf[i++] = 2 | 128;
+				view.setUint32(i, this.u64 / 0x100000000);
+				i += 4;
+				view.setUint32(i, this.u64 % 0x100000000);
+				i += 4;
 			}
 		}
 
 		if (this.i32) {
-			var seg = [3];
 			if (this.i32 < 0) {
-				seg[0] |= 128;
+				buf[i++] = 3 | 128;
 				if (this.i32 < -2147483648)
 					fail('colfer: gen/O field i32 exceeds 32-bit range');
-				encodeVarint(seg, -this.i32);
+				i = encodeVarint(buf, i, -this.i32);
 			} else {
+				buf[i++] = 3; 
 				if (this.i32 > 2147483647)
 					fail('colfer: gen/O field i32 exceeds 32-bit range');
-				encodeVarint(seg, this.i32);
+				i = encodeVarint(buf, i, this.i32);
 			}
-			segs.push(seg);
 		}
 
 		if (this.i64) {
-			var seg = [4];
 			if (this.i64 < 0) {
-				seg[0] |= 128;
+				buf[i++] = 4 | 128;
 				if (this.i64 < Number.MIN_SAFE_INTEGER)
 					fail('colfer: gen/O field i64 exceeds Number.MIN_SAFE_INTEGER');
-				encodeVarint(seg, -this.i64);
+				i = encodeVarint(buf, i, -this.i64);
 			} else {
+				buf[i++] = 4; 
 				if (this.i64 > Number.MAX_SAFE_INTEGER)
 					fail('colfer: gen/O field i64 exceeds Number.MAX_SAFE_INTEGER');
-				encodeVarint(seg, this.i64);
+				i = encodeVarint(buf, i, this.i64);
 			}
-			segs.push(seg);
 		}
 
 		if (this.f32 || Number.isNaN(this.f32)) {
 			if (this.f32 > 3.4028234663852886E38 || this.f32 < -3.4028234663852886E38)
 				fail('colfer: gen/O field f32 exceeds 32-bit range');
-			var bytes = new Uint8Array(5);
-			bytes[0] = 5;
-			new DataView(bytes.buffer).setFloat32(1, this.f32);
-			segs.push(bytes);
+			buf[i++] = 5;
+			view.setFloat32(i, this.f32);
+			i += 4;
 		}
 
 		if (this.f64 || Number.isNaN(this.f64)) {
-			var bytes = new Uint8Array(9);
-			bytes[0] = 6;
-			new DataView(bytes.buffer).setFloat64(1, this.f64);
-			segs.push(bytes);
+			buf[i++] = 6;
+			view.setFloat64(i, this.f64);
+			i += 8;
 		}
 
 		if ((this.t && this.t.getTime()) || this.t_ns) {
@@ -165,177 +159,159 @@ var gen = new function() {
 			ns += msf * 1E6;
 
 			if (s > 0xffffffff || s < 0) {
-				var bytes = new Uint8Array(13);
-				bytes[0] = 7 | 128;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(9, ns);
+				buf[i++] = 7 | 128;
 				if (s > 0) {
-					view.setUint32(1, s / 0x100000000);
-					view.setUint32(5, s);
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
 				} else {
 					s = -s;
-					view.setUint32(1, s / 0x100000000);
-					view.setUint32(5, s);
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
 					var carry = 1;
-					for (var j = 8; j > 0; j--) {
-						var b = (bytes[j] ^ 255) + carry;
-						bytes[j] = b & 255;
+					for (var j = i + 7; j >= i; j--) {
+						var b = (buf[j] ^ 255) + carry;
+						buf[j] = b & 255;
 						carry = b >> 8;
 					}
 				}
-				segs.push(bytes);
+				view.setUint32(i + 8, ns);
+				i += 12;
 			} else {
-				var bytes = new Uint8Array(9);
-				bytes[0] = 7;
-				var view = new DataView(bytes.buffer);
-				view.setUint32(1, s);
-				view.setUint32(5, ns);
-				segs.push(bytes);
+				buf[i++] = 7;
+				view.setUint32(i, s);
+				i += 4;
+				view.setUint32(i, ns);
+				i += 4;
 			}
 		}
 
 		if (this.s) {
-			var utf = encodeUTF8(this.s);
-			var seg = [8];
-			encodeVarint(seg, utf.length);
-			segs.push(seg);
-			segs.push(utf)
+			buf[i++] = 8;
+			var utf8 = encodeUTF8(this.s);
+			i = encodeVarint(buf, i, utf8.length);
+			buf.set(utf8, i);
+			i += utf8.length;
 		}
 
 		if (this.a && this.a.length) {
-			var seg = [9];
-			encodeVarint(seg, this.a.length);
-			segs.push(seg);
-			segs.push(this.a);
+			buf[i++] = 9;
+			var b = this.a;
+			i = encodeVarint(buf, i, b.length);
+			buf.set(b, i);
+			i += b.length;
 		}
 
 		if (this.o) {
-			segs.push([10]);
-			segs.push(this.o.marshal());
+			buf[i++] = 10;
+			var b = this.o.marshal();
+			buf.set(b, i);
+			i += b.length;
 		}
 
 		if (this.os && this.os.length) {
 			var a = this.os;
 			if (a.length > colferListMax)
 				fail('colfer: gen.o.os length exceeds colferListMax');
-			var seg = [11];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var v = a[i];
+			buf[i++] = 11;
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(v, vi) {
 				if (v == null) {
 					v = new gen.O();
-					a[i] = v;
+					a[vi] = v;
 				}
-				segs.push(v.marshal());
-			};
+				var b = v.marshal();
+				buf.set(b, i);
+				i += b.length;
+			});
 		}
 
 		if (this.ss && this.ss.length) {
 			var a = this.ss;
 			if (a.length > colferListMax)
 				fail('colfer: gen.o.ss length exceeds colferListMax');
-			var seg = [12];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var s = a[i];
+			buf[i++] = 12;
+			i = encodeVarint(buf, i, a.length);
+
+			a.forEach(function(s, si) {
 				if (s == null) {
 					s = "";
-					a[i] = s;
+					a[si] = s;
 				}
-				var utf = encodeUTF8(s);
-				seg = [];
-				encodeVarint(seg, utf.length);
-				segs.push(seg);
-				segs.push(utf)
-			}
+				var utf8 = encodeUTF8(s);
+				i = encodeVarint(buf, i, utf8.length);
+				buf.set(utf8, i);
+				i += utf8.length;
+			});
 		}
 
 		if (this.as && this.as.length) {
 			var a = this.as;
 			if (a.length > colferListMax)
 				fail('colfer: gen.o.as length exceeds colferListMax');
-			var seg = [13];
-			encodeVarint(seg, a.length);
-			segs.push(seg);
-			for (var i = 0; i < a.length; i++) {
-				var b = a[i];
+			buf[i++] = 13;
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(b, bi) {
 				if (b == null) {
-					b = new Uint8Array(0);
-					a[i] = b;
+					b = "";
+					a[bi] = b;
 				}
-				seg = [];
-				encodeVarint(seg, b.length);
-				segs.push(seg);
-				segs.push(b)
-			}
+				i = encodeVarint(buf, i, b.length);
+				buf.set(b, i);
+				i += b.length;
+			});
 		}
 
 		if (this.u8) {
 			if (this.u8 > 255 || this.u8 < 0)
 				fail('colfer: gen/O field u8 out of reach: ' + this.u8);
-			segs.push([14, this.u8]);
+			buf[i++] = 14;
+			buf[i++] = this.u8;
 		}
 
 		if (this.u16) {
 			if (this.u16 > 65535 || this.u16 < 0)
 				fail('colfer: gen/O field u16 out of reach: ' + this.u16);
-			if (this.u16 < 256)
-				segs.push([15 | 128, this.u16]);
-			else
-				segs.push([15, this.u16 >>> 8, this.u16 & 255]);
+			if (this.u16 < 256) {
+				buf[i++] = 15 | 128;
+				buf[i++] = this.u16;
+			} else {
+				buf[i++] = 15;
+				buf[i++] = this.u16 >>> 0;
+				buf[i++] = this.u16 & 255;
+			}
 		}
 
 		if (this.f32s && this.f32s.length) {
-			if (this.f32s.length > colferListMax)
+			var a = this.f32s;
+			if (a.length > colferListMax)
 				fail('colfer: gen.o.f32s length exceeds colferListMax');
-			var seg = [16];
-			encodeVarint(seg, this.f32s.length);
-			segs.push(seg);
-
-			var bytes = new Uint8Array(this.f32s.length * 4);
-			segs.push(bytes);
-
-			var view = new DataView(bytes.buffer);
-			this.f32s.forEach(function(f, i) {
+			buf[i++] = 16;
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f, fi) {
 				if (f > 3.4028234663852886E38 || f < -3.4028234663852886E38)
-					fail('colfer: gen.o.f32s[' + i + '] exceeds 32-bit range');
-				view.setFloat32(i * 4, f);
+					fail('colfer: gen.o.f32s[' + fi + '] exceeds 32-bit range');
+				view.setFloat32(i, f);
+				i += 4;
 			});
 		}
 
 		if (this.f64s && this.f64s.length) {
-			if (this.f64s.length > colferListMax)
+			var a = this.f64s;
+			if (a.length > colferListMax)
 				fail('colfer: gen.o.f64s length exceeds colferListMax');
-			var seg = [17];
-			encodeVarint(seg, this.f64s.length);
-			segs.push(seg);
-
-			var bytes = new Uint8Array(this.f64s.length * 8);
-			segs.push(bytes);
-
-			var view = new DataView(bytes.buffer);
-			this.f64s.forEach(function(f, i) {
-				view.setFloat64(i * 8, f);
+			buf[i++] = 17;
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f) {
+				view.setFloat64(i, f);
+				i += 8;
 			});
 		}
 
-		var size = 1;
-		segs.forEach(function(seg) {
-			size += seg.length;
-		});
-		if (size > colferSizeMax)
-			fail('colfer: gen.o serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
 
-		var bytes = new Uint8Array(size);
-		var i = 0;
-		segs.forEach(function(seg) {
-			bytes.set(seg, i);
-			i += seg.length;
-		});
-		bytes[i] = 127;
-		return bytes;
+		buf[i++] = 127;
+		if (i >= colferSizeMax)
+			fail('colfer: gen.o serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
+		return buf.subarray(0, i);
 	}
 
 	// Deserializes the object from an Uint8Array and returns the number of bytes read.
@@ -610,13 +586,13 @@ var gen = new function() {
 
 	// private section
 
-	var encodeVarint = function(bytes, x) {
+	var encodeVarint = function(bytes, i, x) {
 		while (x > 127) {
-			bytes.push(x|128);
+			bytes[i++] = (x & 127) | 128;
 			x /= 128;
 		}
-		bytes.push(x&127);
-		return bytes;
+		bytes[i++] = x & 127;
+		return i;
 	}
 
 	function decodeInt64(data, i) {
@@ -638,7 +614,7 @@ var gen = new function() {
 
 	var encodeUTF8 = function(s) {
 		var i = 0;
-		var bytes = new Uint8Array(s.length * 4);
+		var bytes = new Uint8Array(s.length * 3);
 		for (var ci = 0; ci != s.length; ci++) {
 			var c = s.charCodeAt(ci);
 			if (c < 128) {
