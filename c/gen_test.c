@@ -96,8 +96,8 @@ void gen_o_dump(const gen_o o) {
 			printf(" %f", o.f64s.list[i]);
 		printf(" ] ");
 	}
-	if (o.t.tv_sec) printf("t.tv_sec=%lld ", o.t.tv_sec);
-	if (o.t.tv_nsec) printf("t.tv_nsec=%zd ", o.t.tv_nsec);
+	if (o.t.tv_sec) printf("t.tv_sec=%lld ", (long long) o.t.tv_sec);
+	if (o.t.tv_nsec) printf("t.tv_nsec=%ld ", o.t.tv_nsec);
 	if (o.s.len) {
 		hexstr(buf, o.s.utf8, o.s.len);
 		printf("s=0x%s", buf);
