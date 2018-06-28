@@ -5,6 +5,8 @@
 // https://github.com/google/benchmark
 #include <benchmark/benchmark.h>
 
+#include <iostream>
+
 
 const bench_colfer test_data[] = {
         {1234567890L, (char*) "db003lz12", 9, 389, 452, 0x488b5c2428488918ULL, 0.99, 1},
@@ -41,6 +43,62 @@ static void BM_unmarshal_colfer(benchmark::State& state) {
 		auto serial = serials[i % test_data_len];
 
                 benchmark::DoNotOptimize(bench_colfer_unmarshal(o, serial, colfer_size_max));
+                benchmark::DoNotOptimize(o);
+                benchmark::ClobberMemory();
+        }
+}
+
+static void BM_marshal_protobuf(benchmark::State& state) {
+	std::string buf;
+
+	bench::ProtoBuf data[test_data_len];
+	for (size_t i = 0; i < test_data_len; i++) {
+		data[i].set_key(test_data[i].key);
+		data[i].set_host(test_data[i].host.utf8, test_data[i].host.len);
+		data[i].set_port(test_data[i].port);
+		data[i].set_size(test_data[i].size);
+		data[i].set_hash(test_data[i].hash);
+		data[i].set_ratio(test_data[i].ratio);
+		data[i].set_route(test_data[i].route);
+		if (!data[i].IsInitialized()) state.SkipWithError("not initialized");
+	}
+
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto ok = data[i % test_data_len].SerializeToString(&buf);
+		if (!ok) state.SkipWithError("not serialized");
+
+                benchmark::DoNotOptimize(ok);
+                benchmark::DoNotOptimize(buf);
+                benchmark::ClobberMemory();
+
+		buf.clear();
+        }
+}
+
+static void BM_unmarshal_protobuf(benchmark::State& state) {
+	std::string serials[test_data_len];
+	for (size_t i = 0; i < test_data_len; i++) {
+		bench::ProtoBuf data;
+		data.set_key(test_data[i].key);
+		data.set_host(test_data[i].host.utf8, test_data[i].host.len);
+		data.set_port(test_data[i].port);
+		data.set_size(test_data[i].size);
+		data.set_hash(test_data[i].hash);
+		data.set_ratio(test_data[i].ratio);
+		data.set_route(test_data[i].route);
+		if (!data.IsInitialized()) state.SkipWithError("not initialized");
+		if (!data.SerializeToString(&serials[i]))
+			state.SkipWithError("not serialized");
+	}
+
+
+	bench::ProtoBuf o;
+
+	for (int i = 0; state.KeepRunning(); i++) {
+		auto ok = o.ParseFromString(serials[i % test_data_len]);
+		if (!ok) state.SkipWithError("not parsed");
+
+                benchmark::DoNotOptimize(ok);
                 benchmark::DoNotOptimize(o);
                 benchmark::ClobberMemory();
         }
@@ -106,6 +164,8 @@ static void BM_unmarshal_flatbuffers(benchmark::State& state) {
 
 BENCHMARK(BM_marshal_colfer);
 BENCHMARK(BM_unmarshal_colfer);
+BENCHMARK(BM_marshal_protobuf);
+BENCHMARK(BM_unmarshal_protobuf);
 BENCHMARK(BM_marshal_flatbuffers);
 BENCHMARK(BM_unmarshal_flatbuffers);
 
