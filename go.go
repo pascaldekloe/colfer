@@ -554,7 +554,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			}
 			l += vl
 		}
-		if x > ColferSizeMax {
+		if l > ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
 	}

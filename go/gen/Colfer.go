@@ -459,7 +459,7 @@ func (o *O) MarshalLen() (int, error) {
 			}
 			l += vl
 		}
-		if x > ColferSizeMax {
+		if l > ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct gen.o size exceeds %d bytes", ColferSizeMax))
 		}
 	}
