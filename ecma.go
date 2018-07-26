@@ -442,7 +442,7 @@ const ecmaMarshal = `
 
 		buf[i++] = 127;
 		if (i >= colferSizeMax)
-			throw new Error('colfer: {{.String}} serial size ' + size + ' exceeds ' + colferListMax + ' bytes');
+			throw new Error('colfer: {{.String}} serial size ' + i + ' exceeds ' + colferSizeMax + ' bytes');
 		return buf.subarray(0, i);
 	}`
 
