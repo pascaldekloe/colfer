@@ -171,8 +171,7 @@ import java.nio.BufferUnderflowException;
 	/** The upper limit for the number of elements in a list. */
 	public static int colferListMax = {{.Pkg.ListMax}};
 {{end}}
-
-{{range .Fields}}
+{{- range .Fields}}
 {{if .Docs}}
 	/**
 {{.DocText "\t * "}}
@@ -1128,7 +1127,7 @@ import java.nio.BufferUnderflowException;
 	/**
 	 * Sets {{.String}}.
 	 * @param value the replacement.
-	 * @return {link this}.
+	 * @return {@code this}.
 	 */
 	public {{$class}} with{{.NameTitle}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
 		this.{{.NameNative}} = value;
