@@ -18,10 +18,10 @@ var (
 	format  = flag.Bool("f", false, "Normalizes schemas on the fly.")
 	verbose = flag.Bool("v", false, "Enables verbose reporting to the standard error.")
 
-	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n    \t`expression` is applied to the target language under the name\n    \tColferSizeMax.")
-	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\n    \tlist. The `expression` is applied to the target language under\n    \tthe name ColferListMax.")
+	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
+	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
 
-	superClass = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\n    \ta package separator. Java only.")
+	superClass = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
