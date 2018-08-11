@@ -8,7 +8,7 @@ to marshal and unmarshall data structures.
 
 This is free and unencumbered software released into the
 [public domain](http://creativecommons.org/publicdomain/zero/1.0).
-The format is inspired by Proto**col** Buf**fer**.
+The format is inspired by Proto**col** Buf**fer**s.
 
 
 #### Language Support
@@ -22,8 +22,8 @@ The format is inspired by Proto**col** Buf**fer**.
 
 * Simple and straightforward in use
 * No dependencies other than the core library
-* Both faster and smaller than: Protocol Buffers, FlatBuffers and MessagePack
-* Robust including size protection
+* Both faster and smaller than the competition
+* Robust against malicious input
 * Maximum of 127 fields per data structure
 * No support for enumerations
 * Framed; suitable for concatenation/streaming
@@ -51,15 +51,17 @@ SYNOPSIS
 DESCRIPTION
 	Generates source code for a language. The options are: C, Go,
 	Java and JavaScript.
-	The file operands specify the input. Directories are scanned for
-	files with the colf extension. If file is absent, colf includes
-	the working directory.
-	A package can have multiple schema files.
+	The file operands specify schema input. Directories are scanned
+	for files with the colf extension. When no files are given, then
+	the current working directory is used.
+	A package definition may be spread over several schema files.
+	The directory hierarchy of the input is not relevant for the
+	generated code.
 
 OPTIONS
   -b directory
     	Use a specific destination base directory. (default ".")
-  -f	Normalizes schemas on the fly.
+  -f	Normalizes the format of all input schemas on the fly.
   -l expression
     	Sets the default upper limit for the number of elements in a
     	list. The expression is applied to the target language under
@@ -70,7 +72,7 @@ OPTIONS
     	Sets the default upper limit for serial byte sizes. The
     	expression is applied to the target language under the name
     	ColferSizeMax. (default "16 * 1024 * 1024")
-  -v	Enables verbose reporting to the standard error.
+  -v	Enables verbose reporting to standard error.
   -x class
     	Makes all generated classes extend a super class. Use slash as
     	a package separator. Java only.
@@ -89,7 +91,7 @@ EXAMPLES
 		colf -p com/example -x com/example/Parent Java api
 
 BUGS
-	Report bugs at https://github.com/pascaldekloe/colfer/issues
+	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
 
 	Text validation is not part of the marshalling and unmarshalling
 	process. C and Go just pass any malformed UTF-8 characters. Java
@@ -97,14 +99,12 @@ BUGS
 	(ASCII 63).
 
 SEE ALSO
-	protoc(1)
+	protoc(1), flatc(1)
 ```
 
-
-It is recommended to commit the generated source code to the respective version
-control.
-
-Alternatively, you may use the
+It is recommended to commit the generated source code into the respective
+version control to preserve build consistency and minimise the need for compiler
+installations. Alternatively, you may use the
 [Maven plugin](https://github.com/pascaldekloe/colfer/wiki/Java#maven).
 
 ```xml
@@ -122,7 +122,7 @@ Alternatively, you may use the
 
 ## Schema
 
-Data structures are defined in `.colf` files. The format is quite conventional.
+Data structures are defined in `.colf` files. The format is quite self-explanatory.
 
 ```
 // Package demo offers a demonstration.
@@ -177,9 +177,9 @@ The following table shows how Colfer data types are applied per language.
 | list		| * + size_t		| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
-* ‡ range limited to (1 - 2⁵³, 2⁵³ - 1)
+* ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
 * †† timezone not preserved
-* †‡ characters limited by UTF-16 (`U+0000`, `U+10FFFF`)
+* †‡ characters limited by UTF-16 [`U+0000`, `U+10FFFF`]
 
 Lists may contain floating points, text, binaries or data structures.
 
@@ -196,5 +196,7 @@ seen as the schema version.
 
 ## Performance
 
-Colfer aims to be the fastest and the smallest format while still resilient to malicious input. See the [benchmark wiki](https://github.com/pascaldekloe/colfer/wiki/Benchmark) for a comparison.
-Suboptimal performance is treated like a bug.
+Colfer aims to be the fastest and the smallest format without compromising on
+reliability. See the
+[benchmark wiki](https://github.com/pascaldekloe/colfer/wiki/Benchmark) for a
+comparison. Suboptimal performance is treated like a bug.
