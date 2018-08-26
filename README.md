@@ -30,9 +30,8 @@ The format is inspired by Proto**col** Buf**fer**s.
 
 #### TODO's
 
-* Rust and Python
-* List support for integers and timestamps
-
+* Rust and Python support
+* Protocol [revision](https://github.com/pascaldekloe/colfer/commits/v2)
 
 
 ## Use
