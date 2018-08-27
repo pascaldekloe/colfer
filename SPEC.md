@@ -42,10 +42,11 @@ fixed-size :≡ 1 – 255
 
 The second octet in a serial contains a FLIT64 for the size of the following
 *ranged* and *variable part*. When the size declaration needs more than one
-octet, then the rest of the FLIT64 is placed at the end of the fixed part.
+octet, then the rest of the FLIT64 is placed at the beginning of the ranged
+part.
 
 ```bnf
-fixed-part :≡ FLIT64-single fixes | FLIT64-head fixes FLIT64-tail
+fixed-part :≡ FLIT64-single fixes | FLIT64-head fixes
 ```
 
 Each field from an encoded data structure has a fixed element. Note that the
