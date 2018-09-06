@@ -23,7 +23,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 * Simple and straightforward in use
 * No dependencies other than the core library
 * Both faster and smaller than the competition
-* Robust against malicious input
+* [Robust](#security) against malicious input
 * Maximum of 127 fields per data structure
 * No support for enumerations
 * Framed; suitable for concatenation/streaming
@@ -183,6 +183,17 @@ The following table shows how Colfer data types are applied per language.
 
 Lists may contain floating points, text, binaries or data structures.
 
+
+
+## Security
+
+Colfer is suited for untrusted data sources such as network I/O or bulk streams.
+Marshalling and unmarshalling comes with built-in size protection to ensure
+predictable memory consumption. The format prevents memory bombs by design.
+
+The marshaller may not produce malformed output, regardless of the data input.
+In no event may the unmarshaller read outside the boundaries of a serial. Fuzz
+testing did not reveal any volnurabilities yet. Computing power is welcome.
 
 
 ## Compatibility
