@@ -1,64 +1,71 @@
 package poc
 
 import (
-	"bytes"
+	"log"
 	"reflect"
 	"testing"
 )
 
-var benchData = []byte{
-	16,        // fixed size
-	11<<1 | 1, // ranged + variable size FLIT
-	2,         // key FLIT fixed
-	8<<1 | 1,  // host size FLIT fixed
-	254, 253,  // port fixed
-	2,                              // size FLIT fixed
-	2,                              // hash FLIT fixed
-	10, 11, 12, 13, 14, 15, 16, 17, // ratio fixed
-	1,                              // route fixed
-	8,                              // key FLIT ranged
-	16,                             // size FLIT ranged
-	16,                             // hash FLIT ranged
-	0, 21, 22, 23, 24, 25, 26, 255, // host variable
+var TestData = [4]*Record{
+	{Key: 1234567890, Host: "db003lz12", Port: 389, Size: 452, Hash: 0x488b5c2428488918, Ratio: 0.99, Route: true},
+	{Key: 1234567891, Host: "localhost", Port: 22, Size: 4096, Hash: 0x243048899c24c824, Ratio: 0.20, Route: false},
+	{Key: 1234567892, Host: "kdc.local", Port: 88, Size: 1984, Hash: 0x000048891c24485c, Ratio: 0.06, Route: false},
+	{Key: 1234567893, Host: "vhost8.dmz.example.com", Port: 27017, Size: 59741, Hash: 0x5c2408488b9c2489, Ratio: 0.0, Route: true},
 }
 
-var benchObj = &Record{Key: 256, Host: "\x00\x15\x16\x17\x18\x19\x1a\xff", Port: 0xfdfe, Size: 512, Hash: 0x400, Ratio: 1.694714631965086e-226, Route: true}
+var SerialBytes [4][]byte
+var SerialSizes [4]int
+
+func init() {
+	for i, o := range TestData {
+		SerialBytes[i] = make([]byte, ColferMax)
+
+		var err error
+		SerialSizes[i], err = o.MarshalTo(SerialBytes[i])
+		if err != nil {
+			log.Fatalf("test record %d marshal error: %s", i, err)
+		}
+	}
+}
+
+func TestRoundtrip(t *testing.T) {
+	for i, bytes := range SerialBytes {
+		var o Record
+		n, err := o.Unmarshal(bytes, SerialSizes[i])
+		if err != nil {
+			t.Errorf("test record %d unmarshal error: %s", i, err)
+		}
+		if n != SerialSizes[i] {
+			t.Errorf("test record %d read %d bytes, want %d", i, n, SerialSizes[i])
+		}
+		if !reflect.DeepEqual(&o, TestData[i]) {
+			t.Errorf("test record %d got %#v, want %#v", i, &o, TestData[i])
+		}
+	}
+}
+
+// prevents compiler optimisation
+var R Record
+var N int
+var Buf = make([]byte, ColferMax)
 
 func BenchmarkMarshalTo(b *testing.B) {
-	buf := make([]byte, ColferMax)
-
-	o := *benchObj
 	for i := 0; i < b.N; i++ {
-		n, err := o.MarshalTo(buf)
+		var err error
+		N, err = TestData[i&3].MarshalTo(Buf)
 		if err != nil {
 			b.Fatal("marshal error:", err)
 		}
-		if n != len(benchData) {
-			b.Fatalf("wrote %d bytes, want %d", n, len(benchData))
-		}
-	}
-
-	if got := buf[:len(benchData)]; !bytes.Equal(got, benchData) {
-		b.Errorf("got %x, want %x", got, benchData)
 	}
 }
 
-func BenchmarkUnmarshal(b *testing.B) {
-	buf := make([]byte, ColferMax)
-	copy(buf, benchData)
 
-	var o Record
+func BenchmarkUnmarshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		n, err := o.Unmarshal(buf, len(benchData))
+		var err error
+		N, err = R.Unmarshal(SerialBytes[i&3], ColferMax)
 		if err != nil {
 			b.Fatal(err)
 		}
-		if n != len(benchData) {
-			b.Fatalf("read %d out of %d", n, len(benchData))
-		}
-	}
-
-	if !reflect.DeepEqual(&o, benchObj) {
-		b.Errorf("got %#v, want %#v", o, benchObj)
 	}
 }
