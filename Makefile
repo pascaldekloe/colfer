@@ -12,7 +12,7 @@ test: install
 	make -C go
 	make -C java
 	make -C rpc
-	# Fails on Travis CI: mvn -f java/maven integration-test
+	mvn -f java/maven integration-test
 
 .PHONY: bench
 bench: install
@@ -30,4 +30,4 @@ build:
 clean:
 	go clean -i ./cmd/...
 	rm -fr build
-	# Fails on Travis CI:  mvn -f java/maven clean
+	mvn -f java/maven clean
