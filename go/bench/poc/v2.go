@@ -14,12 +14,6 @@ const ColferMax = 127
 // ErrColferMax signals a ColferMax breach.
 var ErrColferMax = errors.New("colfer: serial size exceeds maximum of 127 bytes")
 
-// ColferBufMin the the minimum size for serial buffers.
-const ColferBufMin = 49 // worst case scenario for fixed + ranged part
-
-// ErrColferBufMin signals a ColferBufMin breach.
-var errColferBufMin = errors.New("colfer: buffer smaller than minumum of 49 bytes")
-
 // ErrColfer signals data corruption or schema mismatch.
 var ErrColfer = errors.New("colfer: incompatible data")
 
@@ -51,12 +45,8 @@ type Record struct {
 // MarshalTo encodes o as Colfer into buf. It returns either the number of bytes
 // successfully written (0 < n ≤ len(buf)) or any error encountered that caused
 // the encoding to stop early. In no case will n exceed ColferMax.
-// If buf is smaller than ColferBufMin bytes, then the return is in error.
 // ErrColferOverflow may safely be used to resize buf due to ErrColferMax.
-func (o *Record) MarshalTo(buf []byte) (n int, err error) {
-	if len(buf) < ColferBufMin {
-		return 0, errColferBufMin
-	}
+func (o *Record) MarshalTo(buf *[ColferMax]byte) (n int, err error) {
 	if o == nil {
 		buf[0], buf[1] = 0, 0
 		return 2, nil
@@ -145,7 +135,7 @@ func (o *Record) MarshalTo(buf []byte) (n int, err error) {
 
 	// finish header
 	word0 |= uint64(n-25)<<17 | 1<<16
-	binary.LittleEndian.PutUint64(buf, word0)
+	binary.LittleEndian.PutUint64(buf[:], word0)
 
 	// write variable part
 	if n > len(buf) {
@@ -156,15 +146,11 @@ func (o *Record) MarshalTo(buf []byte) (n int, err error) {
 	return n, nil
 }
 
-// If buf is smaller than ColferBufMin bytes, then the return is in error.
+// Unmarshal decodes buf as Colfer. BufLen limits the number of bytes.
 // The return error is io.EOF for no data, io.ErrUnexpectedEOF for incomplete
 // data, ErrColferMax for size protection and ErrColfer for corrupted data.
-func (o *Record) Unmarshal(buf []byte, bufLen int) (n int, err error) {
-	if len(buf) < ColferBufMin {
-		return 0, errColferBufMin
-	}
-
-	word0 := binary.LittleEndian.Uint64(buf)
+func (o *Record) Unmarshal(buf *[ColferMax]byte, bufLen int) (n int, err error) {
+	word0 := binary.LittleEndian.Uint64(buf[:8])
 
 	fixedSize := uint16(word0)
 	n = int(fixedSize) + 3
@@ -173,8 +159,8 @@ func (o *Record) Unmarshal(buf []byte, bufLen int) (n int, err error) {
 	// variable size
 	v := word0 >> 17 & 0x7f
 	if word0&(1<<16) == 0 {
-		tz := bits.TrailingZeros64(v|0x80) & 7 + 1
-		v = v << uint(tz << 3 - tz) &^ masks[tz]
+		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		v = v << uint(tz<<3-tz) &^ masks[tz]
 		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
 		i += tz
 	}
@@ -197,8 +183,8 @@ func (o *Record) Unmarshal(buf []byte, bufLen int) (n int, err error) {
 	// field #1
 	v = word0 >> 25 & 0x7f
 	if word0&(1<<24) == 0 {
-		tz := bits.TrailingZeros64(v|0x80) & 7 + 1
-		v = v << uint(tz << 3 - tz) &^ masks[tz]
+		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		v = v << uint(tz<<3-tz) &^ masks[tz]
 		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
 		i += tz
 	}
@@ -207,8 +193,8 @@ func (o *Record) Unmarshal(buf []byte, bufLen int) (n int, err error) {
 	// field #2
 	v = word0 >> 33 & 0x7f
 	if word0&(1<<32) == 0 {
-		tz := bits.TrailingZeros64(v|0x80) & 7 + 1
-		v = v << uint(tz << 3 - tz) &^ masks[tz]
+		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		v = v << uint(tz<<3-tz) &^ masks[tz]
 		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
 		i += tz
 
@@ -224,8 +210,8 @@ func (o *Record) Unmarshal(buf []byte, bufLen int) (n int, err error) {
 	// field #4
 	v = word0 >> 57 & 0x7f
 	if word0&(1<<56) == 0 {
-		tz := bits.TrailingZeros64(v|0x80) & 7 + 1
-		v = v << uint(tz << 3 - tz) &^ masks[tz]
+		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		v = v << uint(tz<<3-tz) &^ masks[tz]
 		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
 		i += tz
 	}

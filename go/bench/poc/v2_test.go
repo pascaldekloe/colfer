@@ -13,13 +13,12 @@ var TestData = [4]*Record{
 	{Key: 1234567893, Host: "vhost8.dmz.example.com", Port: 27017, Size: 59741, Hash: 0x5c2408488b9c2489, Ratio: 0.0, Route: true},
 }
 
-var SerialBytes [4][]byte
+var SerialBytes [4]*[127]byte
 var SerialSizes [4]int
 
 func init() {
 	for i, o := range TestData {
-		SerialBytes[i] = make([]byte, ColferMax)
-
+		SerialBytes[i] = &[127]byte{}
 		var err error
 		SerialSizes[i], err = o.MarshalTo(SerialBytes[i])
 		if err != nil {
@@ -47,25 +46,24 @@ func TestRoundtrip(t *testing.T) {
 // prevents compiler optimisation
 var R Record
 var N int
-var Buf = make([]byte, ColferMax)
+var Buf [ColferMax]byte
 
 func BenchmarkMarshalTo(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var err error
-		N, err = TestData[i&3].MarshalTo(Buf)
+		N, err = TestData[i&3].MarshalTo(&Buf)
 		if err != nil {
 			b.Fatal("marshal error:", err)
 		}
 	}
 }
 
-
 func BenchmarkUnmarshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var err error
 		N, err = R.Unmarshal(SerialBytes[i&3], ColferMax)
 		if err != nil {
-			b.Fatal(err)
+			b.Fatal("unmarshal error:", err)
 		}
 	}
 }
