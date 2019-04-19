@@ -14,7 +14,7 @@ build: gen install
 	javac -d build/classes test.java gen/*.java
 	javac -d build/classes build/java/break_/*/*.java
 
-	javadoc -d build/javadoc -sourcepath build/java -subpackages . > /dev/null
+	javadoc -d build/javadoc -sourcepath .:build/java -subpackages gen:break_ > /dev/null
 
 .PHONY: clean
 clean:
