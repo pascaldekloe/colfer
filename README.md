@@ -159,30 +159,24 @@ See what the generated code looks like in
 [JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
 The following table shows how Colfer data types are applied per language.
+Arrays (denoted by `*`) may contain any type.
 
 | Colfer	| C			| Go		| Java		| JavaScript	|
 |:--------------|:----------------------|:--------------|:--------------|:--------------|
-| bool		| char			| bool		| boolean	| Boolean	|
-| uint8		| uint8_t		| uint8		| byte †	| Number	|
-| uint16	| uint16_t		| uint16	| short †	| Number	|
-| uint32	| uint32_t		| uint32	| int †		| Number	|
-| uint64	| uint64_t		| uint64	| long †	| Number ‡	|
-| int32		| int32_t		| int32		| int		| Number	|
-| int64		| int64_t		| int64		| long		| Number ‡	|
+| bool		| uint + mask		| bool		| boolean	| Boolean	|
+| uint		| uint64_t		| uint64	| long †	| Number ‡	|
+| int		| uint64_t		| int64		| long		| Number ‡	|
 | float32	| float			| float32	| float		| Number	|
 | float64	| double		| float64	| double	| Number	|
-| timestamp	| timespec		| time.Time ††	| time.Instant	| Date + Number	|
-| text		| const char* + size_t	| string	| String †‡	| String †‡	|
-| binary	| uint8_t* + size_t	| []byte	| byte[]	| Uint8Array	|
-| list		| * + size_t		| slice		| array		| Array		|
+| text		| const char* + size_t	| string	| String	| String	|
+| T *		| *T + size_t		| []T		| T[]		| Array		|
+| opaque8	| uint8_t		| byte		| byte †	| Number	|
+| opaque16	| uint16_t		| uint16	| short	†	| Number	|
+| opaque32	| uint32_t		| uint32	| int †		| Number	|
+| opaque64	| uint64_t		| uint64	| long †	| Uint8Array	|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
-* †† timezone not preserved
-* †‡ characters limited by UTF-16 [`U+0000`, `U+10FFFF`]
-
-Lists may contain floating points, text, binaries or data structures.
-
 
 
 ## Security
