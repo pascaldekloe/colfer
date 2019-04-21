@@ -25,7 +25,7 @@ All integers are 64-bit wide. Signed integers use *ZigZag encoding*.
 Leading zeros are ommitted with the following algorithm. TODO(pascaldekloe)
 
 ```bnf
-integer      :≡ integer-head integer tail ;
+integer      :≡ integer-head | integer-head integer-tail ;
 integer-head :≡ octet ;
 integer-tail :≡ octet |
                 octet octet |
@@ -47,7 +47,7 @@ The minimum [size] goes into `fixed` and the remainder, if any, overflows into
 
 ```bnf
 serial        :≡ fixed-size variable-size fixed variable ; record
-fixed-size    :≡ 0–255 0–255 ; 16-bit address space, little-endian order
+fixed-size    :≡ octet octet ; 16-bit address space, little-endian order
 variable-size :≡ integer-head ; 64-bit address space
 ```
 
@@ -87,7 +87,7 @@ Remainders of `fixed` appear in `overflow` in sequential order. The `embedded`
 parts append in reverse field order, this to support unknow/newer field gaps.
 
 ```bnf
-variable :≡ overflow embedded
+variable :≡ overflow embedded ;
 overflow :≡ ε | overflow integer-tail ;
 embedded :≡ ε | embedded text | embedded array ;
 ```
@@ -124,7 +124,7 @@ array :≡ integer-array   | boolean-array   | float32-array   | float64-array  
          opaque168-array | opaque176-array | opaque184-array | opaque192-array |
          opaque200-array | opaque208-array | opaque216-array | opaque224-array |
          opaque232-array | opaque240-array | opaque248-array | opaque256-array |
-         text-array      | record array    ;
+         text-array      | record-array    ;
 
 integer-array      :≡ integer-head-array integer-tail-array ;
 integer-head-array :≡ integer-head-array integer-head | integer-head ;
