@@ -94,7 +94,7 @@ func ParseFiles(files []string) ([]*Package, error) {
 				if ok {
 					if f.TypeList {
 						switch t {
-						case "float32", "float64", "text", "binary":
+						case "float32", "float64", "text", "binary", "int32", "int64":
 						default:
 							return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f.String())
 						}
