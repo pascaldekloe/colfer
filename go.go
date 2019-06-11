@@ -272,14 +272,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		buf[i] = byte(x)
 		i++
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint32(v)
-			if v < 0 {
-				buf[i] = 1
-				x1 = ^x1 + 1
-			} else {
-				buf[i] = 0
-			}
-			i++
+			x1 := uint32((v << 1) ^ (v >> 31))
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				buf[i] = byte(x1 | 0x80)
 				x1 >>= 7
@@ -322,14 +315,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		buf[i] = byte(x)
 		i++
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint64(v)
-			if v < 0 {
-				buf[i] = 1
-				x1 = ^x1 + 1
-			} else {
-				buf[i] = 0
-			}
-			i++
+			x1 := uint64((v << 1) ^ (v >> 63))
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				buf[i] = byte(x1 | 0x80)
 				x1 >>= 7
@@ -519,11 +505,8 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			x >>= 7
 		}
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint32(v)
-			l+=2
-			if v < 0 {
-				x1 = ^x1 + 1
-			}
+			x1 := uint32((v << 1) ^ (v >> 31))
+			l++
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				x1 >>= 7
 				l++
@@ -554,11 +537,8 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			x >>= 7
 		}
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint64(v)
-			l+=2
-			if v < 0 {
-				x1 = ^x1 + 1
-			}
+			x1 := uint64((v << 1) ^ (v >> 63))
+			l++
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				x1 >>= 7
 				l++
@@ -820,8 +800,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				i++
 				goto eof
 			}
-			sign := data[i]
-			i++
+
 			x := uint32(data[i])
 			i++
 	
@@ -842,11 +821,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				}
 			}
 
-			if sign == 1 {
-				a[ai] = int32(^x + 1)
-			} else {
-				a[ai] = int32(x) 
-			}
+			a[ai] = int32((x >> 1) ^ (-(x & 1)))
 		}
 		o.{{.NameTitle}} = a
 
@@ -932,8 +907,6 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				i++
 				goto eof
 			}
-			sign := data[i]
-			i++
 			x := uint64(data[i])
 			i++
 	
@@ -954,11 +927,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				}
 			}
 
-			if sign == 1 {
-				a[ai] = int64(^x + 1)
-			} else {
-				a[ai] = int64(x) 
-			}
+			a[ai] = int64((x >> 1) ^ (-(x & 1)))
 		}
 		o.{{.NameTitle}} = a
 
