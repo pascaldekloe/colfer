@@ -272,8 +272,8 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		buf[i] = byte(x)
 		i++
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint32((v << 1) ^ (v >> 31))
-			for n := 0; x1 >= 0x80 && n < 8; n++ {
+			x1 := uint32(v << 1) ^ uint32(v >> 31)
+			for ; x1 >= 0x80; {
 				buf[i] = byte(x1 | 0x80)
 				x1 >>= 7
 				i++
@@ -315,7 +315,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		buf[i] = byte(x)
 		i++
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint64((v << 1) ^ (v >> 63))
+			x1 := uint64(v << 1) ^ uint64(v >> 63)
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				buf[i] = byte(x1 | 0x80)
 				x1 >>= 7
@@ -505,13 +505,13 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			x >>= 7
 		}
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint32((v << 1) ^ (v >> 31))
-			l++
-			for n := 0; x1 >= 0x80 && n < 8; n++ {
+			x1 := uint32(v << 1) ^ uint32(v >> 31)
+			for ; x1 >= 0x80; {
 				x1 >>= 7
 				l++
 			}
 		}
+		l += len(o.{{.NameTitle}})
 		if l >= ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
@@ -537,13 +537,13 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 			x >>= 7
 		}
 		for _, v := range o.{{.NameTitle}} {
-			x1 := uint64((v << 1) ^ (v >> 63))
-			l++
+			x1 := uint64(v << 1) ^ uint64(v >> 63)
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				x1 >>= 7
 				l++
 			}
 		}
+		l += len(o.{{.NameTitle}})
 		if l >= ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
@@ -789,11 +789,6 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		}
 
 		l := int(x)
-
-		if end := i + l*4; end >= len(data) {
-			i = end
-			goto eof
-		}
 		a := make([]int32, l)
 		for ai := range a {
 			if i+1 >= len(data) {
@@ -801,19 +796,19 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				goto eof
 			}
 
-			x := uint32(data[i])
+			x := uint(data[i])
 			i++
 	
 			if x >= 0x80 {
 				x &= 0x7f
 				for shift := uint(7); ; shift += 7 {
-					b := uint32(data[i])
+					b := uint(data[i])
 					i++
 					if i >= len(data) {
 						goto eof
 					}
 	
-					if b < 0x80 || shift == 56 {
+					if b < 0x80 {
 						x |= b << shift
 						break
 					}
@@ -897,10 +892,6 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 
 		l := int(x)
 
-		if end := i + l*8; end >= len(data) {
-			i = end
-			goto eof
-		}
 		a := make([]int64, l)
 		for ai := range a {
 			if i+1 >= len(data) {
