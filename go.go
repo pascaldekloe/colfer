@@ -798,7 +798,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 
 			x := uint(data[i])
 			i++
-	
+
 			if x >= 0x80 {
 				x &= 0x7f
 				for shift := uint(7); ; shift += 7 {
@@ -807,7 +807,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 					if i >= len(data) {
 						goto eof
 					}
-	
+
 					if b < 0x80 {
 						x |= b << shift
 						break
@@ -900,7 +900,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			}
 			x := uint64(data[i])
 			i++
-	
+
 			if x >= 0x80 {
 				x &= 0x7f
 				for shift := uint(7); ; shift += 7 {
@@ -909,7 +909,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 					if i >= len(data) {
 						goto eof
 					}
-	
+
 					if b < 0x80 || shift == 56 {
 						x |= b << shift
 						break
