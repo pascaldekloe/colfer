@@ -3,15 +3,13 @@ package testdata
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/pascaldekloe/goe/verify"
 
 	"github.com/pascaldekloe/colfer/go/gen"
 )
@@ -59,8 +57,8 @@ func newGoldenCases() []*golden {
 		{"067fefffffffffffff7f", gen.O{F64: math.MaxFloat64}},
 		{"067ff80000000000017f", gen.O{F64: math.NaN()}},
 		{"0755ef312a2e5da4e77f", gen.O{T: time.Unix(1441739050, 777888999).In(time.UTC)}},
-		{"87000007dba8218000000003e87f", gen.O{T: time.Unix(864E10, 1000).In(time.UTC)}},
-		{"87fffff82457de8000000003e97f", gen.O{T: time.Unix(-864E10, 1001).In(time.UTC)}},
+		{"87000007dba8218000000003e87f", gen.O{T: time.Unix(864e10, 1000).In(time.UTC)}},
+		{"87fffff82457de8000000003e97f", gen.O{T: time.Unix(-864e10, 1001).In(time.UTC)}},
 		{"87ffffffffffffffff2e5da4e77f", gen.O{T: time.Unix(-1, 777888999).In(time.UTC)}},
 		{"0801417f", gen.O{S: "A"}},
 		{"080261007f", gen.O{S: "a\x00"}},
@@ -109,7 +107,18 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("0x%s: %s", gold.serial, err)
 			continue
 		}
-		verify.Values(t, fmt.Sprintf("0x%s", gold.serial), got, gold.object)
+
+		// work around NaN != NaN
+		a, b := got, gold.object
+		if math.IsNaN(float64(a.F32)) && math.IsNaN(float64(b.F32)) {
+			a.F32, b.F32 = 0, 0
+		}
+		if math.IsNaN(a.F64) && math.IsNaN(b.F64) {
+			a.F64, b.F64 = 0, 0
+		}
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("0x%s: got %+v, want %+v", gold.serial, got, gold.object)
+		}
 	}
 }
 
