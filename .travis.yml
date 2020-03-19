@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.7
+  - 1.14
 
 sudo: required
 dist: trusty
