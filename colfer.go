@@ -60,6 +60,12 @@ type Package struct {
 	SuperClass string
 	// SuperClassNative is the language specific SuperClass.
 	SuperClassNative string
+	// SuperInterface is the fully qualified path.
+	SuperInterface string
+	// SuperInterfaceNative is the language specific SuperInterface.
+	SuperInterfaceNative string
+	// CodeSnippet is helpful in book-keeping functionality.
+	CodeSnippet string
 }
 
 // DocText returns the documentation lines prefixed with ident.
