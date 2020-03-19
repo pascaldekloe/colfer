@@ -29,7 +29,9 @@ var (
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
 	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
 
-	superClass = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
+	superClass      = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
+	superInterface  = flag.String("i", "", "Makes all generated classes implement a super `interface`. Use slash as\na package separator. Java only.")
+	codeSnippetFile = flag.String("c", "", "Insert code snippet from `file`.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
@@ -62,12 +64,18 @@ func main() {
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with C")
 		}
+		if *superInterface != "" {
+			log.Fatal("colf: super interface not supported with C")
+		}
 
 	case "go":
 		report.Println("Set up for Go")
 		gen = colfer.GenerateGo
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with Go")
+		}
+		if *superInterface != "" {
+			log.Fatal("colf: super interface not supported with Go")
 		}
 
 	case "java":
@@ -79,6 +87,9 @@ func main() {
 		gen = colfer.GenerateECMA
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with ECMAScript")
+		}
+		if *superInterface != "" {
+			log.Fatal("colf: super interface not supported with ECMAScript")
 		}
 
 	default:
@@ -145,6 +156,15 @@ func main() {
 		p.SizeMax = *sizeMax
 		p.ListMax = *listMax
 		p.SuperClass = *superClass
+		p.SuperInterface = *superInterface
+		if len(*codeSnippetFile) > 0 {
+			content, err := ioutil.ReadFile(*codeSnippetFile)
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				p.CodeSnippet = string(content)
+			}
+		}
 	}
 
 	if err := gen(*basedir, packages); err != nil {
