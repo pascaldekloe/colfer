@@ -1,5 +1,5 @@
-GOPATH?=$(HOME)/go
-COLF?=$(GOPATH)/bin/colf
+GOPATH != go env GOPATH
+COLF = $(GOPATH)/bin/colf
 
 .PHONY: run
 run: clean test
