@@ -10,7 +10,7 @@ gen: install
 
 build: install
 	mkdir -p build
-	$(COLF) -b ../../../.. -p github.com/pascaldekloe/colfer/go/build/break go ../testdata/break*.colf
+	$(COLF) -p github.com/pascaldekloe/colfer/go/build/break go ../testdata/break*.colf
 
 fuzz.zip: gen
 	go get github.com/dvyukov/go-fuzz/go-fuzz-build

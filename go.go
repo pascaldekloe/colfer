@@ -2,12 +2,41 @@ package colfer
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/mod/modfile"
 )
+
+func goMod(dir string) (modDir, modPkg string, err error) {
+	path := filepath.Join(dir, "go.mod")
+	text, err := ioutil.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", "", err
+		}
+		if dir == "." {
+			dir, err = filepath.Abs(dir)
+			if err != nil {
+				return "", "", err
+			}
+		}
+		if len(dir) == 1 && dir[0] == filepath.Separator {
+			return "", "", nil // not found
+		}
+		// try parent directory
+		return goMod(filepath.Dir(dir))
+	}
+	modPkg = modfile.ModulePath(text)
+	if modPkg == "" {
+		return "", "", fmt.Errorf("%s: no module definition", path)
+	}
+	return dir, modPkg, nil
+}
 
 // GenerateGo writes the code into file "Colfer.go".
 func GenerateGo(basedir string, packages Packages) error {
@@ -17,6 +46,12 @@ func GenerateGo(basedir string, packages Packages) error {
 	template.Must(t.New("marshal-field-len").Parse(goMarshalFieldLen))
 	template.Must(t.New("unmarshal-field").Parse(goUnmarshalField))
 	template.Must(t.New("unmarshal-varint").Parse(goUnmarshalVarint))
+
+	modDir, modPkg, err := goMod(basedir)
+	if err != nil {
+		return err
+	}
+	modPrefix := modPkg + "/"
 
 	for _, p := range packages {
 		p.NameNative = p.Name[strings.LastIndexByte(p.Name, '/')+1:]
@@ -51,6 +86,9 @@ func GenerateGo(basedir string, packages Packages) error {
 		}
 
 		path := filepath.Join(basedir, p.Name)
+		if modPkg != "" && strings.HasPrefix(p.Name, modPrefix) {
+			path = filepath.Join(modDir, p.Name[len(modPrefix):])
+		}
 		if err := os.MkdirAll(path, 0777); err != nil {
 			return err
 		}
