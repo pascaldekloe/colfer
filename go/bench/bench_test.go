@@ -52,11 +52,7 @@ func init() {
 		gen.FlatBuffersAddSize(builder, o.Size)
 		gen.FlatBuffersAddHash(builder, o.Hash)
 		gen.FlatBuffersAddRatio(builder, o.Ratio)
-		if o.Route {
-			gen.FlatBuffersAddRoute(builder, 1)
-		} else {
-			gen.FlatBuffersAddRoute(builder, 0)
-		}
+		gen.FlatBuffersAddRoute(builder, o.Route)
 		builder.Finish(gen.FlatBuffersEnd(builder))
 		flatSerials[i] = builder.FinishedBytes()
 	}
@@ -106,11 +102,7 @@ func BenchmarkMarshal(b *testing.B) {
 			gen.FlatBuffersAddSize(builder, o.Size)
 			gen.FlatBuffersAddHash(builder, o.Hash)
 			gen.FlatBuffersAddRatio(builder, o.Ratio)
-			if o.Route {
-				gen.FlatBuffersAddRoute(builder, 1)
-			} else {
-				gen.FlatBuffersAddRoute(builder, 0)
-			}
+			gen.FlatBuffersAddRoute(builder, o.Route)
 			builder.Finish(gen.FlatBuffersEnd(builder))
 
 			holdSerial = builder.Bytes[builder.Head():]
@@ -160,7 +152,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 			o.Size = buf.Size()
 			o.Hash = buf.Hash()
 			o.Ratio = buf.Ratio()
-			o.Route = buf.Route() == 1
+			o.Route = buf.Route()
 		}
 	})
 }
@@ -217,11 +209,7 @@ func BenchmarkMarshalReuse(b *testing.B) {
 			gen.FlatBuffersAddSize(builder, o.Size)
 			gen.FlatBuffersAddHash(builder, o.Hash)
 			gen.FlatBuffersAddRatio(builder, o.Ratio)
-			if o.Route {
-				gen.FlatBuffersAddRoute(builder, 1)
-			} else {
-				gen.FlatBuffersAddRoute(builder, 0)
-			}
+			gen.FlatBuffersAddRoute(builder, o.Route)
 			builder.Finish(gen.FlatBuffersEnd(builder))
 			holdSerial = builder.Bytes[builder.Head():]
 		}
@@ -268,7 +256,7 @@ func BenchmarkUnmarshalReuse(b *testing.B) {
 			holdData.Size = buf.Size()
 			holdData.Hash = buf.Hash()
 			holdData.Ratio = buf.Ratio()
-			holdData.Route = buf.Route() == 1
+			holdData.Route = buf.Route()
 		}
 	})
 }
