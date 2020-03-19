@@ -124,9 +124,6 @@ public class O implements Serializable {
 	 */
 	public double[] f64s;
 
-        /** Code Snippet Injected, if Any. */
-        
-
 	/** Default constructor */
 	public O() {
 		init();

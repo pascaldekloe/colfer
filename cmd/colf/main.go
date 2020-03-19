@@ -29,9 +29,9 @@ var (
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
 	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
 
-	superClass      = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
-	interfaces      = flag.String("i", "", "Makes all generated classes implement the `interfaces`. Use commas\nto list and slash as a package separator. Java only.")
-	codeSnippetFile = flag.String("c", "", "Insert code snippet from `file`.")
+	superClass  = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
+	interfaces  = flag.String("i", "", "Makes all generated classes implement the `interfaces`. Use commas\nto list and slash as a package separator. Java only.")
+	snippetFile = flag.String("c", "", "Insert code snippet from `file`. Java only.")
 )
 
 var report = log.New(ioutil.Discard, "", 0)
@@ -67,6 +67,9 @@ func main() {
 		if *interfaces != "" {
 			log.Fatal("colf: interfaces not supported with C")
 		}
+		if *snippetFile != "" {
+			log.Fatal("colf: snippet not supported with C")
+		}
 
 	case "go":
 		report.Println("Set up for Go")
@@ -76,6 +79,9 @@ func main() {
 		}
 		if *interfaces != "" {
 			log.Fatal("colf: interfaces not supported with Go")
+		}
+		if *snippetFile != "" {
+			log.Fatal("colf: snippet not supported with Go")
 		}
 
 	case "java":
@@ -90,6 +96,9 @@ func main() {
 		}
 		if *interfaces != "" {
 			log.Fatal("colf: interfaces not supported with ECMAScript")
+		}
+		if *snippetFile != "" {
+			log.Fatal("colf: snippet not supported with ECMAScript")
 		}
 
 	default:
@@ -159,13 +168,12 @@ func main() {
 		if *interfaces != "" {
 			p.Interfaces = strings.Split(*interfaces, ",")
 		}
-		if len(*codeSnippetFile) > 0 {
-			content, err := ioutil.ReadFile(*codeSnippetFile)
+		if len(*snippetFile) > 0 {
+			snippet, err := ioutil.ReadFile(*snippetFile)
 			if err != nil {
 				log.Fatal(err)
-			} else {
-				p.CodeSnippet = string(content)
 			}
+			p.CodeSnippet = string(snippet)
 		}
 	}
 

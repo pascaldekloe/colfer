@@ -176,13 +176,15 @@ import java.nio.BufferUnderflowException;
 {{- end}}
 	public {{.TypeNative}}{{if .TypeList}}[]{{end}} {{.NameNative}};{{end}}
 
-        /** Code Snippet Injected, if Any. */
-        {{ if .Pkg.CodeSnippet }}{{.Pkg.CodeSnippet}}{{end}}
-
 	/** Default constructor */
 	public {{$class}}() {
 		init();
-	}
+	}{{if .Pkg.CodeSnippet}}
+
+	// BEGIN Code Snippet Injection---
+
+{{.Pkg.CodeSnippet}}
+	// END Code Snippet Injection---{{end}}
 {{if .HasBinary}}
 	private static final byte[] _zeroBytes = new byte[0];
 {{- end}}
