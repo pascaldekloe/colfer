@@ -60,7 +60,12 @@ DESCRIPTION
 OPTIONS
   -b directory
     	Use a specific destination base directory. (default ".")
+  -c file
+    	Insert code snippet from file.
   -f	Normalizes the format of all input schemas on the fly.
+  -i interfaces
+    	Makes all generated classes implement the interfaces. Use commas
+    	to list and slash as a package separator. Java only.
   -l expression
     	Sets the default upper limit for the number of elements in a
     	list. The expression is applied to the target language under

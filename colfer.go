@@ -60,10 +60,10 @@ type Package struct {
 	SuperClass string
 	// SuperClassNative is the language specific SuperClass.
 	SuperClassNative string
-	// SuperInterface is the fully qualified path.
-	SuperInterface string
-	// SuperInterfaceNative is the language specific SuperInterface.
-	SuperInterfaceNative string
+	// Interfaces are the fully qualified paths.
+	Interfaces []string
+	// InterfaceNatives are the language specific Interfaces.
+	InterfaceNatives []string
 	// CodeSnippet is helpful in book-keeping functionality.
 	CodeSnippet string
 }
