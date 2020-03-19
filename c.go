@@ -25,10 +25,10 @@ func IsCKeyword(s string) bool {
 func GenerateC(basedir string, packages Packages) error {
 	for _, p := range packages {
 		for _, s := range p.Structs {
-			s.NameNative = name.SnakeCase(p.Name + "_" + s.Name)
+			s.NameNative = strings.ToLower(name.SnakeCase(p.Name + "_" + s.Name))
 
 			for _, f := range s.Fields {
-				f.NameNative = name.SnakeCase(f.Name)
+				f.NameNative = strings.ToLower(name.SnakeCase(f.Name))
 				if IsCKeyword(f.NameNative) {
 					f.NameNative += "_"
 				}
