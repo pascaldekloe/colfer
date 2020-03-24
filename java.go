@@ -1184,22 +1184,18 @@ import java.nio.BufferUnderflowException;
 	public final boolean equals({{$class}} o) {
 		if (o == null) return false;
 		if (o == this) return true;
-		return o.getClass() == {{$class}}.class
-{{- range .Fields}}
+
+		return {{range .Fields}}
+{{- if ne .Index 0}}
+			&& {{end}}
 {{- if .TypeList}}
- {{- if eq .Type "binary"}}
-			&& _equals(this.{{.NameNative}}, o.{{.NameNative}})
- {{- else}}
-			&& java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
+ {{- if eq .Type "binary"}}_equals(this.{{.NameNative}}, o.{{.NameNative}})
+ {{- else}}java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
  {{- end}}
-{{- else if eq .Type "bool" "uint8" "uint16" "uint32" "uint64" "int32" "int64"}}
-			&& this.{{.NameNative}} == o.{{.NameNative}}
-{{- else if eq .Type "float32" "float64"}}
-			&& (this.{{.NameNative}} == o.{{.NameNative}} || (this.{{.NameNative}} != this.{{.NameNative}} && o.{{.NameNative}} != o.{{.NameNative}}))
-{{- else if eq .Type "binary"}}
-			&& java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
-{{- else}}
-			&& (this.{{.NameNative}} == null ? o.{{.NameNative}} == null : this.{{.NameNative}}.equals(o.{{.NameNative}}))
+{{- else if eq .Type "bool" "uint8" "uint16" "uint32" "uint64" "int32" "int64"}}this.{{.NameNative}} == o.{{.NameNative}}
+{{- else if eq .Type "float32" "float64"}}(this.{{.NameNative}} == o.{{.NameNative}} || (this.{{.NameNative}} != this.{{.NameNative}} && o.{{.NameNative}} != o.{{.NameNative}}))
+{{- else if eq .Type "binary"}}java.util.Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
+{{- else}}(this.{{.NameNative}} == null ? o.{{.NameNative}} == null : this.{{.NameNative}}.equals(o.{{.NameNative}}))
 {{- end}}{{end}};
 	}
 {{if .HasBinaryList}}

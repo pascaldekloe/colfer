@@ -1533,8 +1533,8 @@ public class O implements Serializable {
 	public final boolean equals(O o) {
 		if (o == null) return false;
 		if (o == this) return true;
-		return o.getClass() == O.class
-			&& this.b == o.b
+
+		return this.b == o.b
 			&& this.u32 == o.u32
 			&& this.u64 == o.u64
 			&& this.i32 == o.i32
