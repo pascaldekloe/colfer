@@ -1137,7 +1137,7 @@ import java.nio.BufferUnderflowException;
 {{end}}
 	@Override
 	public final int hashCode() {
-		int h = 1;
+		int h = {{if .Pkg.SuperClass}}super.hashCode(){{else}}1{{end}};
 {{- range .Fields}}
 {{- if eq .Type "bool"}}
 		h = 31 * h + (this.{{.NameNative}} ? 1231 : 1237);
@@ -1186,7 +1186,8 @@ import java.nio.BufferUnderflowException;
 		if (o == this) return true;
 
 		return {{range .Fields}}
-{{- if ne .Index 0}}
+{{- if eq .Index 0}}{{if .Struct.Pkg.SuperClass}}super.equals(o)
+			&& {{end}}{{else}}
 			&& {{end}}
 {{- if .TypeList}}
  {{- if eq .Type "binary"}}_equals(this.{{.NameNative}}, o.{{.NameNative}})

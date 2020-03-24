@@ -8,7 +8,7 @@ gen: install
 	$(COLF) Java ../testdata/test.colf
 
 build: gen install
-	$(COLF) -b build/java -p break Java ../testdata/break*.colf
+	$(COLF) -b build/java -p break -x java/util/ArrayList Java ../testdata/break*.colf
 
 	mkdir -p build/classes
 	javac -d build/classes test.java gen/*.java
