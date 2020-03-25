@@ -18,7 +18,7 @@ stat: build
 
 build: install
 	$(COLF) -b build/gen Go ../../testdata/bench/scheme.colf
-	$(PROTOC) --gogofaster_out=build/gen/bench -I../../testdata/bench -I./vendor -I./vendor/github.com/gogo/protobuf/protobuf ../../testdata/bench/scheme.proto
+	$(PROTOC) --gogofaster_out=build/gen/bench -I../../testdata/bench ../../testdata/bench/scheme.proto
 	$(FLATC) -o build/gen -g ../../testdata/bench/scheme.fbs
 
 .PHONY: clean
