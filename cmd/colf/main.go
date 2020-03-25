@@ -44,15 +44,9 @@ func main() {
 		report.SetOutput(os.Stderr)
 	}
 
-	var files []string
-	switch args := flag.Args(); len(args) {
-	case 0:
+	if flag.NArg() == 0 {
 		flag.Usage()
 		os.Exit(2)
-	case 1:
-		files = []string{"."}
-	default:
-		files = args[1:]
 	}
 
 	// select language
@@ -105,47 +99,51 @@ func main() {
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
 
-	// resolve clean file set
-	var writeIndex int
-	for i := 0; i < len(files); i++ {
-		f := files[i]
-
-		info, err := os.Stat(f)
+	var schemaFiles []string
+	if flag.NArg() <= 1 {
+		var err error
+		schemaFiles, err = filepath.Glob("*.colf")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if info.IsDir() {
-			colfFiles, err := filepath.Glob(filepath.Join(f, "*.colf"))
+	} else {
+		for _, f := range flag.Args()[1:] {
+			info, err := os.Stat(f)
 			if err != nil {
 				log.Fatal(err)
 			}
-			files = append(files, colfFiles...)
-			continue
-		}
-
-		f = filepath.Clean(f)
-		for j := 0; ; j++ {
-			if j == writeIndex {
-				files[writeIndex] = f
-				writeIndex++
-				break
+			if !info.IsDir() {
+				schemaFiles = append(schemaFiles, f)
+				continue
 			}
-			if files[j] == f {
-				report.Println("Duplicate inclusion of", f, "ignored")
-				break
+			files, err := filepath.Glob(filepath.Join(f, "*.colf"))
+			if err != nil {
+				log.Fatal(err)
 			}
+			schemaFiles = append(schemaFiles, files...)
 		}
 	}
-	files = files[:writeIndex]
-	report.Println("Found schema files", strings.Join(files, ", "))
+	// normalize and deduplicate
+	fileSet := make(map[string]bool, len(schemaFiles))
+	for _, f := range schemaFiles {
+		f = filepath.Clean(f)
+		if fileSet[f] {
+			report.Println("Duplicate inclusion of", f, "ignored")
+			continue
+		}
+		schemaFiles[len(fileSet)] = f
+		fileSet[f] = true
+	}
+	schemaFiles = schemaFiles[:len(fileSet)]
+	report.Println("Found schema files", strings.Join(schemaFiles, ", "))
 
-	packages, err := colfer.ParseFiles(files)
+	packages, err := colfer.ParseFiles(schemaFiles)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *format {
-		for _, file := range files {
+		for _, file := range schemaFiles {
 			changed, err := colfer.Format(file)
 			if err != nil {
 				log.Fatal(err)
