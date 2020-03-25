@@ -126,18 +126,24 @@ var gen = new function() {
 			}
 		}
 
-		if (this.f32 || Number.isNaN(this.f32)) {
+		if (this.f32) {
 			if (this.f32 > 3.4028234663852886E38 || this.f32 < -3.4028234663852886E38)
 				throw new Error('colfer: gen/O field f32 exceeds 32-bit range');
 			buf[i++] = 5;
 			view.setFloat32(i, this.f32);
 			i += 4;
+		} else if (Number.isNaN(this.f32)) {
+			buf.set([5, 0x7f, 0xc0, 0, 0], i);
+			i += 5;
 		}
 
-		if (this.f64 || Number.isNaN(this.f64)) {
+		if (this.f64) {
 			buf[i++] = 6;
 			view.setFloat64(i, this.f64);
 			i += 8;
+		} else if (Number.isNaN(this.f64)) {
+			buf.set([6, 0x7f, 0xf8, 0, 0, 0, 0, 0, 0], i);
+			i += 9;
 		}
 
 		if ((this.t && this.t.getTime()) || this.t_ns) {

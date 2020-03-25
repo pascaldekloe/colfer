@@ -289,12 +289,15 @@ const ecmaMarshal = `
 			});
 		}
  {{- else}}
-		if (this.{{.NameNative}} || Number.isNaN(this.{{.NameNative}})) {
+		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 3.4028234663852886E38 || this.{{.NameNative}} < -3.4028234663852886E38)
 				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
 			buf[i++] = {{.Index}};
 			view.setFloat32(i, this.{{.NameNative}});
 			i += 4;
+		} else if (Number.isNaN(this.{{.NameNative}})) {
+			buf.set([{{.Index}}, 0x7f, 0xc0, 0, 0], i);
+			i += 5;
 		}
  {{- end}}
 {{else if eq .Type "float64"}}
@@ -311,10 +314,13 @@ const ecmaMarshal = `
 			});
 		}
  {{- else}}
-		if (this.{{.NameNative}} || Number.isNaN(this.{{.NameNative}})) {
+		if (this.{{.NameNative}}) {
 			buf[i++] = {{.Index}};
 			view.setFloat64(i, this.{{.NameNative}});
 			i += 8;
+		} else if (Number.isNaN(this.{{.NameNative}})) {
+			buf.set([{{.Index}}, 0x7f, 0xf8, 0, 0, 0, 0, 0, 0], i);
+			i += 9;
 		}
  {{- end}}
 {{else if eq .Type "timestamp"}}
