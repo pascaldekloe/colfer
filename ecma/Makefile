@@ -2,7 +2,7 @@ include ../common.mk
 
 .PHONY: test
 test: gen build node_modules
-	node run.js
+	node_modules/.bin/qunit test.js
 
 build: install
 	$(COLF) -b build JavaScript ../testdata/break*.colf
