@@ -34,7 +34,7 @@ var (
 	snippetFile = flag.String("c", "", "Insert code snippet from `file`. Java only.")
 )
 
-var report = log.New(ioutil.Discard, "", 0)
+var report = log.New(ioutil.Discard, os.Args[0]+": ", 0)
 
 func main() {
 	flag.Parse()
@@ -53,7 +53,7 @@ func main() {
 	var gen func(string, colfer.Packages) error
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "c":
-		report.Println("Set up for C")
+		report.Print("set-up for C")
 		gen = colfer.GenerateC
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with C")
@@ -66,7 +66,7 @@ func main() {
 		}
 
 	case "go":
-		report.Println("Set up for Go")
+		report.Print("set-up for Go")
 		gen = colfer.GenerateGo
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with Go")
@@ -79,11 +79,11 @@ func main() {
 		}
 
 	case "java":
-		report.Println("Set up for Java")
+		report.Print("set-up for Java")
 		gen = colfer.GenerateJava
 
 	case "javascript", "js", "ecmascript":
-		report.Println("Set up for ECMAScript")
+		report.Print("set-up for ECMAScript")
 		gen = colfer.GenerateECMA
 		if *superClass != "" {
 			log.Fatal("colf: super class not supported with ECMAScript")
@@ -128,14 +128,14 @@ func main() {
 	for _, f := range schemaFiles {
 		f = filepath.Clean(f)
 		if fileSet[f] {
-			report.Println("Duplicate inclusion of", f, "ignored")
+			report.Printf("duplicate inclusion of %q ignored", f)
 			continue
 		}
 		schemaFiles[len(fileSet)] = f
 		fileSet[f] = true
 	}
 	schemaFiles = schemaFiles[:len(fileSet)]
-	report.Println("Found schema files", strings.Join(schemaFiles, ", "))
+	report.Print("found schema files: ", strings.Join(schemaFiles, ", "))
 
 	packages, err := colfer.ParseFiles(schemaFiles)
 	if err != nil {
@@ -149,7 +149,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if changed {
-				log.Println("colf: formatted", file)
+				log.Printf("colf: formatted %q", file)
 			}
 		}
 	}
