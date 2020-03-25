@@ -1,33 +1,36 @@
 include common.mk
 
+MAKE ?= make
+COLF = $(GOPATH)/bin/colf
+
 .PHONY: dist
 dist: clean test build
-	go fmt ./...
-	go vet ./...
+	$(GO) fmt ./...
+	$(GO) vet ./...
 
 .PHONY: test
 test: install
-	make -C c
-	make -C ecma
-	make -C go
-	make -C java
-	make -C rpc
+	$(MAKE) -C c
+	$(MAKE) -C ecma
+	$(MAKE) -C go
+	$(MAKE) -C java
+	$(MAKE) -C rpc
 	# Fails on Travis CI: mvn -f java/maven integration-test
 
 .PHONY: bench
 bench: install
-	make -C c/bench
-	make -C go/bench
-	make -C java/bench
+	$(MAKE) -C c/bench
+	$(MAKE) -C go/bench
+	$(MAKE) -C java/bench
 
 build:
-	GOARCH=amd64 GOOS=linux go build -o build/colf-linux ./cmd/colf
-	GOARCH=amd64 GOOS=darwin go build -o build/colf-darwin ./cmd/colf
-	GOARCH=amd64 GOOS=openbsd go build -o build/colf-openbsd ./cmd/colf
-	GOARCH=amd64 GOOS=windows go build -o build/colf.exe ./cmd/colf
+	GOARCH=amd64 GOOS=linux $(GO) build -o build/colf-linux ./cmd/colf
+	GOARCH=amd64 GOOS=darwin $(GO) build -o build/colf-darwin ./cmd/colf
+	GOARCH=amd64 GOOS=openbsd $(GO) build -o build/colf-openbsd ./cmd/colf
+	GOARCH=amd64 GOOS=windows $(GO) build -o build/colf.exe ./cmd/colf
 
 .PHONY: clean
 clean:
-	go clean -i ./cmd/...
+	$(GO) clean -i ./cmd/...
 	rm -fr build
 	# Fails on Travis CI:  mvn -f java/maven clean

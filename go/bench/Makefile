@@ -5,14 +5,14 @@ PROTOC?=protoc
 
 .PHONY: test
 test: build
-	go test -bench .
+	$(GO) test -bench .
 
 .PHONY: stat
 stat: build
-	go test -bench . -count 5 > build/bench.log
+	$(GO) test -bench . -count 5 > build/bench.log
 	benchstat build/bench.log
 	@echo
-	@go version
+	@$(GO) version
 	@$(PROTOC) --version
 	@$(FLATC) --version
 
@@ -23,5 +23,5 @@ build: install
 
 .PHONY: clean
 clean:
-	go clean
+	$(GO) clean
 	rm -fr build

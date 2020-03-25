@@ -1,3 +1,4 @@
+GO ?= go
 GOPATH != go env GOPATH
 COLF = $(GOPATH)/bin/colf
 
@@ -6,4 +7,4 @@ run: clean test
 
 .PHONY: install
 install:
-	go install github.com/pascaldekloe/colfer/cmd/...
+	$(GO) install github.com/pascaldekloe/colfer/cmd/...
