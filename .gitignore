@@ -1,4 +1,5 @@
 build
+target
 fuzz.zip
 node_modules
 package-lock.json
