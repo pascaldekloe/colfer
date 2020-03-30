@@ -170,7 +170,6 @@ public class O implements Serializable {
 		 * @param buf the initial buffer or {@code null}.
 		 */
 		public Unmarshaller(InputStream in, byte[] buf) {
-			// TODO: better size estimation
 			if (buf == null || buf.length == 0)
 				buf = new byte[Math.min(O.colferSizeMax, 2048)];
 			this.buf = buf;
@@ -215,7 +214,6 @@ public class O implements Serializable {
 					this.i = 0;
 				} else if (i == buf.length) {
 					byte[] src = this.buf;
-					// TODO: better size estimation
 					if (offset == 0) this.buf = new byte[Math.min(O.colferSizeMax, this.buf.length * 4)];
 					System.arraycopy(src, this.offset, this.buf, 0, this.i - this.offset);
 					this.i -= this.offset;
@@ -236,6 +234,23 @@ public class O implements Serializable {
 
 	}
 
+	/**
+	 * Gets the serial size estimate as a maximum, whereby
+	 * {@link #marshal(byte[],int)} ≤ * {@link #marshalFit()} ≤ * {@link #colferSizeMax}.
+	 * @return the number of bytes.
+	 */
+	public int marshalFit() {
+		long n = 1L + 1 + 5 + 9 + 6 + 10 + 5 + 9 + 13 + 10 + (long)this.s.length() * 3 + 10 + (long)this.a.length +  + 10 + 10 + (long)this.ss.length * 10 + 10 + (long)this.as.length * 10 + 2 + 3 + 10 + (long)this.f32s.length * 4 + 10 + (long)this.f64s.length * 8;
+		if (this.o != null) n += 1 + (long)this.o.marshalFit();
+		for (O o : this.os) {
+			if (o == null) n++;
+			else n += o.marshalFit();
+		}
+		for (String s : this.ss) if (s != null) n += (long)s.length() * 3;
+		for (byte[] a : this.as) if (a != null) n += (long)a.length;
+		if (n < 0 || n > (long)O.colferSizeMax) return O.colferSizeMax;
+		return (int) n;
+	}
 
 	/**
 	 * Serializes the object.
@@ -250,22 +265,16 @@ public class O implements Serializable {
 	 * @throws IllegalStateException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
 	 */
 	public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
-		// TODO: better size estimation
-		if (buf == null || buf.length == 0)
-			buf = new byte[Math.min(O.colferSizeMax, 2048)];
-
-		while (true) {
-			int i;
-			try {
-				i = marshal(buf, 0);
-			} catch (BufferOverflowException e) {
-				buf = new byte[Math.min(O.colferSizeMax, buf.length * 4)];
-				continue;
-			}
-
-			out.write(buf, 0, i);
-			return buf;
+		int n = 0;
+		if (buf != null && buf.length != 0) try {
+			n = marshal(buf, 0);
+		} catch (BufferOverflowException e) {}
+		if (n == 0) {
+			buf = new byte[marshalFit()];
+			n = marshal(buf, 0);
 		}
+		out.write(buf, 0, n);
+		return buf;
 	}
 
 	/**
@@ -1003,16 +1012,8 @@ public class O implements Serializable {
 
 	// {@link Serializable} Colfer extension.
 	private void writeObject(ObjectOutputStream out) throws IOException {
-		// TODO: better size estimation
-		byte[] buf = new byte[1024];
-		int n;
-		while (true) try {
-			n = marshal(buf, 0);
-			break;
-		} catch (BufferUnderflowException e) {
-			buf = new byte[4 * buf.length];
-		}
-
+		byte[] buf = new byte[marshalFit()];
+		int n = marshal(buf, 0);
 		out.writeInt(n);
 		out.write(buf, 0, n);
 	}

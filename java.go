@@ -239,7 +239,6 @@ import java.nio.BufferUnderflowException;
 		 * @param buf the initial buffer or {@code null}.
 		 */
 		public Unmarshaller(InputStream in, byte[] buf) {
-			// TODO: better size estimation
 			if (buf == null || buf.length == 0)
 				buf = new byte[Math.min({{$class}}.colferSizeMax, 2048)];
 			this.buf = buf;
@@ -284,7 +283,6 @@ import java.nio.BufferUnderflowException;
 					this.i = 0;
 				} else if (i == buf.length) {
 					byte[] src = this.buf;
-					// TODO: better size estimation
 					if (offset == 0) this.buf = new byte[Math.min({{$class}}.colferSizeMax, this.buf.length * 4)];
 					System.arraycopy(src, this.offset, this.buf, 0, this.i - this.offset);
 					this.i -= this.offset;
@@ -305,6 +303,54 @@ import java.nio.BufferUnderflowException;
 
 	}
 
+	/**
+	 * Gets the serial size estimate as a maximum, whereby
+	 * {@link #marshal(byte[],int)} ≤ * {@link #marshalFit()} ≤ * {@link #colferSizeMax}.
+	 * @return the number of bytes.
+	 */
+	public int marshalFit() {
+		long n = 1L
+{{- range .Fields}} + {{if eq .Type "bool"}}1
+{{- else if eq .Type "uint8"}}2
+{{- else if eq .Type "uint16"}}3
+{{- else if eq .Type "uint32"}}5
+{{- else if eq .Type "uint64"}}9
+{{- else if eq .Type "int32"}}6
+{{- else if eq .Type "int64"}}10
+{{- else if eq .Type "float32"}}{{if .TypeList}}10 + (long)this.{{.NameNative}}.length * 4{{else}}5{{end}}
+{{- else if eq .Type "float64"}}{{if .TypeList}}10 + (long)this.{{.NameNative}}.length * 8{{else}}9{{end}}
+{{- else if eq .Type "timestamp"}}13
+{{- else if eq .Type "text"}}10 + {{if .TypeList}}(long)this.{{.NameNative}}.length * 10{{else}}(long)this.{{.NameNative}}.length() * 3{{end}}
+{{- else if eq .Type "binary"}}10 + (long)this.{{.NameNative}}.length{{if .TypeList}} * 10{{end}}
+{{- else if .TypeList}}10
+{{- else}}
+{{- end}}{{end}};
+
+{{- range .Fields}}{{if eq .Type "bool"}}
+{{- else if eq .Type "uint8"}}
+{{- else if eq .Type "uint16"}}
+{{- else if eq .Type "uint32"}}
+{{- else if eq .Type "uint64"}}
+{{- else if eq .Type "int32"}}
+{{- else if eq .Type "int64"}}
+{{- else if eq .Type "float32"}}
+{{- else if eq .Type "float64"}}
+{{- else if eq .Type "timestamp"}}
+{{- else if eq .Type "text"}}{{if .TypeList}}
+		for (String s : this.{{.NameNative}}) if (s != null) n += (long)s.length() * 3;{{end}}
+{{- else if eq .Type "binary"}}{{if .TypeList}}
+		for (byte[] a : this.{{.NameNative}}) if (a != null) n += (long)a.length;{{end}}
+{{- else if .TypeList}}
+		for ({{.TypeNative}} o : this.{{.NameNative}}) {
+			if (o == null) n++;
+			else n += o.marshalFit();
+		}
+{{- else}}
+		if (this.{{.NameNative}} != null) n += 1 + (long)this.{{.NameNative}}.marshalFit();
+{{- end}}{{end}}
+		if (n < 0 || n > (long){{$class}}.colferSizeMax) return {{$class}}.colferSizeMax;
+		return (int) n;
+	}
 
 	/**
 	 * Serializes the object.
@@ -319,22 +365,16 @@ import java.nio.BufferUnderflowException;
 	 * @throws IllegalStateException on an upper limit breach defined by{{if .HasList}} either{{end}} {@link #colferSizeMax}{{if .HasList}} or {@link #colferListMax}{{end}}.
 	 */
 	public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
-		// TODO: better size estimation
-		if (buf == null || buf.length == 0)
-			buf = new byte[Math.min({{$class}}.colferSizeMax, 2048)];
-
-		while (true) {
-			int i;
-			try {
-				i = marshal(buf, 0);
-			} catch (BufferOverflowException e) {
-				buf = new byte[Math.min({{$class}}.colferSizeMax, buf.length * 4)];
-				continue;
-			}
-
-			out.write(buf, 0, i);
-			return buf;
+		int n = 0;
+		if (buf != null && buf.length != 0) try {
+			n = marshal(buf, 0);
+		} catch (BufferOverflowException e) {}
+		if (n == 0) {
+			buf = new byte[marshalFit()];
+			n = marshal(buf, 0);
 		}
+		out.write(buf, 0, n);
+		return buf;
 	}
 
 	/**
@@ -1080,16 +1120,8 @@ import java.nio.BufferUnderflowException;
 
 	// {@link Serializable} Colfer extension.
 	private void writeObject(ObjectOutputStream out) throws IOException {
-		// TODO: better size estimation
-		byte[] buf = new byte[1024];
-		int n;
-		while (true) try {
-			n = marshal(buf, 0);
-			break;
-		} catch (BufferUnderflowException e) {
-			buf = new byte[4 * buf.length];
-		}
-
+		byte[] buf = new byte[marshalFit()];
+		int n = marshal(buf, 0);
 		out.writeInt(n);
 		out.write(buf, 0, n);
 	}
