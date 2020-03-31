@@ -235,12 +235,12 @@ public class O implements Serializable {
 	}
 
 	/**
-	 * Gets the serial size estimate as a maximum, whereby
-	 * {@link #marshal(byte[],int)} ≤ * {@link #marshalFit()} ≤ * {@link #colferSizeMax}.
+	 * Gets the serial size estimate as an upper boundary, whereby
+	 * {@link #marshal(byte[],int)} ≤ {@link #marshalFit()} ≤ {@link #colferSizeMax}.
 	 * @return the number of bytes.
 	 */
 	public int marshalFit() {
-		long n = 1L + 1 + 5 + 9 + 6 + 10 + 5 + 9 + 13 + 10 + (long)this.s.length() * 3 + 10 + (long)this.a.length +  + 10 + 10 + (long)this.ss.length * 10 + 10 + (long)this.as.length * 10 + 2 + 3 + 10 + (long)this.f32s.length * 4 + 10 + (long)this.f64s.length * 8;
+		long n = 1L + 1 + 5 + 9 + 6 + 10 + 5 + 9 + 13 + 6 + (long)this.s.length() * 3 + 6 + (long)this.a.length +  + 6 + 6 + (long)this.ss.length * 6 + 6 + (long)this.as.length * 6 + 2 + 3 + 6 + (long)this.f32s.length * 4 + 6 + (long)this.f64s.length * 8;
 		if (this.o != null) n += 1 + (long)this.o.marshalFit();
 		for (O o : this.os) {
 			if (o == null) n++;

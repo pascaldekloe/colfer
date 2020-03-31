@@ -304,8 +304,8 @@ import java.nio.BufferUnderflowException;
 	}
 
 	/**
-	 * Gets the serial size estimate as a maximum, whereby
-	 * {@link #marshal(byte[],int)} ≤ * {@link #marshalFit()} ≤ * {@link #colferSizeMax}.
+	 * Gets the serial size estimate as an upper boundary, whereby
+	 * {@link #marshal(byte[],int)} ≤ {@link #marshalFit()} ≤ {@link #colferSizeMax}.
 	 * @return the number of bytes.
 	 */
 	public int marshalFit() {
@@ -317,12 +317,12 @@ import java.nio.BufferUnderflowException;
 {{- else if eq .Type "uint64"}}9
 {{- else if eq .Type "int32"}}6
 {{- else if eq .Type "int64"}}10
-{{- else if eq .Type "float32"}}{{if .TypeList}}10 + (long)this.{{.NameNative}}.length * 4{{else}}5{{end}}
-{{- else if eq .Type "float64"}}{{if .TypeList}}10 + (long)this.{{.NameNative}}.length * 8{{else}}9{{end}}
+{{- else if eq .Type "float32"}}{{if .TypeList}}6 + (long)this.{{.NameNative}}.length * 4{{else}}5{{end}}
+{{- else if eq .Type "float64"}}{{if .TypeList}}6 + (long)this.{{.NameNative}}.length * 8{{else}}9{{end}}
 {{- else if eq .Type "timestamp"}}13
-{{- else if eq .Type "text"}}10 + {{if .TypeList}}(long)this.{{.NameNative}}.length * 10{{else}}(long)this.{{.NameNative}}.length() * 3{{end}}
-{{- else if eq .Type "binary"}}10 + (long)this.{{.NameNative}}.length{{if .TypeList}} * 10{{end}}
-{{- else if .TypeList}}10
+{{- else if eq .Type "text"}}6 + {{if .TypeList}}(long)this.{{.NameNative}}.length * 6{{else}}(long)this.{{.NameNative}}.length() * 3{{end}}
+{{- else if eq .Type "binary"}}6 + (long)this.{{.NameNative}}.length{{if .TypeList}} * 6{{end}}
+{{- else if .TypeList}}6
 {{- else}}
 {{- end}}{{end}};
 
