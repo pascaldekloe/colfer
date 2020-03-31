@@ -145,7 +145,7 @@ public class test {
 
 	static void marshal() throws Exception {
 		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			byte[] buf = new byte[O.colferSizeMax];
+			byte[] buf = new byte[e.getValue().marshalFit()];
 			int n = e.getValue().marshal(buf, 0);
 			if (n != e.getKey().length() / 2)
 				fail("marshal: got write index %d for serial 0x%s", n, e.getKey());
@@ -196,7 +196,7 @@ public class test {
 		try {
 			O o = new O();
 			o.u64 = 1;
-			o.marshal(new byte[O.colferSizeMax], 0);
+			o.marshal(new byte[o.marshalFit()], 0);
 			fail("no marshal max exception");
 		} catch (IllegalStateException e) {
 			String want = "colfer: gen.o exceeds 2 bytes";
@@ -230,7 +230,7 @@ public class test {
 		try {
 			O o = new O();
 			o.a = new byte[]{0, 1, 2};
-			o.marshal(new byte[O.colferSizeMax], 0);
+			o.marshal(new byte[o.marshalFit()], 0);
 			fail("no marshal binary max exception");
 		} catch (IllegalStateException e) {
 			String want = "colfer: gen.o.a size 3 exceeds 2 bytes";
@@ -247,7 +247,7 @@ public class test {
 		try {
 			O o = new O();
 			o.os = new O[10];
-			o.marshal(new byte[O.colferSizeMax], 0);
+			o.marshal(new byte[o.marshalFit()], 0);
 			fail("no marshal list max exception");
 		} catch (IllegalStateException e) {
 			String want = "colfer: gen.o.os length 10 exceeds 9 elements";
