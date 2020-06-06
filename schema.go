@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path"
+	"strings"
 )
 
 // Format normalizes the file's content.
@@ -148,6 +149,9 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 			return fmt.Errorf("colfer: missing name for field %d", i)
 		}
 		field.Name = f.Names[0].Name
+		if f.Tag != nil {
+			field.Tag = strings.Trim(f.Tag.Value, "`")
+		}
 
 		field.Docs = docs(f.Doc)
 

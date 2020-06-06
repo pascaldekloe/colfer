@@ -184,6 +184,16 @@ func (s *Struct) HasText() bool {
 	return false
 }
 
+// HasTags returns whether s has one or more tagged fields.
+func (s *Struct) HasTags() bool {
+	for _, f := range s.Fields {
+		if f.Tag != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // HasBinary returns whether s has one or more binary fields.
 func (s *Struct) HasBinary() bool {
 	for _, f := range s.Fields {
@@ -232,6 +242,8 @@ type Field struct {
 	Index int
 	// Name is the identification token.
 	Name string
+	// Tag is the Go tag.
+	Tag string
 	// NameNative is the language specific Name.
 	NameNative string
 	// Docs are the documentation texts.

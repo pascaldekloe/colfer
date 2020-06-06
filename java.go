@@ -174,6 +174,9 @@ import java.nio.BufferUnderflowException;
 {{.DocText "\t * "}}
 	 */
 {{- end}}
+{{- if ne .Tag ""}}
+	{{.Tag}}
+{{- end}}
 	public {{.TypeNative}}{{if .TypeList}}[]{{end}} {{.NameNative}};{{end}}
 
 	/** Default constructor */
