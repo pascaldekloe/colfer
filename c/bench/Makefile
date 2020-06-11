@@ -11,7 +11,7 @@ test: build
 	@$(PROTOC) --version
 	@$(CC) --version
 
-build: install
+build:
 	$(COLF) -b build/gen -f -s 1024 c ../../testdata/bench/scheme.colf
 	$(PROTOC) --cpp_out=build/gen -I../../testdata/bench ../../testdata/bench/scheme.proto
 	$(FLATC) --cpp -o build/gen ../../testdata/bench/scheme.fbs

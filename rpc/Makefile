@@ -8,10 +8,10 @@ test: internal build
 bench: internal build
 	$(GO) test -run none -bench .
 
-internal: install
+internal:
 	$(COLF) Go
 
-build: install
+build:
 	$(COLF) -b build Go ../testdata/test.colf
 
 .PHONY: clean

@@ -4,10 +4,10 @@ include ../common.mk
 test: build
 	java -cp build/classes test
 
-gen: install
+gen:
 	$(COLF) Java ../testdata/test.colf
 
-build: gen install
+build: gen
 	$(COLF) -b build/java -p break -x java/util/ArrayList Java ../testdata/break*.colf
 
 	mkdir -p build/classes

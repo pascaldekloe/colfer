@@ -12,7 +12,7 @@ build: gen
 	$(CC) -o build/Colfer.o -c $(CFLAGS) gen/Colfer.c
 	$(CC) -o build/gen_test $(CFLAGS) build/Colfer.o gen_test.c
 
-gen: install
+gen:
 	$(COLF) -b gen C ../testdata/test.colf
 
 .PHONY: clean

@@ -4,10 +4,10 @@ include ../common.mk
 test: gen build node_modules
 	node_modules/.bin/qunit test.js
 
-build: install
+build:
 	$(COLF) -b build JavaScript ../testdata/break*.colf
 
-gen: install
+gen:
 	$(COLF) -b gen JavaScript ../testdata/test.colf
 
 node_modules:

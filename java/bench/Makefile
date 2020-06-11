@@ -4,7 +4,7 @@ include ../../common.mk
 test: build
 	java -cp build/classes bench
 
-build: install
+build:
 	$(COLF) -b build/java Java ../../testdata/bench/scheme.colf
 
 	mkdir -p build/classes

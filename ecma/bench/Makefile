@@ -7,7 +7,7 @@ test: build
 	$(NODE) bench.js
 	$(NODE) --version
 
-build: install
+build:
 	$(COLF) -b build -s 1024 js ../../testdata/bench/scheme.colf
 
 .PHONY: clean

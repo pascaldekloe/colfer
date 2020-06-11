@@ -5,10 +5,10 @@ test: gen build
 	$(GO) test -v -coverprofile build/coverage -coverpkg github.com/pascaldekloe/colfer/go/gen
 	$(GO) build ./build/break/...
 
-gen: install
+gen:
 	$(COLF) Go ../testdata/test.colf
 
-build: install
+build:
 	mkdir -p build
 	$(COLF) -p github.com/pascaldekloe/colfer/go/build/break go ../testdata/break*.colf
 

@@ -1,6 +1,6 @@
 GO ?= go
 GOPATH != go env GOPATH
-COLF = $(GOPATH)/bin/colf
+COLF = go run github.com/pascaldekloe/colfer/cmd/colf
 
 .PHONY: run
 run: clean test

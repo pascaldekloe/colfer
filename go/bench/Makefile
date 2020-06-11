@@ -16,7 +16,7 @@ stat: build
 	@$(PROTOC) --version
 	@$(FLATC) --version
 
-build: install
+build:
 	$(COLF) -b build/gen Go ../../testdata/bench/scheme.colf
 	$(PROTOC) --gogofaster_out=build/gen/bench -I../../testdata/bench ../../testdata/bench/scheme.proto
 	$(FLATC) -o build/gen -g ../../testdata/bench/scheme.fbs
