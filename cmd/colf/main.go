@@ -36,6 +36,11 @@ var (
 
 var report = log.New(ioutil.Discard, os.Args[0]+": ", 0)
 
+var (
+	schemaPaths []string      // source files in use
+	schemaInfos []os.FileInfo // corresponding descriptors
+)
+
 func main() {
 	flag.Parse()
 
@@ -99,57 +104,26 @@ func main() {
 		log.Fatalf("colf: unsupported language %q", lang)
 	}
 
-	var schemaFiles []string
-	if flag.NArg() <= 1 {
-		var err error
-		schemaFiles, err = filepath.Glob("*.colf")
-		if err != nil {
-			log.Fatal(err)
-		}
+	if flag.NArg() > 1 {
+		mustResolveSchemaFiles(flag.Args()[1:]...)
 	} else {
-		for _, f := range flag.Args()[1:] {
-			info, err := os.Stat(f)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if !info.IsDir() {
-				schemaFiles = append(schemaFiles, f)
-				continue
-			}
-			files, err := filepath.Glob(filepath.Join(f, "*.colf"))
-			if err != nil {
-				log.Fatal(err)
-			}
-			schemaFiles = append(schemaFiles, files...)
-		}
+		mustResolveSchemaFiles(".")
 	}
-	// normalize and deduplicate
-	fileSet := make(map[string]bool, len(schemaFiles))
-	for _, f := range schemaFiles {
-		f = filepath.Clean(f)
-		if fileSet[f] {
-			report.Printf("duplicate inclusion of %q ignored", f)
-			continue
-		}
-		schemaFiles[len(fileSet)] = f
-		fileSet[f] = true
-	}
-	schemaFiles = schemaFiles[:len(fileSet)]
-	report.Print("found schema files: ", strings.Join(schemaFiles, ", "))
+	report.Print("using schema files: ", strings.Join(schemaPaths, ", "))
 
-	packages, err := colfer.ParseFiles(schemaFiles)
+	packages, err := colfer.ParseFiles(schemaPaths...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *format {
-		for _, file := range schemaFiles {
-			changed, err := colfer.Format(file)
+		for _, path := range schemaPaths {
+			changed, err := colfer.FormatFile(path)
 			if err != nil {
 				log.Fatal(err)
 			}
 			if changed {
-				log.Printf("colf: formatted %q", file)
+				log.Printf("colf: formatted %q", path)
 			}
 		}
 	}
@@ -178,6 +152,46 @@ func main() {
 	if err := gen(*basedir, packages); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func mustResolveSchemaFiles(paths ...string) {
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !info.IsDir() {
+			addSchemaFile(path, info)
+			continue
+		}
+
+		children, err := filepath.Glob(filepath.Join(path, "*.colf"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, path = range children {
+			info, err = os.Stat(path)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if !info.IsDir() {
+				addSchemaFile(path, info)
+			}
+		}
+	}
+}
+
+func addSchemaFile(path string, info os.FileInfo) {
+	for _, previous := range schemaInfos {
+		if os.SameFile(info, previous) {
+			report.Printf("duplicate inclusion of %q ignored", path)
+			return
+		}
+	}
+
+	schemaPaths = append(schemaPaths, path)
+	schemaInfos = append(schemaInfos, info)
 }
 
 func init() {

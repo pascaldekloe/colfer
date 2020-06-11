@@ -98,7 +98,7 @@ func GenerateGo(basedir string, packages Packages) error {
 			return err
 		}
 
-		if _, err := Format(path); err != nil {
+		if _, err := FormatFile(path); err != nil {
 			return err
 		}
 	}
