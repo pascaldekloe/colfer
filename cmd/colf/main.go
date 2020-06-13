@@ -34,6 +34,7 @@ var (
 	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`. Java only.")
 )
 
+var name = os.Args[0]
 var report = log.New(ioutil.Discard, os.Args[0]+": ", 0)
 
 var (
@@ -61,26 +62,26 @@ func main() {
 		report.Print("set-up for C")
 		gen = colfer.GenerateC
 		if *superClass != "" {
-			log.Fatal("colf: super class not supported with C")
+			log.Fatalf("%s: super class not supported with C", name)
 		}
 		if *interfaces != "" {
-			log.Fatal("colf: interfaces not supported with C")
+			log.Fatalf("%s: interfaces not supported with C", name)
 		}
 		if *snippetFile != "" {
-			log.Fatal("colf: snippet not supported with C")
+			log.Fatalf("%s: snippet not supported with C", name)
 		}
 
 	case "go":
 		report.Print("set-up for Go")
 		gen = colfer.GenerateGo
 		if *superClass != "" {
-			log.Fatal("colf: super class not supported with Go")
+			log.Fatalf("%s: super class not supported with Go", name)
 		}
 		if *interfaces != "" {
-			log.Fatal("colf: interfaces not supported with Go")
+			log.Fatalf("%s: interfaces not supported with Go", name)
 		}
 		if *snippetFile != "" {
-			log.Fatal("colf: snippet not supported with Go")
+			log.Fatalf("%s: snippet not supported with Go", name)
 		}
 
 	case "java":
@@ -91,17 +92,17 @@ func main() {
 		report.Print("set-up for ECMAScript")
 		gen = colfer.GenerateECMA
 		if *superClass != "" {
-			log.Fatal("colf: super class not supported with ECMAScript")
+			log.Fatalf("%s: super class not supported with ECMAScript", name)
 		}
 		if *interfaces != "" {
-			log.Fatal("colf: interfaces not supported with ECMAScript")
+			log.Fatalf("%s: interfaces not supported with ECMAScript", name)
 		}
 		if *snippetFile != "" {
-			log.Fatal("colf: snippet not supported with ECMAScript")
+			log.Fatalf("%s: snippet not supported with ECMAScript", name)
 		}
 
 	default:
-		log.Fatalf("colf: unsupported language %q", lang)
+		log.Fatalf("%s: unsupported language %q", name, lang)
 	}
 
 	if flag.NArg() > 1 {
@@ -123,13 +124,13 @@ func main() {
 				log.Fatal(err)
 			}
 			if changed {
-				log.Printf("colf: formatted %q", path)
+				log.Printf("%s: formatted %s", name, path)
 			}
 		}
 	}
 
 	if len(packages) == 0 {
-		log.Fatal("colf: no struct definitons found")
+		log.Fatalf("%s: no struct definitons found", name)
 	}
 
 	for _, p := range packages {
@@ -195,10 +196,8 @@ func addSchemaFile(path string, info os.FileInfo) {
 }
 
 func init() {
-	cmd := os.Args[0]
-
-	help := bold + "NAME\n\t" + cmd + clear + " \u2014 compile Colfer schemas\n\n"
-	help += bold + "SYNOPSIS\n\t" + cmd + clear
+	help := bold + "NAME\n\t" + name + clear + " \u2014 compile Colfer schemas\n\n"
+	help += bold + "SYNOPSIS\n\t" + name + clear
 	help += " [ " + underline + "options" + clear + " ] " + underline + "language" + clear
 	help += " [ " + underline + "file" + clear + " " + underline + "..." + clear + " ]\n\n"
 	help += bold + "DESCRIPTION\n\t" + clear
@@ -218,9 +217,9 @@ func init() {
 	tail += "\twhen invoked without arguments.\n"
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
-	tail += "\t\t" + cmd + " -b src -s 2048 -l 96 C io.colf\n\n"
+	tail += "\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n"
 	tail += "\tCompile ./*.colf with a common parent as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com.example.model -x com.example.io.IOBean Java\n"
+	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n"
 	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
