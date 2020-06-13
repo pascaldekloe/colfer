@@ -183,14 +183,13 @@ The following table shows how Colfer data types are applied per language.
 | float32	| float			| float32	| float		| Number	|
 | float64	| double		| float64	| double	| Number	|
 | timestamp	| timespec		| time.Time ††	| time.Instant	| Date + Number	|
-| text		| const char* + size_t	| string	| String †‡	| String †‡	|
+| text		| const char* + size_t	| string	| String	| String	|
 | binary	| uint8_t* + size_t	| []byte	| byte[]	| Uint8Array	|
 | list		| * + size_t		| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
 * †† timezone not preserved
-* †‡ characters limited by UTF-16 [`U+0000`, `U+10FFFF`]
 
 Lists may contain floating points, text, binaries or data structures.
 
