@@ -20,17 +20,20 @@ func IsJavaKeyword(s string) bool {
 }
 
 func toJavaName(name string) string {
-	var buf strings.Builder
-	for i, seg := range strings.Split(name, "/") {
-		if i != 0 {
-			buf.WriteByte('.')
-		}
-		buf.WriteString(seg)
-		if IsJavaKeyword(seg) {
-			buf.WriteByte('_')
+	name = strings.ReplaceAll(name, "/", ".")
+
+	segments := strings.Split(name, ".")
+	var escapes bool
+	for i, s := range segments {
+		if IsJavaKeyword(s) {
+			segments[i] = s + "_"
+			escapes = true
 		}
 	}
-	return buf.String()
+	if escapes {
+		return strings.Join(segments, ".")
+	}
+	return name
 }
 
 // GenerateJava writes the code into the respective ".java" files.
@@ -102,10 +105,7 @@ func GenerateJava(basedir string, packages Packages) error {
 					f.TypeNative = "byte[]"
 				}
 
-				f.NameNative = f.Name
-				if IsJavaKeyword(f.NameNative) {
-					f.NameNative += "_"
-				}
+				f.NameNative = toJavaName(f.Name)
 			}
 
 			f, err := os.Create(filepath.Join(pkgdir, s.NameTitle()+".java"))

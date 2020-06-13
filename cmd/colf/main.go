@@ -21,17 +21,17 @@ const (
 )
 
 var (
-	basedir = flag.String("b", ".", "Use a specific destination base `directory`.")
-	prefix  = flag.String("p", "", "Adds a package `prefix`. Use slash as a separator when nesting.")
-	format  = flag.Bool("f", false, "Normalizes the format of all input schemas on the fly.")
-	verbose = flag.Bool("v", false, "Enables verbose reporting to "+italic+"standard error"+clear+".")
+	basedir = flag.String("b", ".", "Use a base `directory` for the generated code.")
+	prefix  = flag.String("p", "", "Compile to a `package` prefix.")
+	format  = flag.Bool("f", false, "Normalize the format of all input schemas on the fly.")
+	verbose = flag.Bool("v", false, "Enable verbose reporting to "+italic+"standard error"+clear+".")
 
-	sizeMax = flag.String("s", "16 * 1024 * 1024", "Sets the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
-	listMax = flag.String("l", "64 * 1024", "Sets the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
+	sizeMax = flag.String("s", "16 * 1024 * 1024", "Set the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
+	listMax = flag.String("l", "64 * 1024", "Set the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
 
-	superClass  = flag.String("x", "", "Makes all generated classes extend a super `class`. Use slash as\na package separator. Java only.")
-	interfaces  = flag.String("i", "", "Makes all generated classes implement the `interfaces`. Use commas\nto list and slash as a package separator. Java only.")
-	snippetFile = flag.String("c", "", "Insert code snippet from `file`. Java only.")
+	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`. Java only.")
+	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator. Java only.")
+	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`. Java only.")
 )
 
 var report = log.New(ioutil.Discard, os.Args[0]+": ", 0)
@@ -219,8 +219,8 @@ func init() {
 	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
 	tail += "\t\t" + cmd + " -b src -s 2048 -l 96 C io.colf\n\n"
-	tail += "\tCompile ./api/*.colf in package com.example as Java:\n\n"
-	tail += "\t\t" + cmd + " -p com/example -x com/example/Parent Java api\n"
+	tail += "\tCompile ./*.colf with a common parent as Java:\n\n"
+	tail += "\t\t" + cmd + " -p com.example.model -x com.example.io.IOBean Java\n"
 	tail += "\n" + bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n"
 	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
