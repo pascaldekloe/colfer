@@ -4,7 +4,7 @@ include ../common.mk
 test: internal build
 	$(GO) test -v -coverprofile build/coverage
 
-.PHONY: test
+.PHONY: bench
 bench: internal build
 	$(GO) test -run none -bench .
 

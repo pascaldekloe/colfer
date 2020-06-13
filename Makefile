@@ -1,27 +1,20 @@
 include common.mk
 
-MAKE ?= make
-COLF = $(GOPATH)/bin/colf
-
-.PHONY: dist
-dist: clean test build
-	$(GO) fmt ./...
-	$(GO) vet ./...
-
 .PHONY: test
-test: install
-	$(MAKE) -C c
-	$(MAKE) -C ecma
-	$(MAKE) -C go
-	$(MAKE) -C java
-	$(MAKE) -C rpc
+test:
+	$(MAKE) -C c test
+	$(MAKE) -C ecma test
+	$(MAKE) -C go test
+	$(MAKE) -C java test
+	$(MAKE) -C rpc test
 	# Fails on Travis CI: mvn -f java/maven integration-test
 
 .PHONY: bench
-bench: install
-	$(MAKE) -C c/bench
-	$(MAKE) -C go/bench
-	$(MAKE) -C java/bench
+bench:
+	$(MAKE) -C c/bench test
+	$(MAKE) -C ecma/bench test
+	$(MAKE) -C go/bench test
+	$(MAKE) -C java/bench test
 
 build:
 	GOARCH=amd64 GOOS=linux $(GO) build -o build/colf-linux ./cmd/colf
@@ -31,6 +24,18 @@ build:
 
 .PHONY: clean
 clean:
-	$(GO) clean -i ./cmd/...
 	rm -fr build
-	# Fails on Travis CI:  mvn -f java/maven clean
+
+.PHONY: clean-all
+clean-all: clean
+	$(MAKE) -C c clean
+	$(MAKE) -C c/bench clean
+	$(MAKE) -C ecma clean
+	$(MAKE) -C ecma/bench clean
+	$(MAKE) -C go clean
+	$(MAKE) -C go/bench clean
+	$(MAKE) -C java clean
+	$(MAKE) -C java/bench clean
+	$(MAKE) -C rpc clean
+	mvn -f java/maven clean
+	$(GO) clean -r ./cmd/...

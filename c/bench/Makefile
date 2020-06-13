@@ -1,7 +1,7 @@
 include ../../common.mk
 
-FLATC?=flatc
-PROTOC?=protoc
+FLATC ?= flatc
+PROTOC ?= protoc
 
 .PHONY: test
 test: build

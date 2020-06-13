@@ -1,5 +1,7 @@
 include ../common.mk
 
+NPM ?= npm
+
 .PHONY: test
 test: gen build node_modules
 	node_modules/.bin/qunit test.js
@@ -11,7 +13,7 @@ gen:
 	$(COLF) -b gen JavaScript ../testdata/test.colf
 
 node_modules:
-	npm install qunit
+	$(NPM) install qunit
 
 .PHONY: clean
 clean:

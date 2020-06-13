@@ -1,20 +1,19 @@
 include ../../common.mk
 
-FLATC?=flatc
-PROTOC?=protoc
+FLATC ?= flatc
+PROTOC ?= protoc
 
 .PHONY: test
 test: build
 	$(GO) test -bench .
 
-.PHONY: stat
-stat: build
+stat.txt: build
 	$(GO) test -bench . -count 5 > build/bench.log
-	benchstat build/bench.log
-	@echo
-	@$(GO) version
-	@$(PROTOC) --version
-	@$(FLATC) --version
+	benchstat build/bench.log > stat.txt
+	@echo >> stat.txt
+	@$(GO) version >> stat.txt
+	@$(PROTOC) --version >> stat.txt
+	@$(FLATC) --version >> stat.txt
 
 build:
 	$(COLF) -b build/gen Go ../../testdata/bench/scheme.colf
@@ -23,5 +22,4 @@ build:
 
 .PHONY: clean
 clean:
-	$(GO) clean
-	rm -fr build
+	rm -fr build stat.txt

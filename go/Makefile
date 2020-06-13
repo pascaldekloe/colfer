@@ -26,5 +26,4 @@ fuzz: fuzz.zip
 
 .PHONY: clean
 clean:
-	go clean .
 	rm -fr gen build fuzz.zip

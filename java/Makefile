@@ -1,8 +1,12 @@
 include ../common.mk
 
+JAVA ?= java
+JAVAC ?= javac
+JAVADOC ?= javadoc
+
 .PHONY: test
 test: build
-	java -cp build/classes test
+	$(JAVA) -cp build/classes test
 
 gen:
 	$(COLF) Java ../testdata/test.colf
@@ -11,10 +15,10 @@ build: gen
 	$(COLF) -b build/java -p break -x java/util/ArrayList Java ../testdata/break*.colf
 
 	mkdir -p build/classes
-	javac -d build/classes test.java gen/*.java
-	javac -d build/classes build/java/break_/*/*.java
+	$(JAVAC) -d build/classes test.java gen/*.java
+	$(JAVAC) -d build/classes build/java/break_/*/*.java
 
-	javadoc -d build/javadoc build/java/break_/*/*.java > /dev/null
+	$(JAVADOC) -d build/javadoc build/java/break_/*/*.java > /dev/null
 
 .PHONY: clean
 clean:

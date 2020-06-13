@@ -1,14 +1,17 @@
 include ../../common.mk
 
+JAVA ?= java
+JAVAC ?= javac
+
 .PHONY: test
 test: build
-	java -cp build/classes bench
+	$(JAVA) -cp build/classes bench
 
 build:
 	$(COLF) -b build/java Java ../../testdata/bench/scheme.colf
 
 	mkdir -p build/classes
-	javac -d build/classes bench.java build/java/bench/*.java
+	$(JAVAC) -d build/classes bench.java build/java/bench/*.java
 
 .PHONY: clean
 clean:

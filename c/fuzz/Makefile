@@ -1,10 +1,10 @@
-CC=~/code/afl-2.52b/afl-clang
-CFLAGS=-std=c11 -g -O0
+CC ?= afl-clang
+CFLAGS = -std=c11 -g -O0
 
-FUZZ=~/code/afl-2.52b/afl-fuzz
+FUZZ ?= afl-fuzz
 
-.PHONY: run
-run: build
+.PHONY: test
+test: build
 	mkdir -p build/seed
 	cp ../../testdata/corpus/seed* build/seed
 	$(FUZZ) -i build/seed -o findings build/fuzz

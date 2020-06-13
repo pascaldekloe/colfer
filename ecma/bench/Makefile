@@ -1,6 +1,6 @@
 include ../../common.mk
 
-NODE?=node
+NODE ?= node
 
 .PHONY: test
 test: build

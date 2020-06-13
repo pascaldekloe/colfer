@@ -1,7 +1,7 @@
 include ../common.mk
 
-CC=clang
-CFLAGS=-std=c11 -g -O0 -pedantic -Werror
+CC ?= clang
+CFLAGS = -std=c11 -g -O0 -pedantic -Werror
 
 .PHONY: test
 test: build
