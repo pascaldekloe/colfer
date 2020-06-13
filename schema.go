@@ -98,7 +98,7 @@ func ParseFiles(paths ...string) (Packages, error) {
 							fmt.Println("colfer: WARNING: integer lists are Go only at the moment")
 						case "float32", "float64", "text", "binary":
 						default:
-							return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f.String())
+							return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f)
 						}
 					}
 					continue
@@ -109,7 +109,7 @@ func ParseFiles(paths ...string) (Packages, error) {
 				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
 					continue
 				}
-				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", t, f.String())
+				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", t, f)
 			}
 		}
 	}
@@ -141,13 +141,17 @@ func addSpec(pkg *Package, decl *ast.GenDecl, spec ast.Spec, schemaPath string) 
 
 func mapStruct(dst *Struct, src *ast.StructType) error {
 	for i, f := range src.Fields.List {
-		field := Field{Struct: dst, Index: i}
-		dst.Fields = append(dst.Fields, &field)
+		field := &Field{Struct: dst, Index: i}
+		dst.Fields = append(dst.Fields, field)
 
 		if len(f.Names) == 0 {
-			return fmt.Errorf("colfer: missing name for field %d", i)
+			return fmt.Errorf("colfer: field %d from %s has no name", i, dst)
 		}
 		field.Name = f.Names[0].Name
+
+		if f.Tag != nil {
+			return fmt.Errorf("colfer: illegal tag %s on %s", f.Tag.Value, field)
+		}
 
 		field.Docs = docs(f.Doc)
 
@@ -165,10 +169,10 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 				case *ast.Ident:
 					field.Type = pkgIdent.Name + "." + t.Sel.Name
 				default:
-					return fmt.Errorf("colfer: unknown datatype selector expression %T for field %s", pkgIdent, field.String())
+					return fmt.Errorf("colfer: unknown datatype selector expression %T for field %s", pkgIdent, field)
 				}
 			default:
-				return fmt.Errorf("colfer: unknown datatype declaration %T for field %s", t, field.String())
+				return fmt.Errorf("colfer: unknown datatype declaration %T for field %s", t, field)
 			}
 			break
 		}
