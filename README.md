@@ -41,50 +41,58 @@ or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
 Without arguments the command prints its manual.
 
 ```
-[1mNAME
-	colf[0m — compile Colfer schemas
+NAME
+	colf — compile Colfer schemas
 
-[1mSYNOPSIS
-	colf[0m [ [4moptions[0m ] [4mlanguage[0m [ [4mfile[0m [4m...[0m ]
+SYNOPSIS
+	colf [-h]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] C [file ...]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] Go [file ...]
+	colf [-vf] [-b directory] [-p package] \
+		[-x class] [-i interfaces] [-c file] \
+		[-s expression] [-l expression] Java [file ...]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] JavaScript [file ...]
 
-[1mDESCRIPTION
-	[0mGenerates source code for a [4mlanguage[0m. The options are: [1mC[0m, [1mGo[0m,
-	[1mJava[0m and [1mJavaScript[0m.
-	The [4mfile[0m operands specify schema input. Directories are scanned
+DESCRIPTION
+	Generates source code from a model definition for one language.
+	The file operands specify schema input. Directories are scanned
 	for files with the colf extension. When no files are given, then
-	the current [3mworking directory[0m is used.
+	the current working directory is used.
 	A package definition may be spread over several schema files.
 	The directory hierarchy of the input is not relevant for the
 	generated code.
 
-[1mOPTIONS
-[0m  -b directory
+OPTIONS
+  -b directory
     	Use a base directory for the generated code. (default ".")
   -c file
-    	Insert a code snippet from a file. Java only.
+    	Insert a code snippet from a file.
   -f	Normalize the format of all input schemas on the fly.
   -i interfaces
     	Make all generated classes implement one or more interfaces.
-    	Use commas as a list separator. Java only.
+    	Use commas as a list separator.
   -l expression
     	Set the default upper limit for the number of elements in a
     	list. The expression is applied to the target language under
     	the name ColferListMax. (default "64 * 1024")
   -p package
-    	Compile with a package prefix.
+    	Compile to a package prefix.
   -s expression
     	Set the default upper limit for serial byte sizes. The
     	expression is applied to the target language under the name
     	ColferSizeMax. (default "16 * 1024 * 1024")
-  -v	Enable verbose reporting to [3mstandard error[0m.
+  -v	Enable verbose reporting to standard error.
   -x class
-    	Make all generated classes extend a super class. Java only.
+    	Make all generated classes extend a super class.
 
-[1mEXIT STATUS[0m
+EXIT STATUS
 	The command exits 0 on succes, 1 on compilation failure and 2
 	when invoked without arguments.
 
-[1mEXAMPLES[0m
+EXAMPLES
 	Compile ./io.colf with compact limits as C:
 
 		colf -b src -s 2048 -l 96 C io.colf
@@ -93,7 +101,7 @@ Without arguments the command prints its manual.
 
 		colf -p com.example.model -x com.example.io.IOBean Java
 
-[1mBUGS[0m
+BUGS
 	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
 
 	Text validation is not part of the marshalling and unmarshalling
@@ -101,8 +109,8 @@ Without arguments the command prints its manual.
 	and JavaScript replace unmappable content with the '?' character
 	(ASCII 63).
 
-[1mSEE ALSO
-	[0mprotoc(1), flatc(1)
+SEE ALSO
+	protoc(1), flatc(1)
 ```
 
 It is recommended to commit the generated source code into the respective

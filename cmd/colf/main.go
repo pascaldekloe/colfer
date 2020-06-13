@@ -14,10 +14,9 @@ import (
 
 // ANSI escape codes for markup
 const (
-	bold      = "\x1b[1m"
-	italic    = "\x1b[3m"
-	underline = "\x1b[4m"
-	clear     = "\x1b[0m"
+	bold   = "\x1b[1m"
+	italic = "\x1b[3m"
+	clear  = "\x1b[0m"
 )
 
 var (
@@ -29,9 +28,9 @@ var (
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Set the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
 	listMax = flag.String("l", "64 * 1024", "Set the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
 
-	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`. Java only.")
-	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator. Java only.")
-	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`. Java only.")
+	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`.")
+	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator.")
+	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`.")
 )
 
 var name = os.Args[0]
@@ -197,14 +196,42 @@ func addSchemaFile(path string, info os.FileInfo) {
 
 func init() {
 	help := bold + "NAME\n\t" + name + clear + " \u2014 compile Colfer schemas\n\n"
-	help += bold + "SYNOPSIS\n\t" + name + clear
-	help += " [ " + underline + "options" + clear + " ] " + underline + "language" + clear
-	help += " [ " + underline + "file" + clear + " " + underline + "..." + clear + " ]\n\n"
-	help += bold + "DESCRIPTION\n\t" + clear
-	help += "Generates source code for a " + underline + "language" + clear + ". The options are: "
-	help += bold + "C" + clear + ", " + bold + "Go" + clear + ",\n"
-	help += "\t" + bold + "Java" + clear + " and " + bold + "JavaScript" + clear + ".\n"
-	help += "\tThe " + underline + "file" + clear + " operands specify schema input. Directories are scanned\n"
+	help += bold + "SYNOPSIS\n\t" + name + clear + " [" + bold + "-h" + clear + "]\n\t"
+
+	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
+	help += bold + "-b" + clear + " directory] ["
+	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-s" + clear + " expression] ["
+	help += bold + "-l" + clear + " expression] C"
+	help += " [file ...]\n\t"
+
+	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
+	help += bold + "-b" + clear + " directory] ["
+	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-s" + clear + " expression] ["
+	help += bold + "-l" + clear + " expression] Go"
+	help += " [file ...]\n\t"
+
+	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
+	help += bold + "-b" + clear + " directory] ["
+	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-x" + clear + " class] ["
+	help += bold + "-i" + clear + " interfaces] ["
+	help += bold + "-c" + clear + " file] \\\n\t\t["
+	help += bold + "-s" + clear + " expression] ["
+	help += bold + "-l" + clear + " expression] Java"
+	help += " [file ...]\n\t"
+
+	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
+	help += bold + "-b" + clear + " directory] ["
+	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-s" + clear + " expression] ["
+	help += bold + "-l" + clear + " expression] JavaScript"
+	help += " [file ...]\n\n"
+
+	help += bold + "DESCRIPTION" + clear + "\n"
+	help += "\tGenerates source code from a model definition for one language.\n"
+	help += "\tThe file operands specify schema input. Directories are scanned\n"
 	help += "\tfor files with the colf extension. When no files are given, then\n"
 	help += "\tthe current " + italic + "working directory" + clear + " is used.\n"
 	help += "\tA package definition may be spread over several schema files.\n"
