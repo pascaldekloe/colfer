@@ -4,3 +4,7 @@ go:
   - 1.14
 
 script: make clean-all test CC=clang
+
+cache:
+  directories:
+  - $HOME/.m2
