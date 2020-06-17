@@ -3,4 +3,4 @@ language: go
 go:
   - 1.14
 
-script: make clean-all test
+script: make clean-all test CC=clang
