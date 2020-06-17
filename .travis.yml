@@ -3,5 +3,4 @@ language: go
 go:
   - 1.14
 
-sudo: required
-dist: trusty
+script: make clean-all test
