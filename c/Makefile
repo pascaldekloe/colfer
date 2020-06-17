@@ -1,7 +1,8 @@
 include ../common.mk
 
 CC ?= clang
-CFLAGS = -std=c11 -g -O0 -pedantic -Werror
+CFLAGS = -std=c11 -g -O0
+CFLAGS_STRICT = $(CFLAGS) -pedantic -Werror
 
 .PHONY: test
 test: build
@@ -9,7 +10,7 @@ test: build
 
 build: gen
 	mkdir -p build
-	$(CC) -o build/Colfer.o -c $(CFLAGS) gen/Colfer.c
+	$(CC) -o build/Colfer.o -c $(CFLAGS_STRICT) gen/Colfer.c
 	$(CC) -o build/gen_test $(CFLAGS) build/Colfer.o gen_test.c
 
 gen:
