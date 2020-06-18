@@ -13,3 +13,8 @@ type int struct {
 	throw   []class
 	finally []void.class
 }
+
+// Issue66 is a regression test.
+type Issue66 struct {
+	value class
+}

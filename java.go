@@ -310,20 +310,19 @@ import java.nio.BufferUnderflowException;
 	 */
 	public int marshalFit() {
 		long n = 1L
-{{- range .Fields}} + {{if eq .Type "bool"}}1
-{{- else if eq .Type "uint8"}}2
-{{- else if eq .Type "uint16"}}3
-{{- else if eq .Type "uint32"}}5
-{{- else if eq .Type "uint64"}}9
-{{- else if eq .Type "int32"}}6
-{{- else if eq .Type "int64"}}10
-{{- else if eq .Type "float32"}}{{if .TypeList}}6 + (long)this.{{.NameNative}}.length * 4{{else}}5{{end}}
-{{- else if eq .Type "float64"}}{{if .TypeList}}6 + (long)this.{{.NameNative}}.length * 8{{else}}9{{end}}
-{{- else if eq .Type "timestamp"}}13
-{{- else if eq .Type "text"}}6 + {{if .TypeList}}(long)this.{{.NameNative}}.length * 6{{else}}(long)this.{{.NameNative}}.length() * 3{{end}}
-{{- else if eq .Type "binary"}}6 + (long)this.{{.NameNative}}.length{{if .TypeList}} * 6{{end}}
-{{- else if .TypeList}}6
-{{- else}}
+{{- range .Fields}}{{if eq .Type "bool"}} + 1
+{{- else if eq .Type "uint8"}} + 2
+{{- else if eq .Type "uint16"}} + 3
+{{- else if eq .Type "uint32"}} + 5
+{{- else if eq .Type "uint64"}} + 9
+{{- else if eq .Type "int32"}} + 6
+{{- else if eq .Type "int64"}} + 10
+{{- else if eq .Type "float32"}}{{if .TypeList}} + 6 + (long)this.{{.NameNative}}.length * 4{{else}} + 5{{end}}
+{{- else if eq .Type "float64"}}{{if .TypeList}} + 6 + (long)this.{{.NameNative}}.length * 8{{else}} + 9{{end}}
+{{- else if eq .Type "timestamp"}} + 13
+{{- else if eq .Type "text"}} + 6{{if .TypeList}} + (long)this.{{.NameNative}}.length * 6{{else}} + (long)this.{{.NameNative}}.length() * 3{{end}}
+{{- else if eq .Type "binary"}} + 6 + (long)this.{{.NameNative}}.length{{if .TypeList}} * 6{{end}}
+{{- else if .TypeList}} + 6
 {{- end}}{{end}};
 
 {{- range .Fields}}{{if eq .Type "bool"}}
