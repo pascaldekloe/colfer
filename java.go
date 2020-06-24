@@ -71,8 +71,8 @@ func GenerateJava(basedir string, packages Packages) error {
 			}
 		}
 
-		for _, s := range p.Structs {
-			for _, f := range s.Fields {
+		for _, t := range p.Structs {
+			for _, f := range t.Fields {
 				switch f.Type {
 				default:
 					if f.TypeRef == nil {
@@ -108,13 +108,13 @@ func GenerateJava(basedir string, packages Packages) error {
 				f.NameNative = toJavaName(f.Name)
 			}
 
-			f, err := os.Create(filepath.Join(pkgdir, s.NameTitle()+".java"))
+			f, err := os.Create(filepath.Join(pkgdir, t.NameTitle()+".java"))
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
-			if err := codeTemplate.Execute(f, s); err != nil {
+			if err := codeTemplate.Execute(f, t); err != nil {
 				return err
 			}
 		}

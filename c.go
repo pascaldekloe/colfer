@@ -24,10 +24,10 @@ func IsCKeyword(s string) bool {
 // GenerateC writes the code into file "Colfer.h" and "Colfer.c".
 func GenerateC(basedir string, packages Packages) error {
 	for _, p := range packages {
-		for _, s := range p.Structs {
-			s.NameNative = strings.ToLower(name.SnakeCase(p.Name + "_" + s.Name))
+		for _, t := range p.Structs {
+			t.NameNative = strings.ToLower(name.SnakeCase(p.Name + "_" + t.Name))
 
-			for _, f := range s.Fields {
+			for _, f := range t.Fields {
 				f.NameNative = strings.ToLower(name.SnakeCase(f.Name))
 				if IsCKeyword(f.NameNative) {
 					f.NameNative += "_"

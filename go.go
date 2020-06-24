@@ -58,8 +58,8 @@ func GenerateGo(basedir string, packages Packages) error {
 	}
 
 	for _, p := range packages {
-		for _, s := range p.Structs {
-			for _, f := range s.Fields {
+		for _, t := range p.Structs {
+			for _, f := range t.Fields {
 				switch f.Type {
 				default:
 					if f.TypeRef == nil {

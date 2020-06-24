@@ -77,23 +77,22 @@ func ParseFiles(paths ...string) (Packages, error) {
 
 	names := make(map[string]*Struct)
 	for _, pkg := range packages {
-		for _, s := range pkg.Structs {
-			qname := s.String()
+		for _, t := range pkg.Structs {
+			qname := t.String()
 			if dupe, ok := names[qname]; ok {
-				return nil, fmt.Errorf("colfer: duplicate struct definition %q in file %s and %s", qname, dupe.SchemaFile, s.SchemaFile)
+				return nil, fmt.Errorf("colfer: duplicate struct definition %q in file %s and %s", qname, dupe.SchemaFile, t.SchemaFile)
 			}
-			names[qname] = s
+			names[qname] = t
 		}
 	}
 
 	for _, pkg := range packages {
-		for _, s := range pkg.Structs {
-			for _, f := range s.Fields {
-				t := f.Type
-				_, ok := datatypes[t]
+		for _, t := range pkg.Structs {
+			for _, f := range t.Fields {
+				_, ok := datatypes[f.Type]
 				if ok {
 					if f.TypeList {
-						switch t {
+						switch f.Type {
 						case "int32", "int64":
 							fmt.Println("colfer: WARNING: integer lists are Go only at the moment")
 						case "float32", "float64", "text", "binary":
@@ -103,13 +102,13 @@ func ParseFiles(paths ...string) (Packages, error) {
 					}
 					continue
 				}
-				if f.TypeRef, ok = names[t]; ok {
+				if f.TypeRef, ok = names[f.Type]; ok {
 					continue
 				}
-				if f.TypeRef, ok = names[pkg.Name+"."+t]; ok {
+				if f.TypeRef, ok = names[pkg.Name+"."+f.Type]; ok {
 					continue
 				}
-				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", t, f)
+				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", f.Type, f)
 			}
 		}
 	}

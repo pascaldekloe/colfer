@@ -88,8 +88,8 @@ func (p *Package) SchemaFileList() string {
 // Refs returns all direct references sorted by name.
 func (p *Package) Refs() Packages {
 	found := make(map[*Package]struct{})
-	for _, s := range p.Structs {
-		for _, f := range s.Fields {
+	for _, t := range p.Structs {
+		for _, f := range t.Fields {
 			if f.TypeRef != nil && f.TypeRef.Pkg != p {
 				found[f.TypeRef.Pkg] = struct{}{}
 			}
@@ -106,8 +106,8 @@ func (p *Package) Refs() Packages {
 
 // HasFloat returns whether p has one or more floating point fields.
 func (p *Package) HasFloat() bool {
-	for _, s := range p.Structs {
-		if s.HasFloat() {
+	for _, t := range p.Structs {
+		if t.HasFloat() {
 			return true
 		}
 	}
@@ -116,8 +116,8 @@ func (p *Package) HasFloat() bool {
 
 // HasTimestamp returns whether p has one or more timestamp fields.
 func (p *Package) HasTimestamp() bool {
-	for _, s := range p.Structs {
-		if s.HasTimestamp() {
+	for _, t := range p.Structs {
+		if t.HasTimestamp() {
 			return true
 		}
 	}
@@ -126,8 +126,8 @@ func (p *Package) HasTimestamp() bool {
 
 // HasList returns whether p has one or more list fields.
 func (p *Package) HasList() bool {
-	for _, s := range p.Structs {
-		if s.HasList() {
+	for _, t := range p.Structs {
+		if t.HasList() {
 			return true
 		}
 	}
@@ -150,23 +150,23 @@ type Struct struct {
 }
 
 // NameTitle returns the identification token in title case.
-func (s *Struct) NameTitle() string {
-	return strings.Title(s.Name)
+func (t *Struct) NameTitle() string {
+	return strings.Title(t.Name)
 }
 
 // DocText returns the documentation lines prefixed with ident.
-func (s *Struct) DocText(indent string) string {
-	return docText(s.Docs, indent)
+func (t *Struct) DocText(indent string) string {
+	return docText(t.Docs, indent)
 }
 
 // String returns the qualified name.
-func (s *Struct) String() string {
-	return fmt.Sprintf("%s.%s", s.Pkg.Name, s.Name)
+func (t *Struct) String() string {
+	return fmt.Sprintf("%s.%s", t.Pkg.Name, t.Name)
 }
 
 // HasFloat returns whether s has one or more floating point fields.
-func (s *Struct) HasFloat() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasFloat() bool {
+	for _, f := range t.Fields {
 		if f.Type == "float32" || f.Type == "float64" {
 			return true
 		}
@@ -175,8 +175,8 @@ func (s *Struct) HasFloat() bool {
 }
 
 // HasText returns whether s has one or more text fields.
-func (s *Struct) HasText() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasText() bool {
+	for _, f := range t.Fields {
 		if f.Type == "text" {
 			return true
 		}
@@ -185,8 +185,8 @@ func (s *Struct) HasText() bool {
 }
 
 // HasBinary returns whether s has one or more binary fields.
-func (s *Struct) HasBinary() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasBinary() bool {
+	for _, f := range t.Fields {
 		if f.Type == "binary" {
 			return true
 		}
@@ -195,8 +195,8 @@ func (s *Struct) HasBinary() bool {
 }
 
 // HasBinaryList returns whether s has one or more binary list fields.
-func (s *Struct) HasBinaryList() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasBinaryList() bool {
+	for _, f := range t.Fields {
 		if f.Type == "binary" && f.TypeList {
 			return true
 		}
@@ -205,8 +205,8 @@ func (s *Struct) HasBinaryList() bool {
 }
 
 // HasTimestamp returns whether s has one or more timestamp fields.
-func (s *Struct) HasTimestamp() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasTimestamp() bool {
+	for _, f := range t.Fields {
 		if f.Type == "timestamp" {
 			return true
 		}
@@ -215,8 +215,8 @@ func (s *Struct) HasTimestamp() bool {
 }
 
 // HasList returns whether s has one or more list fields.
-func (s *Struct) HasList() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasList() bool {
+	for _, f := range t.Fields {
 		if f.TypeList {
 			return true
 		}

@@ -27,8 +27,8 @@ func GenerateECMA(basedir string, packages Packages) error {
 			p.NameNative += "_"
 		}
 
-		for _, s := range p.Structs {
-			for _, f := range s.Fields {
+		for _, t := range p.Structs {
+			for _, f := range t.Fields {
 				f.NameNative = f.Name
 				if IsECMAKeyword(f.NameNative) {
 					f.NameNative += "_"
