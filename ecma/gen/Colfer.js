@@ -586,6 +586,79 @@ var gen = new function() {
 		return i;
 	}
 
+	// Constructor.
+	// EmbedO has an inner object only.
+	// Covers regression of issue #66.
+	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
+	this.EmbedO = function(init) {
+
+		this.inner = null;
+
+		for (var p in init) this[p] = init[p];
+	}
+
+	// Serializes the object into an Uint8Array.
+	this.EmbedO.prototype.marshal = function(buf) {
+		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
+		var i = 0;
+		var view = new DataView(buf.buffer);
+
+
+		if (this.inner) {
+			buf[i++] = 0;
+			var b = this.inner.marshal();
+			buf.set(b, i);
+			i += b.length;
+		}
+
+
+		buf[i++] = 127;
+		if (i >= colferSizeMax)
+			throw new Error('colfer: gen.EmbedO serial size ' + i + ' exceeds ' + colferSizeMax + ' bytes');
+		return buf.subarray(0, i);
+	}
+
+	// Deserializes the object from an Uint8Array and returns the number of bytes read.
+	this.EmbedO.prototype.unmarshal = function(data) {
+		if (!data || ! data.length) throw new Error(EOF);
+		var header = data[0];
+		var i = 1;
+		var readHeader = function() {
+			if (i >= data.length) throw new Error(EOF);
+			header = data[i++];
+		}
+
+		var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+		var readVarint = function() {
+			var pos = 0, result = 0;
+			while (pos != 8) {
+				var c = data[i+pos];
+				result += (c & 127) * Math.pow(128, pos);
+				++pos;
+				if (c < 128) {
+					i += pos;
+					if (result > Number.MAX_SAFE_INTEGER) break;
+					return result;
+				}
+				if (pos == data.length) throw new Error(EOF);
+			}
+			return -1;
+		}
+
+		if (header == 0) {
+			var o = new gen.O();
+			i += o.unmarshal(data.subarray(i));
+			this.inner = o;
+			readHeader();
+		}
+
+		if (header != 127) throw new Error('colfer: unknown header at byte ' + (i - 1));
+		if (i > colferSizeMax)
+			throw new Error('colfer: gen.EmbedO serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes');
+		return i;
+	}
+
 	// private section
 
 	var encodeVarint = function(bytes, i, x) {

@@ -1201,3 +1201,77 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 
 	return (size_t) (p - (const uint8_t*) data);
 }
+
+size_t gen_embed_o_marshal_len(const gen_embed_o* o) {
+	size_t l = 1;
+
+	{
+		if (o->inner) l += 1 + gen_o_marshal_len(o->inner);
+	}
+
+	if (l > colfer_size_max) {
+		errno = EFBIG;
+		return 0;
+	}
+	return l;
+}
+
+size_t gen_embed_o_marshal(const gen_embed_o* o, void* buf) {
+	// octet pointer navigation
+	uint8_t* p = buf;
+
+	{
+		if (o->inner) {
+			*p++ = 0;
+
+			p += gen_o_marshal(o->inner, p);
+		}
+	}
+
+	*p++ = 127;
+
+	return p - (uint8_t*) buf;
+}
+
+size_t gen_embed_o_unmarshal(gen_embed_o* o, const void* data, size_t datalen) {
+	// octet pointer navigation
+	const uint8_t* p = data;
+	const uint8_t* end;
+	int enderr;
+	if (datalen < colfer_size_max) {
+		end = p + datalen;
+		enderr = EWOULDBLOCK;
+	} else {
+		end = p + colfer_size_max;
+		enderr = EFBIG;
+	}
+
+	if (p >= end) {
+		errno = enderr;
+		return 0;
+	}
+	uint_fast8_t header = *p++;
+
+	if (header == 0) {
+		o->inner = calloc(1, sizeof(gen_o));
+		size_t read = gen_o_unmarshal(o->inner, p, (size_t) (end - p));
+		if (!read) {
+			if (errno == EWOULDBLOCK) errno = enderr;
+			return read;
+		}
+		p += read;
+
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
+		header = *p++;
+	}
+
+	if (header != 127) {
+		errno = EILSEQ;
+		return 0;
+	}
+
+	return (size_t) (p - (const uint8_t*) data);
+}
