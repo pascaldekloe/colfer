@@ -31,6 +31,8 @@ var (
 	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`.")
 	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator.")
 	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`.")
+
+	tagFiles = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
 )
 
 var name = os.Args[0]
@@ -69,6 +71,9 @@ func main() {
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with C", name)
 		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with C", name)
+		}
 
 	case "go":
 		report.Print("set-up for Go")
@@ -99,6 +104,9 @@ func main() {
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with ECMAScript", name)
 		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with ECMAScript", name)
+		}
 
 	default:
 		log.Fatalf("%s: unsupported language %q", name, lang)
@@ -115,6 +123,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	if *tagFiles != "" {
+		for _, path := range strings.Split(*tagFiles, ",") {
+			if err = packages.ApplyTagFile(path); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	report.Print("using schema files: ", strings.Join(schemaPaths, ", "))
 
 	if *format {
 		for _, path := range schemaPaths {
@@ -207,14 +225,16 @@ func init() {
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-p" + clear + " package] ["
+	help += bold + "-t" + clear + " files] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
 	help += bold + "-l" + clear + " expression] Go"
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-p" + clear + " package] ["
+	help += bold + "-t" + clear + " files] \\\n\t\t["
 	help += bold + "-x" + clear + " class] ["
 	help += bold + "-i" + clear + " interfaces] ["
 	help += bold + "-c" + clear + " file] \\\n\t\t["
@@ -237,23 +257,35 @@ func init() {
 	help += "\tA package definition may be spread over several schema files.\n"
 	help += "\tThe directory hierarchy of the input is not relevant for the\n"
 	help += "\tgenerated code.\n\n"
-	help += bold + "OPTIONS\n" + clear
 
-	tail := "\n" + bold + "EXIT STATUS" + clear + "\n"
+	help += bold + "OPTIONS\n" + clear
+	// … rendered with the flag package
+	tail := "\n"
+
+	tail += bold + "TAGS" + clear + "\n"
+	tail += "\tTags, a.k.a. annotations, are source code additions for structs\n"
+	tail += "\tand fields. The compiler uses a line-orient data format in the\n"
+	tail += "\tform of: <package> '.' <structure> ('.' <field>) <space> <code>.\n"
+	tail += "\tLines starting with a '#' are ignored (as comments).\n\n"
+
+	tail += bold + "EXIT STATUS" + clear + "\n"
 	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
-	tail += "\twhen invoked without arguments.\n"
-	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
+	tail += "\twhen invoked without arguments.\n\n"
+
+	tail += bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
 	tail += "\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n"
 	tail += "\tCompile ./*.colf with a common parent as Java:\n\n"
-	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n"
-	tail += "\n" + bold + "BUGS" + clear + "\n"
+	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n\n"
+
+	tail += bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n"
 	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
 	tail += "\tprocess. C and Go just pass any malformed UTF-8 characters. Java\n"
 	tail += "\tand JavaScript replace unmappable content with the '?' character\n"
 	tail += "\t(ASCII 63).\n\n"
-	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1), flatc(1)\n"
+
+	tail += bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
 
 	flag.Usage = func() {
 		os.Stderr.WriteString(help)

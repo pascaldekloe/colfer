@@ -1,0 +1,6 @@
+# multiple spaces after qualified name
+gen.o	some struct tag value
+# tab after qualified name
+gen.o.i	some field tag value
+# broken is not a qualified name
+broken	another tag value

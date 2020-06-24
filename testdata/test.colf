@@ -41,6 +41,11 @@ type o struct {
 	f64s []float64
 }
 
+// DromedaryCase oposes name casings.
+type dromedaryCase struct {
+	PascalCase text
+}
+
 // EmbedO has an inner object only.
 // Covers regression of issue #66.
 type EmbedO struct {

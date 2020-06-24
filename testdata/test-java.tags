@@ -1,0 +1,2 @@
+gen.dromedaryCase		@java.lang.Deprecated
+gen.dromedaryCase.PascalCase	@Deprecated(forRemoval=true)

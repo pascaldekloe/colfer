@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -59,7 +60,17 @@ func GenerateGo(basedir string, packages Packages) error {
 
 	for _, p := range packages {
 		for _, t := range p.Structs {
+			if t.TagAdd != "" {
+				return fmt.Errorf("colfer: struct tag %q on %s not supported with Go", t.TagAdd, t)
+			}
+
 			for _, f := range t.Fields {
+				if f.TagAdd != "" {
+					if _, err := strconv.Unquote(f.TagAdd); err != nil || f.TagAdd[0] == '\'' {
+						return fmt.Errorf("colfer: struct tag %q on %s not a valid string literal", f.TagAdd, f)
+					}
+				}
+
 				switch f.Type {
 				default:
 					if f.TypeRef == nil {
@@ -163,7 +174,7 @@ func (i ColferTail) Error() string {
 {{.DocText "// "}}
 type {{.NameTitle}} struct {
 {{range .Fields}}{{.DocText "\t// "}}
-	{{.NameTitle}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}
+	{{.NameTitle}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}{{if .TagAdd}} {{.TagAdd}}{{end}}
 {{end}}}
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.

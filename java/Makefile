@@ -9,7 +9,7 @@ test: build
 	$(JAVA) -cp build/classes test
 
 gen:
-	$(COLF) Java ../testdata/test.colf
+	$(COLF) -t ../testdata/test-java.tags Java ../testdata/test.colf
 
 build: gen
 	$(COLF) -b build/java -p break -x java/util/ArrayList Java ../testdata/break*.colf

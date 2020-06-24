@@ -2,10 +2,14 @@
 package colfer
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // datatypes holds all supported names.
@@ -147,6 +151,8 @@ type Struct struct {
 	Fields []*Field
 	// SchemaFile is the source filename.
 	SchemaFile string
+	// TagAdd is an optional source code addition.
+	TagAdd string
 }
 
 // NameTitle returns the identification token in title case.
@@ -244,6 +250,8 @@ type Field struct {
 	TypeRef *Struct
 	// TypeList flags whether the datatype is a list.
 	TypeList bool
+	// TagAdd is an optional source code addition.
+	TagAdd string
 }
 
 // NameTitle returns the identification token in title case.
@@ -280,4 +288,135 @@ func docText(docs []string, indent string) string {
 	}
 
 	return buf.String()
+}
+
+// StructsByQName maps each Struct to its respective qualified name
+// as in <package>.<type>.<field>.
+func (p Packages) StructsByQName() map[string]*Struct {
+	var n int
+	for _, pkg := range p {
+		n += len(pkg.Structs)
+	}
+	m := make(map[string]*Struct, n)
+
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			m[t.String()] = t
+		}
+	}
+	return m
+}
+
+// FieldsByQName maps each Field to its respective qualified name
+// as in <package>.<type>.<field>.
+func (p Packages) FieldsByQName() map[string]*Field {
+	var n int
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			n += len(t.Fields)
+		}
+	}
+	m := make(map[string]*Field, n)
+
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			for _, f := range t.Fields {
+				// no dupe check
+				m[f.String()] = f
+			}
+		}
+	}
+	return m
+}
+
+func (p Packages) ApplyTagFile(path string) error {
+	fields := p.FieldsByQName()
+	structs := p.StructsByQName()
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	r := bufio.NewReader(file)
+
+	for lineNo := 1; ; lineNo++ {
+		line, isPrefix, err := r.ReadLine()
+		switch err {
+		case nil:
+			break
+		case io.EOF:
+			return nil
+		default:
+			return err
+		}
+		if isPrefix {
+			return fmt.Errorf("colfer: line %s:%d exceeds %d bytes", path, lineNo, r.Size())
+		}
+
+		line = bytes.TrimLeftFunc(line, unicode.IsSpace)
+		if len(line) == 0 || line[0] == '#' {
+			continue // empty or comment
+		}
+
+		var qName []byte
+		var tag string
+		if i := bytes.IndexFunc(line, unicode.IsSpace); i < 0 {
+			qName = line
+		} else {
+			qName = line[:i]
+			tag = string(bytes.TrimSpace(line[i+1:]))
+		}
+
+		if c := structs[string(qName)]; c != nil {
+			if c.TagAdd != "" {
+				return fmt.Errorf("%s:%d: duplicate tag for struct %s", path, lineNo, qName)
+			}
+			c.TagAdd = tag
+
+			continue
+		}
+
+		if f := fields[string(qName)]; f != nil {
+			if f.TagAdd != "" {
+				return fmt.Errorf("%s:%d: duplicate tag for field %s", path, lineNo, qName)
+			}
+			f.TagAdd = tag
+
+			continue
+		}
+
+		// Narrow the mismatch down for user-friendly errors.
+		segs := strings.Split(string(qName), ".")
+		if len(segs) < 2 || len(segs) > 3 {
+			return fmt.Errorf("%s:%d: invalid qualifier %q; use <package>.<type> or <package>.<type>.<field>", path, lineNo, qName)
+		}
+		for _, pkg := range p {
+			if !strings.EqualFold(pkg.Name, segs[0]) {
+				continue
+			}
+			if pkg.Name != segs[0] {
+				return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, pkg.Name)
+			}
+
+			for _, t := range pkg.Structs {
+				if !strings.EqualFold(t.Name, segs[1]) {
+					continue
+				}
+				if t.Name != segs[1] {
+					return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, t)
+				}
+
+				for _, f := range t.Fields {
+					if strings.EqualFold(f.Name, segs[2]) {
+						return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, f)
+					}
+				}
+
+				return fmt.Errorf("%s:%d: %q field not in schema", path, lineNo, qName)
+			}
+			return fmt.Errorf("%s:%d: %q struct not in schema", path, lineNo, qName)
+		}
+		return fmt.Errorf("%s:%d: %q package not in schema", path, lineNo, qName)
+	}
 }

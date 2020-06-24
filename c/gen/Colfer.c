@@ -1202,6 +1202,115 @@ size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
 	return (size_t) (p - (const uint8_t*) data);
 }
 
+size_t gen_dromedary_case_marshal_len(const gen_dromedary_case* o) {
+	size_t l = 1;
+
+	{
+		size_t n = o->pascal_case.len;
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
+		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
+	}
+
+	if (l > colfer_size_max) {
+		errno = EFBIG;
+		return 0;
+	}
+	return l;
+}
+
+size_t gen_dromedary_case_marshal(const gen_dromedary_case* o, void* buf) {
+	// octet pointer navigation
+	uint8_t* p = buf;
+
+	{
+		size_t n = o->pascal_case.len;
+		if (n) {
+			*p++ = 0;
+
+			uint_fast32_t x = n;
+			for (; x >= 128; x >>= 7) *p++ = x | 128;
+			*p++ = x;
+
+			memcpy(p, o->pascal_case.utf8, n);
+			p += n;
+		}
+	}
+
+	*p++ = 127;
+
+	return p - (uint8_t*) buf;
+}
+
+size_t gen_dromedary_case_unmarshal(gen_dromedary_case* o, const void* data, size_t datalen) {
+	// octet pointer navigation
+	const uint8_t* p = data;
+	const uint8_t* end;
+	int enderr;
+	if (datalen < colfer_size_max) {
+		end = p + datalen;
+		enderr = EWOULDBLOCK;
+	} else {
+		end = p + colfer_size_max;
+		enderr = EFBIG;
+	}
+
+	if (p >= end) {
+		errno = enderr;
+		return 0;
+	}
+	uint_fast8_t header = *p++;
+
+	if (header == 0) {
+		if (p >= end) {
+			errno = enderr;
+			return 0;
+		}
+		size_t n = *p++;
+		if (n > 127) {
+			n &= 127;
+			for (int shift = 7; shift < sizeof(size_t) * CHAR_BIT; shift += 7) {
+				if (p >= end) {
+					errno = enderr;
+					return 0;
+				}
+				size_t c = *p++;
+				if (c <= 127) {
+					n |= c << shift;
+					break;
+				}
+				n |= (c & 127) << shift;
+			}
+		}
+		if (n > colfer_size_max) {
+			errno = EFBIG;
+			return 0;
+		}
+		if (p+n >= end) {
+			errno = enderr;
+			return 0;
+		}
+		o->pascal_case.len = n;
+
+		void* a = malloc(n);
+		o->pascal_case.utf8 = (char*) a;
+		if (n) {
+			memcpy(a, p, n);
+			p += n;
+		}
+		header = *p++;
+	}
+
+	if (header != 127) {
+		errno = EILSEQ;
+		return 0;
+	}
+
+	return (size_t) (p - (const uint8_t*) data);
+}
+
 size_t gen_embed_o_marshal_len(const gen_embed_o* o) {
 	size_t l = 1;
 

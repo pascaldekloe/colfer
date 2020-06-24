@@ -48,9 +48,9 @@ SYNOPSIS
 	colf [-h]
 	colf [-vf] [-b directory] [-p package] \
 		[-s expression] [-l expression] C [file ...]
-	colf [-vf] [-b directory] [-p package] \
+	colf [-vf] [-b directory] [-p package] [-t files] \
 		[-s expression] [-l expression] Go [file ...]
-	colf [-vf] [-b directory] [-p package] \
+	colf [-vf] [-b directory] [-p package] [-t files] \
 		[-x class] [-i interfaces] [-c file] \
 		[-s expression] [-l expression] Java [file ...]
 	colf [-vf] [-b directory] [-p package] \
@@ -84,9 +84,18 @@ OPTIONS
     	Set the default upper limit for serial byte sizes. The
     	expression is applied to the target language under the name
     	ColferSizeMax. (default "16 * 1024 * 1024")
+  -t files
+    	Supply custom tags with one or more files. Use commas as a list
+    	separator. See the TAGS section for details.
   -v	Enable verbose reporting to standard error.
   -x class
     	Make all generated classes extend a super class.
+
+TAGS
+	Tags, a.k.a. annotations, are source code additions for structs
+	and fields. The compiler uses a line-orient data format in the
+	form of: <package> '.' <structure> ('.' <field>) <space> <code>.
+	Lines starting with a '#' are ignored (as comments).
 
 EXIT STATUS
 	The command exits 0 on succes, 1 on compilation failure and 2

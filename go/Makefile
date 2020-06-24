@@ -6,7 +6,7 @@ test: gen build
 	$(GO) build ./build/break/...
 
 gen:
-	$(COLF) Go ../testdata/test.colf
+	$(COLF) -t ../testdata/test-go.tags Go ../testdata/test.colf
 
 build:
 	mkdir -p build
