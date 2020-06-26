@@ -45,8 +45,9 @@ var GoldenTagFileErrors = []struct{ File, Err string }{
 }
 
 func TestTagFileErrors(t *testing.T) {
+	options := TagOptions{StructAllow: TagMulti, FieldAllow: TagMulti}
 	for _, gold := range GoldenTagFileErrors {
-		err := GoldenTagPackages().ApplyTagFile(gold.File)
+		err := GoldenTagPackages().ApplyTagFile(gold.File, options)
 		if err == nil || err.Error() != gold.Err {
 			t.Errorf("%s: got %v, want %v", gold.File, err, gold.Err)
 		}

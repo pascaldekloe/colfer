@@ -30,9 +30,8 @@ var (
 
 	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`.")
 	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator.")
+	tagFiles    = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
 	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`.")
-
-	tagFiles = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
 )
 
 var name = os.Args[0]
@@ -58,6 +57,7 @@ func main() {
 
 	// select language
 	var gen func(string, colfer.Packages) error
+	var tagOptions colfer.TagOptions
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "c":
 		report.Print("set-up for C")
@@ -68,11 +68,11 @@ func main() {
 		if *interfaces != "" {
 			log.Fatalf("%s: interfaces not supported with C", name)
 		}
-		if *snippetFile != "" {
-			log.Fatalf("%s: snippet not supported with C", name)
-		}
 		if *tagFiles != "" {
 			log.Fatalf("%s: tags not supported with C", name)
+		}
+		if *snippetFile != "" {
+			log.Fatalf("%s: snippet not supported with C", name)
 		}
 
 	case "go":
@@ -87,10 +87,13 @@ func main() {
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with Go", name)
 		}
+		tagOptions.FieldAllow = colfer.TagSingle
 
 	case "java":
 		report.Print("set-up for Java")
 		gen = colfer.GenerateJava
+		tagOptions.StructAllow = colfer.TagMulti
+		tagOptions.FieldAllow = colfer.TagMulti
 
 	case "javascript", "js", "ecmascript":
 		report.Print("set-up for ECMAScript")
@@ -101,11 +104,11 @@ func main() {
 		if *interfaces != "" {
 			log.Fatalf("%s: interfaces not supported with ECMAScript", name)
 		}
-		if *snippetFile != "" {
-			log.Fatalf("%s: snippet not supported with ECMAScript", name)
-		}
 		if *tagFiles != "" {
 			log.Fatalf("%s: tags not supported with ECMAScript", name)
+		}
+		if *snippetFile != "" {
+			log.Fatalf("%s: snippet not supported with ECMAScript", name)
 		}
 
 	default:
@@ -117,8 +120,6 @@ func main() {
 	} else {
 		mustResolveSchemaFiles(".")
 	}
-	report.Print("using schema files: ", strings.Join(schemaPaths, ", "))
-
 	packages, err := colfer.ParseFiles(schemaPaths...)
 	if err != nil {
 		log.Fatal(err)
@@ -126,13 +127,12 @@ func main() {
 
 	if *tagFiles != "" {
 		for _, path := range strings.Split(*tagFiles, ",") {
-			if err = packages.ApplyTagFile(path); err != nil {
+			report.Print("using tag file: ", path)
+			if err = packages.ApplyTagFile(path, tagOptions); err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
-
-	report.Print("using schema files: ", strings.Join(schemaPaths, ", "))
 
 	if *format {
 		for _, path := range schemaPaths {
@@ -208,6 +208,7 @@ func addSchemaFile(path string, info os.FileInfo) {
 		}
 	}
 
+	report.Print("using schema file: ", path)
 	schemaPaths = append(schemaPaths, path)
 	schemaInfos = append(schemaInfos, info)
 }

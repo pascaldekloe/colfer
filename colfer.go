@@ -151,8 +151,8 @@ type Struct struct {
 	Fields []*Field
 	// SchemaFile is the source filename.
 	SchemaFile string
-	// TagAdd is an optional source code addition.
-	TagAdd string
+	// TagAdd has optional source code additions.
+	TagAdd []string
 }
 
 // NameTitle returns the identification token in title case.
@@ -250,8 +250,8 @@ type Field struct {
 	TypeRef *Struct
 	// TypeList flags whether the datatype is a list.
 	TypeList bool
-	// TagAdd is an optional source code addition.
-	TagAdd string
+	// TagAdd has optional source code additions.
+	TagAdd []string
 }
 
 // NameTitle returns the identification token in title case.
@@ -329,7 +329,21 @@ func (p Packages) FieldsByQName() map[string]*Field {
 	return m
 }
 
-func (p Packages) ApplyTagFile(path string) error {
+// TagAllow defines tag options.
+type TagAllow int
+
+const (
+	TagNone   TagAllow = iota // not allowed
+	TagSingle                 // zero or one
+	TagMulti                  // any number
+)
+
+type TagOptions struct {
+	StructAllow TagAllow
+	FieldAllow  TagAllow
+}
+
+func (p Packages) ApplyTagFile(path string, options TagOptions) error {
 	fields := p.FieldsByQName()
 	structs := p.StructsByQName()
 
@@ -368,20 +382,30 @@ func (p Packages) ApplyTagFile(path string) error {
 			tag = string(bytes.TrimSpace(line[i+1:]))
 		}
 
-		if c := structs[string(qName)]; c != nil {
-			if c.TagAdd != "" {
-				return fmt.Errorf("%s:%d: duplicate tag for struct %s", path, lineNo, qName)
+		if t := structs[string(qName)]; t != nil {
+			switch options.StructAllow {
+			case TagNone:
+				return fmt.Errorf("apply %s:%d: struct tags not allowed for language", path, lineNo)
+			case TagSingle:
+				if len(t.TagAdd) != 0 {
+					return fmt.Errorf("apply %s:%d: %s already tagged [dupe]", path, lineNo, qName)
+				}
 			}
-			c.TagAdd = tag
+			t.TagAdd = append(t.TagAdd, tag)
 
 			continue
 		}
 
 		if f := fields[string(qName)]; f != nil {
-			if f.TagAdd != "" {
-				return fmt.Errorf("%s:%d: duplicate tag for field %s", path, lineNo, qName)
+			switch options.StructAllow {
+			case TagNone:
+				return fmt.Errorf("apply %s:%d: field tags not allowed for language", path, lineNo)
+			case TagSingle:
+				if len(f.TagAdd) != 0 {
+					return fmt.Errorf("apply %s:%d: %s already tagged [dupe]", path, lineNo, qName)
+				}
 			}
-			f.TagAdd = tag
+			f.TagAdd = append(f.TagAdd, tag)
 
 			continue
 		}
