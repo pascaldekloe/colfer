@@ -7,7 +7,7 @@ test:
 	$(MAKE) -C go test
 	$(MAKE) -C java test
 	$(MAKE) -C rpc test
-	# Fails on Travis CI: mvn -f java/maven integration-test
+	mvn -f java/maven integration-test
 
 .PHONY: bench
 bench:
