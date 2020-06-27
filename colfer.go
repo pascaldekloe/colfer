@@ -395,7 +395,7 @@ func (p Packages) ApplyTagFile(path string, options TagOptions) error {
 			}
 			t.TagAdd = append(t.TagAdd, tag)
 		} else if f := fields[string(qName)]; f != nil {
-			switch options.StructAllow {
+			switch options.FieldAllow {
 			case TagNone:
 				return fmt.Errorf("apply %s:%d: field tag (on %s) not supported by target language", path, lineNo, qName)
 			case TagSingle:
