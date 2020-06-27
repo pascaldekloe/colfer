@@ -1,2 +1,2 @@
-# Field "i" is lower-case.
-gen.o.I
+# Field "p" is lower-case.
+gen.o.P value

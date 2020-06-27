@@ -1,4 +1,5 @@
-gen.dromedaryCase		@Deprecated
-gen.dromedaryCase               @SuppressWarnings("fallthrough")
-gen.dromedaryCase.PascalCase	@Deprecated(forRemoval=true)
-gen.dromedaryCase.PascalCase    // @javax.validation.constraints.NotNull
+gen.dromedaryCase		@SuppressWarnings(
+gen.dromedaryCase			value = "fallthrough"
+gen.dromedaryCase               )
+gen.dromedaryCase.PascalCase    @Deprecated(forRemoval=true)
+gen.dromedaryCase.PascalCase	// @javax.validation.constraints.NotNull

@@ -93,9 +93,16 @@ OPTIONS
 
 TAGS
 	Tags, a.k.a. annotations, are source code additions for structs
-	and fields. The compiler uses a line-orient data format in the
-	form of: <package> '.' <structure> ('.' <field>) <space> <code>.
-	Lines starting with a '#' are ignored (as comments).
+	and/or fields. Input for the compiler can be specified with the
+	-f option. The data format is line-oriented.
+
+		<line> :≡ <qual> <space> <code> ;
+		<qual> :≡ <package> '.' <dest> ;
+		<dest> :≡ <struct> | <struct> '.' <field> ;
+
+	Lines starting with a '#' are ignored (as comments). Java output
+	can take multiple tag lines for the same struct or field. Each
+	code line is applied in order of appearance.
 
 EXIT STATUS
 	The command exits 0 on succes, 1 on compilation failure and 2

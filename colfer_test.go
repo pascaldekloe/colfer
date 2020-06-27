@@ -5,7 +5,7 @@ import "testing"
 func GoldenTagPackages() Packages {
 	p := &Package{Name: "gen"}
 	t := &Struct{Name: "o", Pkg: p}
-	f := &Field{Name: "i", Struct: t}
+	f := &Field{Name: "p", Struct: t}
 
 	p.Structs = append(p.Structs, t)
 	t.Fields = append(t.Fields, f)
@@ -16,31 +16,31 @@ func GoldenTagPackages() Packages {
 var GoldenTagFileErrors = []struct{ File, Err string }{
 	{
 		"testdata/struct-package-miss.tags",
-		`testdata/struct-package-miss.tags:2: "wrong.o" package not in schema`,
+		`map testdata/struct-package-miss.tags:2: package "wrong" not in schema`,
 	}, {
 		"testdata/struct-miss.tags",
-		`testdata/struct-miss.tags:2: "gen.wrong" struct not in schema`,
+		`map testdata/struct-miss.tags:2: type "gen.wrong" not in schema`,
 	}, {
 		"testdata/field-package-miss.tags",
-		`testdata/field-package-miss.tags:2: "wrong.o.i" package not in schema`,
+		`map testdata/field-package-miss.tags:2: package "wrong" not in schema`,
 	}, {
 		"testdata/field-struct-miss.tags",
-		`testdata/field-struct-miss.tags:2: "gen.wrong.i" struct not in schema`,
+		`map testdata/field-struct-miss.tags:2: type "gen.wrong" not in schema`,
 	}, {
 		"testdata/field-miss.tags",
-		`testdata/field-miss.tags:2: "gen.o.wrong" field not in schema`,
+		`map testdata/field-miss.tags:2: field "gen.o.wrong" not in schema`,
 	}, {
 		"testdata/package-case.tags",
-		`testdata/package-case.tags:2: "Gen.o.i" case mismatch with gen?`,
+		`map testdata/package-case.tags:2: package not found; case mismatch with gen?`,
 	}, {
 		"testdata/struct-case.tags",
-		`testdata/struct-case.tags:2: "gen.O.i" case mismatch with gen.o?`,
+		`map testdata/struct-case.tags:2: type not found; case mismatch with gen.o?`,
 	}, {
 		"testdata/field-case.tags",
-		`testdata/field-case.tags:2: "gen.o.I" case mismatch with gen.o.i?`,
+		`map testdata/field-case.tags:2: field not found; case mismatch with gen.o.p?`,
 	}, {
 		"testdata/corrupt.tags",
-		`testdata/corrupt.tags:6: invalid qualifier "broken"; use <package>.<type> or <package>.<type>.<field>`,
+		`parse testdata/corrupt.tags:6: invalid qualifier "broken"; use <package>'.'<type>('.'<field>)`,
 	},
 }
 

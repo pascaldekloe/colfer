@@ -1,2 +1,2 @@
-# Package wrong does not exist.
-wrong.o
+# Package "wrong" does not exist.
+wrong.o value

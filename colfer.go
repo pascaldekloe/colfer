@@ -365,82 +365,83 @@ func (p Packages) ApplyTagFile(path string, options TagOptions) error {
 			return err
 		}
 		if isPrefix {
-			return fmt.Errorf("colfer: line %s:%d exceeds %d bytes", path, lineNo, r.Size())
+			return fmt.Errorf("parse %s:%d: line exceeds %d bytes", path, lineNo, r.Size())
 		}
 
+		// parse line
 		line = bytes.TrimLeftFunc(line, unicode.IsSpace)
 		if len(line) == 0 || line[0] == '#' {
 			continue // empty or comment
 		}
-
-		var qName []byte
-		var tag string
-		if i := bytes.IndexFunc(line, unicode.IsSpace); i < 0 {
-			qName = line
-		} else {
-			qName = line[:i]
-			tag = string(bytes.TrimSpace(line[i+1:]))
+		i := bytes.IndexFunc(line, unicode.IsSpace)
+		if i < 0 {
+			i = len(line)
+		}
+		qName := line[:i]
+		tag := string(bytes.TrimSpace(line[i:]))
+		if tag == "" {
+			return fmt.Errorf("parse %s:%d: incomplete declaration %q", path, lineNo, line)
 		}
 
+		// match qualifier
 		if t := structs[string(qName)]; t != nil {
 			switch options.StructAllow {
 			case TagNone:
-				return fmt.Errorf("apply %s:%d: struct tags not allowed for language", path, lineNo)
+				return fmt.Errorf("apply %s:%d: struct tag (on %s) not supported by target language", path, lineNo, qName)
 			case TagSingle:
 				if len(t.TagAdd) != 0 {
-					return fmt.Errorf("apply %s:%d: %s already tagged [dupe]", path, lineNo, qName)
+					return fmt.Errorf("apply %s:%d: %s already tagged [duplicate]", path, lineNo, qName)
 				}
 			}
 			t.TagAdd = append(t.TagAdd, tag)
-
-			continue
-		}
-
-		if f := fields[string(qName)]; f != nil {
+		} else if f := fields[string(qName)]; f != nil {
 			switch options.StructAllow {
 			case TagNone:
-				return fmt.Errorf("apply %s:%d: field tags not allowed for language", path, lineNo)
+				return fmt.Errorf("apply %s:%d: field tag (on %s) not supported by target language", path, lineNo, qName)
 			case TagSingle:
 				if len(f.TagAdd) != 0 {
-					return fmt.Errorf("apply %s:%d: %s already tagged [dupe]", path, lineNo, qName)
+					return fmt.Errorf("apply %s:%d: %s already tagged [duplicate]", path, lineNo, qName)
 				}
 			}
 			f.TagAdd = append(f.TagAdd, tag)
+		} else {
+			return p.qNameNotFound(string(qName), path, lineNo)
+		}
+	}
+}
 
+// QNameNotFound narrows the mismatch down with user-friendly errors.
+func (p Packages) qNameNotFound(qName string, path string, lineNo int) error {
+	segs := strings.SplitN(qName, ".", 4)
+	if len(segs) < 2 || len(segs) > 3 {
+		return fmt.Errorf("parse %s:%d: invalid qualifier %q; use <package>'.'<type>('.'<field>)", path, lineNo, qName)
+	}
+
+	for _, pkg := range p {
+		if !strings.EqualFold(pkg.Name, segs[0]) {
 			continue
 		}
-
-		// Narrow the mismatch down for user-friendly errors.
-		segs := strings.Split(string(qName), ".")
-		if len(segs) < 2 || len(segs) > 3 {
-			return fmt.Errorf("%s:%d: invalid qualifier %q; use <package>.<type> or <package>.<type>.<field>", path, lineNo, qName)
+		if pkg.Name != segs[0] {
+			return fmt.Errorf("map %s:%d: package not found; case mismatch with %s?", path, lineNo, pkg.Name)
 		}
-		for _, pkg := range p {
-			if !strings.EqualFold(pkg.Name, segs[0]) {
+
+		for _, t := range pkg.Structs {
+			if !strings.EqualFold(t.Name, segs[1]) {
 				continue
 			}
-			if pkg.Name != segs[0] {
-				return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, pkg.Name)
+			if t.Name != segs[1] {
+				return fmt.Errorf("map %s:%d: type not found; case mismatch with %s?", path, lineNo, t)
 			}
 
-			for _, t := range pkg.Structs {
-				if !strings.EqualFold(t.Name, segs[1]) {
-					continue
+			for _, f := range t.Fields {
+				if strings.EqualFold(f.Name, segs[2]) {
+					return fmt.Errorf("map %s:%d: field not found; case mismatch with %s?", path, lineNo, f)
 				}
-				if t.Name != segs[1] {
-					return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, t)
-				}
-
-				for _, f := range t.Fields {
-					if strings.EqualFold(f.Name, segs[2]) {
-						return fmt.Errorf("%s:%d: %q case mismatch with %s?", path, lineNo, qName, f)
-					}
-				}
-
-				return fmt.Errorf("%s:%d: %q field not in schema", path, lineNo, qName)
 			}
-			return fmt.Errorf("%s:%d: %q struct not in schema", path, lineNo, qName)
+
+			return fmt.Errorf("map %s:%d: field %q not in schema", path, lineNo, segs[0]+"."+segs[1]+"."+segs[2])
 		}
-		return fmt.Errorf("%s:%d: %q package not in schema", path, lineNo, qName)
+		return fmt.Errorf("map %s:%d: type %q not in schema", path, lineNo, segs[0]+"."+segs[1])
 	}
+	return fmt.Errorf("map %s:%d: package %q not in schema", path, lineNo, segs[0])
 }

@@ -221,7 +221,7 @@ func init() {
 	help += bold + "-b" + clear + " directory] ["
 	help += bold + "-p" + clear + " package] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] C"
+	help += bold + "-l" + clear + " expression] " + bold + "C" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
@@ -229,7 +229,7 @@ func init() {
 	help += bold + "-p" + clear + " package] ["
 	help += bold + "-t" + clear + " files] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] Go"
+	help += bold + "-l" + clear + " expression] " + bold + "Go" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
@@ -240,21 +240,21 @@ func init() {
 	help += bold + "-i" + clear + " interfaces] ["
 	help += bold + "-c" + clear + " file] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] Java"
+	help += bold + "-l" + clear + " expression] " + bold + "Java" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
 	help += bold + "-p" + clear + " package] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] JavaScript"
+	help += bold + "-l" + clear + " expression] " + bold + "JavaScript" + clear
 	help += " [file ...]\n\n"
 
 	help += bold + "DESCRIPTION" + clear + "\n"
 	help += "\tGenerates source code from a model definition for one language.\n"
 	help += "\tThe file operands specify schema input. Directories are scanned\n"
 	help += "\tfor files with the colf extension. When no files are given, then\n"
-	help += "\tthe current " + italic + "working directory" + clear + " is used.\n"
+	help += "\tthe " + italic + "current working directory" + clear + " is used.\n"
 	help += "\tA package definition may be spread over several schema files.\n"
 	help += "\tThe directory hierarchy of the input is not relevant for the\n"
 	help += "\tgenerated code.\n\n"
@@ -265,9 +265,15 @@ func init() {
 
 	tail += bold + "TAGS" + clear + "\n"
 	tail += "\tTags, a.k.a. annotations, are source code additions for structs\n"
-	tail += "\tand fields. The compiler uses a line-orient data format in the\n"
-	tail += "\tform of: <package> '.' <structure> ('.' <field>) <space> <code>.\n"
-	tail += "\tLines starting with a '#' are ignored (as comments).\n\n"
+	tail += "\tand/or fields. Input for the compiler can be specified with the\n"
+	tail += bold + "\t-f" + clear + " option. The data format is " + italic +
+		"line-oriented" + clear + ".\n\n"
+	tail += "\t\t<line> :≡ <qual> <space> <code> ;\n"
+	tail += "\t\t<qual> :≡ <package> '.' <dest> ;\n"
+	tail += "\t\t<dest> :≡ <struct> | <struct> '.' <field> ;\n\n"
+	tail += "\tLines starting with a '#' are ignored (as comments). Java output\n"
+	tail += "\tcan take multiple tag lines for the same struct or field. Each\n"
+	tail += "\tcode line is applied in order of appearance.\n\n"
 
 	tail += bold + "EXIT STATUS" + clear + "\n"
 	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
