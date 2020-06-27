@@ -1249,6 +1249,138 @@ func (o *O) UnmarshalBinary(data []byte) error {
 	return err
 }
 
+// DromedaryCase oposes name casings.
+type DromedaryCase struct {
+	PascalCase string `xml:"pascal-case" json:"pascal_case,omitempty"`
+}
+
+// MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
+// If the buffer is too small, MarshalTo will panic.
+func (o *DromedaryCase) MarshalTo(buf []byte) int {
+	var i int
+
+	if l := len(o.PascalCase); l != 0 {
+		buf[i] = 0
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		i += copy(buf[i:], o.PascalCase)
+	}
+
+	buf[i] = 0x7f
+	i++
+	return i
+}
+
+// MarshalLen returns the Colfer serial byte size.
+// The error return option is gen.ColferMax.
+func (o *DromedaryCase) MarshalLen() (int, error) {
+	l := 1
+
+	if x := len(o.PascalCase); x != 0 {
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field gen.dromedaryCase.PascalCase exceeds %d bytes", ColferSizeMax))
+		}
+		for l += x + 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+
+	if l > ColferSizeMax {
+		return l, ColferMax(fmt.Sprintf("colfer: struct gen.dromedaryCase exceeds %d bytes", ColferSizeMax))
+	}
+	return l, nil
+}
+
+// MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
+// The error return option is gen.ColferMax.
+func (o *DromedaryCase) MarshalBinary() (data []byte, err error) {
+	l, err := o.MarshalLen()
+	if err != nil {
+		return nil, err
+	}
+	data = make([]byte, l)
+	o.MarshalTo(data)
+	return data, nil
+}
+
+// Unmarshal decodes data as Colfer and returns the number of bytes read.
+// The error return options are io.EOF, gen.ColferError and gen.ColferMax.
+func (o *DromedaryCase) Unmarshal(data []byte) (int, error) {
+	if len(data) == 0 {
+		return 0, io.EOF
+	}
+	header := data[0]
+	i := 1
+
+	if header == 0 {
+		if i >= len(data) {
+			goto eof
+		}
+		x := uint(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				if i >= len(data) {
+					goto eof
+				}
+				b := uint(data[i])
+				i++
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: gen.dromedaryCase.PascalCase size %d exceeds %d bytes", x, ColferSizeMax))
+		}
+
+		start := i
+		i += int(x)
+		if i >= len(data) {
+			goto eof
+		}
+		o.PascalCase = string(data[start:i])
+
+		header = data[i]
+		i++
+	}
+
+	if header != 0x7f {
+		return 0, ColferError(i - 1)
+	}
+	if i < ColferSizeMax {
+		return i, nil
+	}
+eof:
+	if i >= ColferSizeMax {
+		return 0, ColferMax(fmt.Sprintf("colfer: struct gen.dromedaryCase size exceeds %d bytes", ColferSizeMax))
+	}
+	return 0, io.EOF
+}
+
+// UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
+// The error return options are io.EOF, gen.ColferError, gen.ColferTail and gen.ColferMax.
+func (o *DromedaryCase) UnmarshalBinary(data []byte) error {
+	i, err := o.Unmarshal(data)
+	if i < len(data) && err == nil {
+		return ColferTail(i)
+	}
+	return err
+}
+
 // EmbedO has an inner object only.
 // Covers regression of issue #66.
 type EmbedO struct {

@@ -163,7 +163,7 @@ func (i ColferTail) Error() string {
 {{.DocText "// "}}
 type {{.NameTitle}} struct {
 {{range .Fields}}{{.DocText "\t// "}}
-	{{.NameTitle}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}
+	{{.NameTitle}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}{{range .TagAdd}} {{.}}{{end}}
 {{end}}}
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.

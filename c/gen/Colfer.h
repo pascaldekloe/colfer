@@ -41,6 +41,8 @@ typedef struct {
 
 typedef struct gen_o gen_o;
 
+typedef struct gen_dromedary_case gen_dromedary_case;
+
 typedef struct gen_embed_o gen_embed_o;
 
 
@@ -115,6 +117,29 @@ size_t gen_o_marshal(const gen_o* o, void* buf);
 // EWOULDBLOCK on incomplete data, EFBIG on a breach of either colfer_size_max
 // or colfer_list_max and EILSEQ on schema mismatch.
 size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen);
+
+// DromedaryCase oposes name casings.
+struct gen_dromedary_case {
+
+	colfer_text pascal_case;
+};
+
+// gen_dromedary_case_marshal_len returns the Colfer serial octet size.
+// When the return is zero then errno is set to EFBIG to indicate a breach of
+// either colfer_size_max or colfer_list_max.
+size_t gen_dromedary_case_marshal_len(const gen_dromedary_case* o);
+
+// gen_dromedary_case_marshal encodes o as Colfer into buf and returns the number
+// of octets written.
+size_t gen_dromedary_case_marshal(const gen_dromedary_case* o, void* buf);
+
+// gen_dromedary_case_unmarshal decodes data as Colfer into o and returns the
+// number of octets read. The data is read up to a maximum of datalen or
+// colfer_size_max, whichever occurs first.
+// When the return is zero then errno is set to one of the following 3 values:
+// EWOULDBLOCK on incomplete data, EFBIG on a breach of either colfer_size_max
+// or colfer_list_max and EILSEQ on schema mismatch.
+size_t gen_dromedary_case_unmarshal(gen_dromedary_case* o, const void* data, size_t datalen);
 
 // EmbedO has an inner object only.
 // Covers regression of issue #66.

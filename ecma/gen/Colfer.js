@@ -587,6 +587,86 @@ var gen = new function() {
 	}
 
 	// Constructor.
+	// DromedaryCase oposes name casings.
+	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
+	this.DromedaryCase = function(init) {
+
+		this.PascalCase = '';
+
+		for (var p in init) this[p] = init[p];
+	}
+
+	// Serializes the object into an Uint8Array.
+	this.DromedaryCase.prototype.marshal = function(buf) {
+		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
+		var i = 0;
+		var view = new DataView(buf.buffer);
+
+
+		if (this.PascalCase) {
+			buf[i++] = 0;
+			var utf8 = encodeUTF8(this.PascalCase);
+			i = encodeVarint(buf, i, utf8.length);
+			buf.set(utf8, i);
+			i += utf8.length;
+		}
+
+
+		buf[i++] = 127;
+		if (i >= colferSizeMax)
+			throw new Error('colfer: gen.dromedaryCase serial size ' + i + ' exceeds ' + colferSizeMax + ' bytes');
+		return buf.subarray(0, i);
+	}
+
+	// Deserializes the object from an Uint8Array and returns the number of bytes read.
+	this.DromedaryCase.prototype.unmarshal = function(data) {
+		if (!data || ! data.length) throw new Error(EOF);
+		var header = data[0];
+		var i = 1;
+		var readHeader = function() {
+			if (i >= data.length) throw new Error(EOF);
+			header = data[i++];
+		}
+
+		var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+		var readVarint = function() {
+			var pos = 0, result = 0;
+			while (pos != 8) {
+				var c = data[i+pos];
+				result += (c & 127) * Math.pow(128, pos);
+				++pos;
+				if (c < 128) {
+					i += pos;
+					if (result > Number.MAX_SAFE_INTEGER) break;
+					return result;
+				}
+				if (pos == data.length) throw new Error(EOF);
+			}
+			return -1;
+		}
+
+		if (header == 0) {
+			var size = readVarint();
+			if (size < 0)
+				throw new Error('colfer: gen.dromedaryCase.PascalCase size exceeds Number.MAX_SAFE_INTEGER');
+			else if (size > colferSizeMax)
+				throw new Error('colfer: gen.dromedaryCase.PascalCase size ' + size + ' exceeds ' + colferSizeMax + ' UTF-8 bytes');
+
+			var start = i;
+			i += size;
+			if (i > data.length) throw new Error(EOF);
+			this.PascalCase = decodeUTF8(data.subarray(start, i));
+			readHeader();
+		}
+
+		if (header != 127) throw new Error('colfer: unknown header at byte ' + (i - 1));
+		if (i > colferSizeMax)
+			throw new Error('colfer: gen.dromedaryCase serial size ' + size + ' exceeds ' + colferSizeMax + ' bytes');
+		return i;
+	}
+
+	// Constructor.
 	// EmbedO has an inner object only.
 	// Covers regression of issue #66.
 	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.

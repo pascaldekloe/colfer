@@ -30,6 +30,7 @@ var (
 
 	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`.")
 	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator.")
+	tagFiles    = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
 	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`.")
 )
 
@@ -56,6 +57,7 @@ func main() {
 
 	// select language
 	var gen func(string, colfer.Packages) error
+	var tagOptions colfer.TagOptions
 	switch lang := flag.Arg(0); strings.ToLower(lang) {
 	case "c":
 		report.Print("set-up for C")
@@ -65,6 +67,9 @@ func main() {
 		}
 		if *interfaces != "" {
 			log.Fatalf("%s: interfaces not supported with C", name)
+		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with C", name)
 		}
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with C", name)
@@ -82,10 +87,13 @@ func main() {
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with Go", name)
 		}
+		tagOptions.FieldAllow = colfer.TagSingle
 
 	case "java":
 		report.Print("set-up for Java")
 		gen = colfer.GenerateJava
+		tagOptions.StructAllow = colfer.TagMulti
+		tagOptions.FieldAllow = colfer.TagMulti
 
 	case "javascript", "js", "ecmascript":
 		report.Print("set-up for ECMAScript")
@@ -95,6 +103,9 @@ func main() {
 		}
 		if *interfaces != "" {
 			log.Fatalf("%s: interfaces not supported with ECMAScript", name)
+		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with ECMAScript", name)
 		}
 		if *snippetFile != "" {
 			log.Fatalf("%s: snippet not supported with ECMAScript", name)
@@ -109,11 +120,18 @@ func main() {
 	} else {
 		mustResolveSchemaFiles(".")
 	}
-	report.Print("using schema files: ", strings.Join(schemaPaths, ", "))
-
 	packages, err := colfer.ParseFiles(schemaPaths...)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if *tagFiles != "" {
+		for _, path := range strings.Split(*tagFiles, ",") {
+			report.Print("using tag file: ", path)
+			if err = packages.ApplyTagFile(path, tagOptions); err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	if *format {
@@ -190,6 +208,7 @@ func addSchemaFile(path string, info os.FileInfo) {
 		}
 	}
 
+	report.Print("using schema file: ", path)
 	schemaPaths = append(schemaPaths, path)
 	schemaInfos = append(schemaInfos, info)
 }
@@ -202,58 +221,78 @@ func init() {
 	help += bold + "-b" + clear + " directory] ["
 	help += bold + "-p" + clear + " package] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] C"
+	help += bold + "-l" + clear + " expression] " + bold + "C" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-p" + clear + " package] ["
+	help += bold + "-t" + clear + " files] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] Go"
+	help += bold + "-l" + clear + " expression] " + bold + "Go" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
+	help += bold + "-p" + clear + " package] ["
+	help += bold + "-t" + clear + " files] \\\n\t\t["
 	help += bold + "-x" + clear + " class] ["
 	help += bold + "-i" + clear + " interfaces] ["
 	help += bold + "-c" + clear + " file] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] Java"
+	help += bold + "-l" + clear + " expression] " + bold + "Java" + clear
 	help += " [file ...]\n\t"
 
 	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
 	help += bold + "-b" + clear + " directory] ["
 	help += bold + "-p" + clear + " package] \\\n\t\t["
 	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] JavaScript"
+	help += bold + "-l" + clear + " expression] " + bold + "JavaScript" + clear
 	help += " [file ...]\n\n"
 
 	help += bold + "DESCRIPTION" + clear + "\n"
 	help += "\tGenerates source code from a model definition for one language.\n"
 	help += "\tThe file operands specify schema input. Directories are scanned\n"
 	help += "\tfor files with the colf extension. When no files are given, then\n"
-	help += "\tthe current " + italic + "working directory" + clear + " is used.\n"
+	help += "\tthe " + italic + "current working directory" + clear + " is used.\n"
 	help += "\tA package definition may be spread over several schema files.\n"
 	help += "\tThe directory hierarchy of the input is not relevant for the\n"
 	help += "\tgenerated code.\n\n"
-	help += bold + "OPTIONS\n" + clear
 
-	tail := "\n" + bold + "EXIT STATUS" + clear + "\n"
+	help += bold + "OPTIONS\n" + clear
+	// … rendered with the flag package
+	tail := "\n"
+
+	tail += bold + "TAGS" + clear + "\n"
+	tail += "\tTags, a.k.a. annotations, are source code additions for structs\n"
+	tail += "\tand/or fields. Input for the compiler can be specified with the\n"
+	tail += bold + "\t-f" + clear + " option. The data format is " + italic +
+		"line-oriented" + clear + ".\n\n"
+	tail += "\t\t<line> :≡ <qual> <space> <code> ;\n"
+	tail += "\t\t<qual> :≡ <package> '.' <dest> ;\n"
+	tail += "\t\t<dest> :≡ <struct> | <struct> '.' <field> ;\n\n"
+	tail += "\tLines starting with a '#' are ignored (as comments). Java output\n"
+	tail += "\tcan take multiple tag lines for the same struct or field. Each\n"
+	tail += "\tcode line is applied in order of appearance.\n\n"
+
+	tail += bold + "EXIT STATUS" + clear + "\n"
 	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
-	tail += "\twhen invoked without arguments.\n"
-	tail += "\n" + bold + "EXAMPLES" + clear + "\n"
+	tail += "\twhen invoked without arguments.\n\n"
+
+	tail += bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
 	tail += "\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n"
 	tail += "\tCompile ./*.colf with a common parent as Java:\n\n"
-	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n"
-	tail += "\n" + bold + "BUGS" + clear + "\n"
+	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n\n"
+
+	tail += bold + "BUGS" + clear + "\n"
 	tail += "\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n"
 	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
 	tail += "\tprocess. C and Go just pass any malformed UTF-8 characters. Java\n"
 	tail += "\tand JavaScript replace unmappable content with the '?' character\n"
 	tail += "\t(ASCII 63).\n\n"
-	tail += bold + "SEE ALSO\n\t" + clear + "protoc(1), flatc(1)\n"
+
+	tail += bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
 
 	flag.Usage = func() {
 		os.Stderr.WriteString(help)
