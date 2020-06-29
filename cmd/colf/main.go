@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"io"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -11,13 +11,6 @@ import (
 	"strings"
 
 	"github.com/pascaldekloe/colfer"
-)
-
-// ANSI escape codes for markup
-const (
-	bold   = "\x1b[1m"
-	italic = "\x1b[3m"
-	clear  = "\x1b[0m"
 )
 
 var (
@@ -34,6 +27,11 @@ var (
 	tagFiles    = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
 	snippetFile = flag.String("c", "", "Insert a code snippet from a `file`.")
 )
+
+func init() {
+	flag.Bool("h", false, "Prints the manual to standard error.")
+	flag.Usage = printManual
+}
 
 var name = os.Args[0]
 var report = log.New(ioutil.Discard, os.Args[0]+": ", 0)
@@ -214,96 +212,99 @@ func addSchemaFile(path string, info os.FileInfo) {
 	schemaInfos = append(schemaInfos, info)
 }
 
-func init() {
-	flag.Bool("h", false, "Prints the manual to standard error.")
+// ANSI escape codes for markup
+const (
+	bold   = "\x1b[1m"
+	italic = "\x1b[3m"
+	clear  = "\x1b[0m"
+)
 
-	help := bold + "NAME\n\t" + name + clear + " \u2014 compile Colfer schemas\n\n"
-	help += bold + "SYNOPSIS\n\t" + name + clear + " [" + bold + "-h" + clear + "]\n\t"
+func printManual() {
+	nameSection := bold + "NAME\n\t" + name + clear + " \u2014 compile Colfer schemas\n"
 
-	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
-	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
-	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] " + bold + "C" + clear
-	help += " [file ...]\n\t"
+	synopsisSection := bold + "SYNOPSIS\n\t" + name + clear + " [" + bold + "-h" + clear + "]\n\t" +
+		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
+		bold + "-b" + clear + " directory] [" +
+		bold + "-p" + clear + " package] \\\n\t\t[" +
+		bold + "-s" + clear + " expression] [" +
+		bold + "-l" + clear + " expression] " + bold + "C" + clear +
+		" [file ...]\n\t" +
+		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
+		bold + "-b" + clear + " directory] [" +
+		bold + "-p" + clear + " package] [" +
+		bold + "-t" + clear + " files] \\\n\t\t[" +
+		bold + "-s" + clear + " expression] [" +
+		bold + "-l" + clear + " expression] " + bold + "Go" + clear +
+		" [file ...]\n\t" +
+		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
+		bold + "-b" + clear + " directory] [" +
+		bold + "-p" + clear + " package] [" +
+		bold + "-t" + clear + " files] \\\n\t\t[" +
+		bold + "-x" + clear + " class] [" +
+		bold + "-i" + clear + " interfaces] [" +
+		bold + "-c" + clear + " file] \\\n\t\t[" +
+		bold + "-s" + clear + " expression] [" +
+		bold + "-l" + clear + " expression] " + bold + "Java" + clear +
+		" [file ...]\n\t" +
+		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
+		bold + "-b" + clear + " directory] [" +
+		bold + "-p" + clear + " package] \\\n\t\t[" +
+		bold + "-s" + clear + " expression] [" +
+		bold + "-l" + clear + " expression] " + bold + "JavaScript" + clear +
+		" [file ...]\n"
 
-	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
-	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] ["
-	help += bold + "-t" + clear + " files] \\\n\t\t["
-	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] " + bold + "Go" + clear
-	help += " [file ...]\n\t"
+	descriptionSection := bold + "DESCRIPTION" + clear + "\n" +
+		"\tThe output is source code for either C, Go, Java or JavaScript.\n\n" +
+		"\tFor each operand that names a file of a type other than\n" +
+		"\tdirectory, " + bold + "colf" + clear + " reads the content as schema input. For each\n" +
+		"\tnamed directory, " + bold + "colf" + clear + " reads all files with a .colf extension\n" +
+		"\twithin that directory. If no operands are given, the contents of\n" +
+		"\tthe current directory are used.\n\n" +
+		"\tA package definition may be spread over several schema files.\n" +
+		"\tThe directory hierarchy of the input is not relevant to the\n" +
+		"\tgenerated code.\n"
 
-	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
-	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] ["
-	help += bold + "-t" + clear + " files] \\\n\t\t["
-	help += bold + "-x" + clear + " class] ["
-	help += bold + "-i" + clear + " interfaces] ["
-	help += bold + "-c" + clear + " file] \\\n\t\t["
-	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] " + bold + "Java" + clear
-	help += " [file ...]\n\t"
+	tagsSection := bold + "TAGS" + clear + "\n" +
+		"\tTags, a.k.a. annotations, are source code additions for structs\n" +
+		"\tand/or fields. Input for the compiler can be specified with the\n" +
+		bold + "\t-f" + clear + " option. The data format is " + italic +
+		"line-oriented" + clear + ".\n\n" +
+		"\t\t<line> :≡ <qual> <space> <code> ;\n" +
+		"\t\t<qual> :≡ <package> '.' <dest> ;\n" +
+		"\t\t<dest> :≡ <struct> | <struct> '.' <field> ;\n\n" +
+		"\tLines starting with a '#' are ignored (as comments). Java output\n" +
+		"\tcan take multiple tag lines for the same struct or field. Each\n" +
+		"\tcode line is applied in order of appearance.\n"
 
-	help += bold + name + clear + " [" + bold + "-vf" + clear + "] ["
-	help += bold + "-b" + clear + " directory] ["
-	help += bold + "-p" + clear + " package] \\\n\t\t["
-	help += bold + "-s" + clear + " expression] ["
-	help += bold + "-l" + clear + " expression] " + bold + "JavaScript" + clear
-	help += " [file ...]\n\n"
+	exitStatusSection := bold + "EXIT STATUS" + clear + "\n" +
+		"\tThe command exits 0 on success, 1 on error and 2 when invoked\n" +
+		"\twithout arguments.\n"
 
-	help += bold + "DESCRIPTION" + clear + "\n"
-	help += "\tThe output is source code for either C, Go, Java or JavaScript.\n\n"
+	examplesSection := bold + "EXAMPLES" + clear + "\n" +
+		"\tCompile ./io.colf with compact limits as C:\n\n" +
+		"\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n" +
+		"\tCompile ./*.colf with a common parent as Java:\n\n" +
+		"\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n"
 
-	help += "\tFor each operand that names a file of a type other than\n"
-	help += "\tdirectory, " + bold + "colf" + clear + " reads the content as schema input. For each\n"
-	help += "\tnamed directory, " + bold + "colf" + clear + " reads all files with a .colf extension\n"
-	help += "\twithin that directory. If no operands are given, the contents of\n"
-	help += "\tthe current directory are used.\n\n"
+	bugsSection := bold + "BUGS" + clear + "\n" +
+		"\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n" +
+		"\tText validation is not part of the marshalling and unmarshalling\n" +
+		"\tprocess. C and Go just pass any malformed UTF-8 characters. Java\n" +
+		"\tand JavaScript replace unmappable content with the '?' character\n" +
+		"\t(ASCII 63).\n"
 
-	help += "\tA package definition may be spread over several schema files.\n"
-	help += "\tThe directory hierarchy of the input is not relevant to the\n"
-	help += "\tgenerated code.\n\n"
+	seeAlsoSection := bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
 
-	help += bold + "OPTIONS\n" + clear
-	// … rendered with the flag package
-	tail := "\n"
-
-	tail += bold + "TAGS" + clear + "\n"
-	tail += "\tTags, a.k.a. annotations, are source code additions for structs\n"
-	tail += "\tand/or fields. Input for the compiler can be specified with the\n"
-	tail += bold + "\t-f" + clear + " option. The data format is " + italic +
-		"line-oriented" + clear + ".\n\n"
-	tail += "\t\t<line> :≡ <qual> <space> <code> ;\n"
-	tail += "\t\t<qual> :≡ <package> '.' <dest> ;\n"
-	tail += "\t\t<dest> :≡ <struct> | <struct> '.' <field> ;\n\n"
-	tail += "\tLines starting with a '#' are ignored (as comments). Java output\n"
-	tail += "\tcan take multiple tag lines for the same struct or field. Each\n"
-	tail += "\tcode line is applied in order of appearance.\n\n"
-
-	tail += bold + "EXIT STATUS" + clear + "\n"
-	tail += "\tThe command exits 0 on success, 1 on error and 2 when invoked\n"
-	tail += "\twithout arguments.\n\n"
-
-	tail += bold + "EXAMPLES" + clear + "\n"
-	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
-	tail += "\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n"
-	tail += "\tCompile ./*.colf with a common parent as Java:\n\n"
-	tail += "\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n\n"
-
-	tail += bold + "BUGS" + clear + "\n"
-	tail += "\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n"
-	tail += "\tText validation is not part of the marshalling and unmarshalling\n"
-	tail += "\tprocess. C and Go just pass any malformed UTF-8 characters. Java\n"
-	tail += "\tand JavaScript replace unmappable content with the '?' character\n"
-	tail += "\t(ASCII 63).\n\n"
-
-	tail += bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
-
-	flag.Usage = func() {
-		io.WriteString(flag.CommandLine.Output(), help)
-		flag.PrintDefaults()
-		io.WriteString(flag.CommandLine.Output(), tail)
-	}
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, nameSection)
+	fmt.Fprintln(w, synopsisSection)
+	fmt.Fprintln(w, descriptionSection)
+	fmt.Fprintln(w, bold+"OPTIONS"+clear)
+	flag.PrintDefaults()
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, tagsSection)
+	fmt.Fprintln(w, exitStatusSection)
+	fmt.Fprintln(w, examplesSection)
+	fmt.Fprintln(w, bugsSection)
+	fmt.Fprint(w, seeAlsoSection)
 }
