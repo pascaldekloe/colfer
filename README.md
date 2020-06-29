@@ -57,12 +57,16 @@ SYNOPSIS
 		[-s expression] [-l expression] JavaScript [file ...]
 
 DESCRIPTION
-	Generates source code from a model definition for one language.
-	The file operands specify schema input. Directories are scanned
-	for files with the colf extension. When no files are given, then
-	the current working directory is used.
+	The output is source code for either C, Go, Java or JavaScript.
+
+	For each operand that names a file of a type other than
+	directory, colf reads the content as schema input. For each
+	named directory, colf reads all files with a .colf extension
+	within that directory. If no operands are given, the contents of
+	the current directory are used.
+
 	A package definition may be spread over several schema files.
-	The directory hierarchy of the input is not relevant for the
+	The directory hierarchy of the input is not relevant to the
 	generated code.
 
 OPTIONS
@@ -70,7 +74,8 @@ OPTIONS
     	Use a base directory for the generated code. (default ".")
   -c file
     	Insert a code snippet from a file.
-  -f	Normalize the format of all input schemas on the fly.
+  -f	Normalize the format of all schema input on the fly.
+  -h	Prints the manual to standard error.
   -i interfaces
     	Make all generated classes implement one or more interfaces.
     	Use commas as a list separator.
@@ -105,8 +110,8 @@ TAGS
 	code line is applied in order of appearance.
 
 EXIT STATUS
-	The command exits 0 on succes, 1 on compilation failure and 2
-	when invoked without arguments.
+	The command exits 0 on success, 1 on error and 2 when invoked
+	without arguments.
 
 EXAMPLES
 	Compile ./io.colf with compact limits as C:

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,7 +23,7 @@ const (
 var (
 	basedir = flag.String("b", ".", "Use a base `directory` for the generated code.")
 	prefix  = flag.String("p", "", "Compile to a `package` prefix.")
-	format  = flag.Bool("f", false, "Normalize the format of all input schemas on the fly.")
+	format  = flag.Bool("f", false, "Normalize the format of all schema input on the fly.")
 	verbose = flag.Bool("v", false, "Enable verbose reporting to "+italic+"standard error"+clear+".")
 
 	sizeMax = flag.String("s", "16 * 1024 * 1024", "Set the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
@@ -214,6 +215,8 @@ func addSchemaFile(path string, info os.FileInfo) {
 }
 
 func init() {
+	flag.Bool("h", false, "Prints the manual to standard error.")
+
 	help := bold + "NAME\n\t" + name + clear + " \u2014 compile Colfer schemas\n\n"
 	help += bold + "SYNOPSIS\n\t" + name + clear + " [" + bold + "-h" + clear + "]\n\t"
 
@@ -251,12 +254,16 @@ func init() {
 	help += " [file ...]\n\n"
 
 	help += bold + "DESCRIPTION" + clear + "\n"
-	help += "\tGenerates source code from a model definition for one language.\n"
-	help += "\tThe file operands specify schema input. Directories are scanned\n"
-	help += "\tfor files with the colf extension. When no files are given, then\n"
-	help += "\tthe " + italic + "current working directory" + clear + " is used.\n"
+	help += "\tThe output is source code for either C, Go, Java or JavaScript.\n\n"
+
+	help += "\tFor each operand that names a file of a type other than\n"
+	help += "\tdirectory, " + bold + "colf" + clear + " reads the content as schema input. For each\n"
+	help += "\tnamed directory, " + bold + "colf" + clear + " reads all files with a .colf extension\n"
+	help += "\twithin that directory. If no operands are given, the contents of\n"
+	help += "\tthe current directory are used.\n\n"
+
 	help += "\tA package definition may be spread over several schema files.\n"
-	help += "\tThe directory hierarchy of the input is not relevant for the\n"
+	help += "\tThe directory hierarchy of the input is not relevant to the\n"
 	help += "\tgenerated code.\n\n"
 
 	help += bold + "OPTIONS\n" + clear
@@ -276,8 +283,8 @@ func init() {
 	tail += "\tcode line is applied in order of appearance.\n\n"
 
 	tail += bold + "EXIT STATUS" + clear + "\n"
-	tail += "\tThe command exits 0 on succes, 1 on compilation failure and 2\n"
-	tail += "\twhen invoked without arguments.\n\n"
+	tail += "\tThe command exits 0 on success, 1 on error and 2 when invoked\n"
+	tail += "\twithout arguments.\n\n"
 
 	tail += bold + "EXAMPLES" + clear + "\n"
 	tail += "\tCompile ./io.colf with compact limits as C:\n\n"
@@ -295,8 +302,8 @@ func init() {
 	tail += bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
 
 	flag.Usage = func() {
-		os.Stderr.WriteString(help)
+		io.WriteString(flag.CommandLine.Output(), help)
 		flag.PrintDefaults()
-		os.Stderr.WriteString(tail)
+		io.WriteString(flag.CommandLine.Output(), tail)
 	}
 }
