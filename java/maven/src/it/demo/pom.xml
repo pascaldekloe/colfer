@@ -19,6 +19,16 @@
 
 <dependencies>
 <dependency>
+	<groupId>javax.validation</groupId>
+	<artifactId>validation-api</artifactId>
+	<version>2.0.1.Final</version>
+</dependency>
+<dependency>
+	<groupId>jakarta.xml.bind</groupId>
+	<artifactId>jakarta.xml.bind-api</artifactId>
+	<version>2.3.3</version>
+</dependency>
+<dependency>
 	<groupId>junit</groupId>
 	<artifactId>junit</artifactId>
 	<version>4.12</version>
@@ -53,7 +63,10 @@
 		<goals><goal>compile</goal></goals>
 		<configuration>
 			<packagePrefix>com/example</packagePrefix>
+			<tagFiles>src/main/colfer/demo-java.tags</tagFiles>
 			<superClass>com/example/BeanParent</superClass>
+			<interfaces>javax.xml.bind.Element</interfaces>
+			<snippetFile>src/main/colfer/java.snippet</snippetFile>
 		</configuration>
 	</execution>
 	<execution>

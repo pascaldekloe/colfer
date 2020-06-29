@@ -62,10 +62,28 @@ File sourceTarget;
 String packagePrefix;
 
 /**
+ * Supply custom tags. See the TAGS section in the manual for details.
+ */
+@Parameter
+File[] tagFiles;
+
+/**
  * Make all generated classes extend a super class. Java only.
  */
 @Parameter
 String superClass;
+
+/**
+ * Make all generated classes implement interfaces. Java only.
+ */
+@Parameter
+String[] interfaces;
+
+/**
+ * Insert a code snippet from a file. Java only.
+ */
+@Parameter
+File snippetFile;
 
 /**
  * Sets the default upper limit for serial byte sizes. The
@@ -118,8 +136,18 @@ throws IOException {
 	args.add("-b=" + sourceTarget);
 	if (packagePrefix != null)
 		args.add("-p=" + packagePrefix);
+	if (tagFiles != null) {
+		String[] paths = new String[tagFiles.length];
+		for (int i = 0; i < paths.length; i++)
+			paths[i] = tagFiles[i].getPath();
+		args.add("-t=" + String.join(",", paths));
+	}
 	if (superClass != null)
 		args.add("-x=" + superClass);
+	if (interfaces != null)
+		args.add("-i=" + String.join(",", interfaces));
+	if (snippetFile != null)
+		args.add("-c=" + snippetFile.getPath());
 	if (sizeMax != null)
 		args.add("-s=" + sizeMax);
 	if (listMax != null)
