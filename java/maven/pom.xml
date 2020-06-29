@@ -105,6 +105,7 @@
 		<configuration>
 			<cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
 			<goals><goal>package</goal></goals>
+			<debug>true</debug>
 		</configuration>
 	</execution>
 	</executions>

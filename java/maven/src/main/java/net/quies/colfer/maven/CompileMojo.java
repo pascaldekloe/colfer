@@ -96,7 +96,7 @@ throws MojoExecutionException, MojoFailureException {
 		Process proc = launch(colf);
 
 		Scanner stderr = new Scanner(proc.getErrorStream());
-		while (stderr.hasNext()) getLog().error(stderr.nextLine());
+		while (stderr.hasNext()) getLog().info(stderr.nextLine());
 
 		int exit = proc.waitFor();
 		if (exit != 0) throw new MojoFailureException("colf: exit " + exit);
@@ -111,6 +111,8 @@ Process launch(Path colf)
 throws IOException {
 	List<String> args = new ArrayList<>();
 	args.add(colf.toString());
+	if (getLog().isDebugEnabled())
+		args.add("-v");
 	if (formatSchemas)
 		args.add("-f");
 	args.add("-b=" + sourceTarget);
