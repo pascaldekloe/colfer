@@ -187,10 +187,10 @@ import java.nio.BufferUnderflowException;
 		init();
 	}{{if .Pkg.CodeSnippet}}
 
-	// BEGIN Code Snippet Injection---
+	// BEGIN Code Snippet Injection
 
 {{.Pkg.CodeSnippet}}
-	// END Code Snippet Injection---{{end}}
+	// END Code Snippet Injection{{end}}
 {{if .HasBinary}}
 	private static final byte[] _zeroBytes = new byte[0];
 {{- end}}
