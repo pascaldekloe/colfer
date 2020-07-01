@@ -9,14 +9,14 @@ Colfer.go: ../../testdata/test.colf ../../*.go ../../cmd/colf/*.go
 	mv gen/Colfer.go .
 	rmdir gen
 
+fuzz.zip: Colfer.go fuzz.go go-fuzz-build
+	./go-fuzz-build -o $@ .
+
 go-fuzz:
 	$(GO) build -o $@ github.com/dvyukov/go-fuzz/go-fuzz
 
 go-fuzz-build:
 	$(GO) build -o $@ github.com/dvyukov/go-fuzz/go-fuzz-build
-
-fuzz.zip: Colfer.go go-fuzz-build
-	./go-fuzz-build -o $@ .
 
 .PHONY: clean
 clean:
