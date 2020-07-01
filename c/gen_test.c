@@ -1,4 +1,4 @@
-#include "gen/Colfer.h"
+#include "Colfer.h"
 #include "gen_test.h"
 
 #include <errno.h>

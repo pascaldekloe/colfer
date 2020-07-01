@@ -1,7 +1,7 @@
 global._ = require('./lodash.js')
 const Benchmark = require('./benchmark.js');
 
-const Colfer = require('./build/Colfer.js')
+const Colfer = require('./Colfer.js')
 
 const testData = [
 	new Colfer.bench.Colfer({key: 1234567890, host: "db003lz12", port: 389, size: 452, hash: 0x5c2428488918, ratio: 0.99, route: true}),

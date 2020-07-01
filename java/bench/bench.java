@@ -66,7 +66,7 @@ public class bench {
 		}
 		long end = System.nanoTime();
 
-		System.err.printf("%dM marshals avg %dns\n", n / 1000000, (end - start) / n);
+		System.out.printf("%dM marshals avg %dns\n", n / 1000000, (end - start) / n);
 	}
 
 	static void benchMarshalReuse() {
@@ -80,7 +80,7 @@ public class bench {
 		}
 		long end = System.nanoTime();
 
-		System.err.printf("%dM marshals with buffer reuse avg %dns\n", n / 1000000, (end - start) / n);
+		System.out.printf("%dM marshals with buffer reuse avg %dns\n", n / 1000000, (end - start) / n);
 	}
 
 	static void benchUnmarshal() {
@@ -100,7 +100,7 @@ public class bench {
 		}
 		long end = System.nanoTime();
 
-		System.err.printf("%dM unmarshals avg %dns\n", n / 1000000, (end - start) / n);
+		System.out.printf("%dM unmarshals avg %dns\n", n / 1000000, (end - start) / n);
 	}
 
 }

@@ -1,21 +1,29 @@
 include ../common.mk
 
-CC ?= clang
-CFLAGS = -std=c11 -g -O0
-CFLAGS_STRICT = $(CFLAGS) -pedantic -Werror
+CFLAGS += -O0 -pedantic -Werror
 
 .PHONY: test
-test: build
-	build/gen_test
+test: gen_test breaktest
+	./gen_test
 
-build: gen
-	mkdir -p build
-	$(CC) -o build/Colfer.o -c $(CFLAGS_STRICT) gen/Colfer.c
-	$(CC) -o build/gen_test $(CFLAGS) build/Colfer.o gen_test.c
+breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+	$(COLF) -b $@ C ../testdata/break*.colf
+	$(CC) $(CFLAGS) -c -std=c11 $@/Colfer.c
+	touch $@
 
-gen:
-	$(COLF) -b gen C ../testdata/test.colf
+Colfer.h Colfer.c &: ../testdata/test.colf ../*.go ../cmd/colf/*.go
+	$(COLF) C ../testdata/test.colf
+
+Colfer.o: Colfer.h Colfer.c
+	$(CC) $(CFLAGS) -o $@ -c -std=c11 Colfer.c
+
+gen_test: gen_test.h gen_test.c Colfer.o
+	$(CC) $(CFLAGS) -o $@ -std=c11 gen_test.c Colfer.o
 
 .PHONY: clean
 clean:
-	rm -fr gen build
+	rm -fr gen_test *.o breaktest
+
+.PHONY: clean-all
+clean-all: clean
+	rm -f Colfer.?

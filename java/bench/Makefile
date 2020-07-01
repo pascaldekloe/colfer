@@ -4,15 +4,19 @@ JAVA ?= java
 JAVAC ?= javac
 
 .PHONY: test
-test: build
-	$(JAVA) -cp build/classes bench
+bench.txt: bench.class
+	$(JAVA) bench > $@
+	echo >> $@
+	$(JAVA) -version 2>> $@
 
-build:
-	$(COLF) -b build/java Java ../../testdata/bench/scheme.colf
+bench: ../../testdata/bench/scheme.colf ../../*.go ../../cmd/colf/*.go
+	$(COLF) -s 1024 Java ../../testdata/bench/scheme.colf
+	touch $@
 
-	mkdir -p build/classes
-	$(JAVAC) -d build/classes bench.java build/java/bench/*.java
+bench.class: bench
+	$(JAVAC) bench.java
 
 .PHONY: clean
 clean:
-	rm -fr build
+	rm -f bench.txt bench.class
+	rm -fr bench

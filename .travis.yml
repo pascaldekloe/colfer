@@ -3,7 +3,7 @@ language: go
 go:
   - 1.14
 
-script: make clean-all test CC=clang
+script: make clean test CC=clang
 
 cache:
   directories:

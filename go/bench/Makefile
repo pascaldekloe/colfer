@@ -3,23 +3,36 @@ include ../../common.mk
 FLATC ?= flatc
 PROTOC ?= protoc
 
-.PHONY: test
-test: build
-	$(GO) test -bench .
+BENCHN ?= 10
 
-stat.txt: build
-	$(GO) test -bench . -count 5 > build/bench.log
-	benchstat build/bench.log > stat.txt
-	@echo >> stat.txt
-	@$(GO) version >> stat.txt
-	@$(PROTOC) --version >> stat.txt
-	@$(FLATC) --version >> stat.txt
+bench.txt: Colfer.go scheme.pb.go FlatBuffers.go
+	$(GO) test -bench . > $@
+	@echo >> $@
+	@$(GO) version >> $@
+	@$(PROTOC) --version >> $@
+	@$(FLATC) --version >> $@
 
-build:
-	$(COLF) -b build/gen Go ../../testdata/bench/scheme.colf
-	$(PROTOC) --gogofaster_out=build/gen/bench -I../../testdata/bench ../../testdata/bench/scheme.proto
-	$(FLATC) -o build/gen -g ../../testdata/bench/scheme.fbs
+new.txt: Colfer.go scheme.pb.go FlatBuffers.go
+	$(GO) test -bench /colfer -count $(BENCHN) > $@
+
+old.txt:
+	@[ -f new.txt ] || echo '# Run "make new.txt" to produce a reference first.'
+	cp new.txt old.txt
+
+.PHONY: diff
+diff: old.txt new.txt
+	benchstat old.txt new.txt
+
+Colfer.go: ../../testdata/bench/scheme.colf ../../*.go ../../cmd/colf/*.go
+	$(COLF) -b .. -s 1024 Go ../../testdata/bench/scheme.colf
+
+scheme.pb.go: ../../testdata/bench/scheme.proto
+	$(PROTOC) --gogofaster_out=. -I../../testdata/bench ../../testdata/bench/scheme.proto
+
+FlatBuffers.go: ../../testdata/bench/scheme.fbs
+	$(FLATC) -o .. -g ../../testdata/bench/scheme.fbs
 
 .PHONY: clean
 clean:
-	rm -fr build stat.txt
+	rm -fr bench.txt new.txt old.txt
+	rm -fr Colfer.go scheme.pb.go FlatBuffers.go

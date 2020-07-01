@@ -5,21 +5,28 @@ JAVAC ?= javac
 JAVADOC ?= javadoc
 
 .PHONY: test
-test: build
-	$(JAVA) -cp build/classes test
+test: test.class breaktest
+	$(JAVA) test
 
-gen:
+breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+	$(COLF) -b $@ -x java/util/ArrayList Java ../testdata/break*.colf
+	$(JAVAC) $@/*/*.java
+	$(JAVADOC) -d $@ $@/*/*.java
+	touch $@
+
+gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../cmd/colf/*.go
 	$(COLF) -t ../testdata/test-java.tags Java ../testdata/test.colf
+	$(JAVAC) $@/*.java
+	touch $@
 
-build: gen
-	$(COLF) -b build/java -p break -x java/util/ArrayList Java ../testdata/break*.colf
-
-	mkdir -p build/classes
-	$(JAVAC) -d build/classes test.java gen/*.java
-	$(JAVAC) -d build/classes build/java/break_/*/*.java
-
-	$(JAVADOC) -d build/javadoc build/java/break_/*/*.java > /dev/null
+test.class: gen
+	$(JAVAC) test.java
 
 .PHONY: clean
 clean:
-	rm -fr gen build
+	rm -f *.class gen/*.class
+	rm -fr breaktest
+
+.PHONY: clean-all
+clean-all: clean
+	rm -fr gen

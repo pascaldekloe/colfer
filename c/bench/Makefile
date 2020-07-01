@@ -3,23 +3,37 @@ include ../../common.mk
 FLATC ?= flatc
 PROTOC ?= protoc
 
-.PHONY: test
-test: build
-	build/bench
-	@echo
-	@$(FLATC) --version
-	@$(PROTOC) --version
-	@$(CC) --version
+CFLAGS += -O3
+CXXFLAGS += -O3
 
-build:
-	$(COLF) -b build/gen -f -s 1024 c ../../testdata/bench/scheme.colf
-	$(PROTOC) --cpp_out=build/gen -I../../testdata/bench ../../testdata/bench/scheme.proto
-	$(FLATC) --cpp -o build/gen ../../testdata/bench/scheme.fbs
+bench.txt: bench
+	./bench > $@
+	@echo >> $@
+	@$(FLATC) --version >> $@
+	@$(PROTOC) --version >> $@
+	@$(CC) --version >> $@
 
-	$(CC) $(CFLAGS) -o build/Colfer.o -c -std=c99 -O3 build/gen/Colfer.c
-	$(CC) $(CFLAGS) -o build/ProtoBuf.o -c -std=c++11 -O3 build/gen/scheme.pb.cc
-	$(CC) $(CFLAGS) -o build/bench -std=c++11 -O3 -lstdc++ -lprotobuf -lbenchmark bench.cpp build/Colfer.o build/ProtoBuf.o
+Colfer.h Colfer.c &: ../../testdata/bench/scheme.colf ../../*.go ../../cmd/colf/*.go
+	$(COLF) -f -s 1024 C ../../testdata/bench/scheme.colf
+
+# ProtoBuf
+scheme.pb.cc: ../../testdata/bench/scheme.proto
+	$(PROTOC) --cpp_out=. -I../../testdata/bench ../../testdata/bench/scheme.proto
+
+# FlatBuffers
+scheme_generated.h: ../../testdata/bench/scheme.fbs
+	$(FLATC) --cpp -o . ../../testdata/bench/scheme.fbs
+
+Colfer.o: Colfer.h Colfer.c
+	$(CC) $(CFLAGS) -o $@ -c -std=c11 Colfer.c
+
+scheme.pb.o: scheme.pb.cc
+	$(CXX) $(CXXFLAGS) -o $@ -c -std=c++11 scheme.pb.cc
+
+bench: bench.cpp Colfer.o scheme.pb.o scheme_generated.h
+	$(CXX) $(CXXFLAGS) -o $@ -lstdc++ -lprotobuf -lbenchmark -std=c++11 bench.cpp Colfer.o scheme.pb.o
 
 .PHONY: clean
 clean:
-	rm -fr build
+	rm -f bench bench.txt
+	rm -f Colfer.* scheme.pb.* scheme_generated.*

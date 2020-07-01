@@ -1,20 +1,29 @@
 include ../common.mk
 
+NODE ?= node
 NPM ?= npm
 
 .PHONY: test
-test: gen build node_modules
+test: test.js Colfer.js node_modules/.bin/qunit breaktest
 	node_modules/.bin/qunit test.js
 
-build:
-	$(COLF) -b build JavaScript ../testdata/break*.colf
+breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+	$(COLF) -b $@ JavaScript ../testdata/break*.colf
+	$(NODE) --check $@/*.js
+	touch $@
 
-gen:
-	$(COLF) -b gen JavaScript ../testdata/test.colf
+Colfer.js: ../testdata/test.colf ../*.go ../cmd/colf/*.go
+	$(COLF) JavaScript ../testdata/test.colf
+	$(NODE) --check $@
 
-node_modules:
+node_modules/.bin/qunit:
 	$(NPM) install qunit
 
 .PHONY: clean
 clean:
-	rm -fr gen build
+	rm -fr breaktest
+
+.PHONY: clean-all
+clean-all: clean
+	rm -f Colfer.js
+	rm -fr node_modules package-lock.json
