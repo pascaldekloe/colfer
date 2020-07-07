@@ -291,7 +291,7 @@ func docText(docs []string, indent string) string {
 }
 
 // StructsByQName maps each Struct to its respective qualified name
-// as in <package>.<type>.<field>.
+// (as in <package>.<type>).
 func (p Packages) StructsByQName() map[string]*Struct {
 	var n int
 	for _, pkg := range p {
@@ -301,14 +301,18 @@ func (p Packages) StructsByQName() map[string]*Struct {
 
 	for _, pkg := range p {
 		for _, t := range pkg.Structs {
-			m[t.String()] = t
+			qName := t.String()
+			if _, ok := m[qName]; ok {
+				panic(qName + " dupe")
+			}
+			m[qName] = t
 		}
 	}
 	return m
 }
 
 // FieldsByQName maps each Field to its respective qualified name
-// as in <package>.<type>.<field>.
+// (as in <package>.<type>.<field>).
 func (p Packages) FieldsByQName() map[string]*Field {
 	var n int
 	for _, pkg := range p {
@@ -321,8 +325,11 @@ func (p Packages) FieldsByQName() map[string]*Field {
 	for _, pkg := range p {
 		for _, t := range pkg.Structs {
 			for _, f := range t.Fields {
-				// no dupe check
-				m[f.String()] = f
+				qName := f.String()
+				if _, ok := m[qName]; ok {
+					panic(qName + " dupe")
+				}
+				m[qName] = f
 			}
 		}
 	}

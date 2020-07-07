@@ -49,6 +49,7 @@ func ParseFiles(paths ...string) (Packages, error) {
 		for _, p := range packages {
 			if p.Name == fileAST.Name.Name {
 				pkg = p
+				break
 			}
 		}
 		if pkg == nil {
@@ -121,15 +122,20 @@ func addSpec(pkg *Package, decl *ast.GenDecl, spec ast.Spec, schemaPath string) 
 	default:
 		return fmt.Errorf("colfer: unsupported specification type %T", spec)
 	case *ast.TypeSpec:
-		switch t := spec.Type.(type) {
+		switch specType := spec.Type.(type) {
 		default:
-			return fmt.Errorf("colfer: unsupported data type %T", t)
+			return fmt.Errorf("colfer: unsupported data type %T", specType)
 		case *ast.StructType:
-			s := &Struct{Pkg: pkg, Name: spec.Name.Name, SchemaFile: path.Base(schemaPath)}
-			pkg.Structs = append(pkg.Structs, s)
+			t := &Struct{Pkg: pkg, Name: spec.Name.Name, SchemaFile: path.Base(schemaPath)}
+			for _, pt := range pkg.Structs {
+				if pt.Name == t.Name {
+					return fmt.Errorf("colfer: duplicate %s declaration", pt)
+				}
+			}
+			pkg.Structs = append(pkg.Structs, t)
 
-			s.Docs = append(docs(decl.Doc), docs(spec.Doc)...)
-			if err := mapStruct(s, t); err != nil {
+			t.Docs = append(docs(decl.Doc), docs(spec.Doc)...)
+			if err := mapStruct(t, specType); err != nil {
 				return err
 			}
 		}
