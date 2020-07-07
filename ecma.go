@@ -7,30 +7,32 @@ import (
 	"text/template"
 )
 
-const ecmaKeywords = "break case catch class const continue debugger default delete do else enum export extends finally for function if import in instanceof new return super switch this throw try typeof var void while with yield"
-
-// IsECMAKeyword returs whether s is a reserved word in ECMAScript code.
-func IsECMAKeyword(s string) bool {
-	for _, k := range strings.Fields(ecmaKeywords) {
-		if k == s {
-			return true
-		}
-	}
-	return false
+// ECMAKeywords are the reserved tokens for ECMA Script.
+// Some entries are redundant due to the use of a Go parser.
+var eCMAKeywords = map[string]struct{}{
+	"break": struct{}{}, "case": struct{}{}, "catch": struct{}{}, "class": struct{}{},
+	"const": struct{}{}, "continue": struct{}{}, "debugger": struct{}{}, "default": struct{}{},
+	"delete": struct{}{}, "do": struct{}{}, "else": struct{}{}, "enum": struct{}{},
+	"export": struct{}{}, "extends": struct{}{}, "finally": struct{}{}, "for": struct{}{},
+	"function": struct{}{}, "if": struct{}{}, "import": struct{}{}, "in": struct{}{},
+	"instanceof": struct{}{}, "new": struct{}{}, "return": struct{}{}, "super": struct{}{},
+	"switch": struct{}{}, "this": struct{}{}, "throw": struct{}{}, "try": struct{}{},
+	"typeof": struct{}{}, "var": struct{}{}, "void": struct{}{}, "while": struct{}{},
+	"with": struct{}{}, "yield": struct{}{},
 }
 
 // GenerateECMA writes the code into file "Colfer.js".
 func GenerateECMA(basedir string, packages Packages) error {
 	for _, p := range packages {
 		p.NameNative = strings.Replace(p.Name, "/", "_", -1)
-		if IsECMAKeyword(p.NameNative) {
+		if _, ok := eCMAKeywords[p.NameNative]; ok {
 			p.NameNative += "_"
 		}
 
 		for _, t := range p.Structs {
 			for _, f := range t.Fields {
 				f.NameNative = f.Name
-				if IsECMAKeyword(f.NameNative) {
+				if _, ok := eCMAKeywords[f.NameNative]; ok {
 					f.NameNative += "_"
 				}
 			}

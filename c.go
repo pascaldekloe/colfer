@@ -9,16 +9,17 @@ import (
 	"github.com/pascaldekloe/name"
 )
 
-const cKeywords = "auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while"
-
-// IsCKeyword returs whether s is a reserved word in C code.
-func IsCKeyword(s string) bool {
-	for _, k := range strings.Fields(cKeywords) {
-		if k == s {
-			return true
-		}
-	}
-	return false
+// CKeywords are the reserved tokens for C code.
+// Some entries are redundant due to the use of a Go parser.
+var cKeywords = map[string]struct{}{
+	"auto": struct{}{}, "break": struct{}{}, "case": struct{}{}, "char": struct{}{},
+	"const": struct{}{}, "continue": struct{}{}, "default": struct{}{}, "do": struct{}{},
+	"double": struct{}{}, "else": struct{}{}, "enum": struct{}{}, "extern": struct{}{},
+	"float": struct{}{}, "for": struct{}{}, "goto": struct{}{}, "if": struct{}{},
+	"int": struct{}{}, "long": struct{}{}, "register": struct{}{}, "return": struct{}{},
+	"short": struct{}{}, "signed": struct{}{}, "sizeof": struct{}{}, "static": struct{}{},
+	"struct": struct{}{}, "switch": struct{}{}, "typedef": struct{}{}, "union": struct{}{},
+	"unsigned": struct{}{}, "void": struct{}{}, "volatile": struct{}{}, "while": struct{}{},
 }
 
 // GenerateC writes the code into file "Colfer.h" and "Colfer.c".
@@ -29,7 +30,7 @@ func GenerateC(basedir string, packages Packages) error {
 
 			for _, f := range t.Fields {
 				f.NameNative = strings.ToLower(name.SnakeCase(f.Name))
-				if IsCKeyword(f.NameNative) {
+				if _, ok := cKeywords[f.NameNative]; ok {
 					f.NameNative += "_"
 				}
 
