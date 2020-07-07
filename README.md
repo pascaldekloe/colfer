@@ -38,7 +38,9 @@ The format is inspired by Proto**col** Buf**fer**s.
 
 Download a [prebuilt compiler](https://github.com/pascaldekloe/colfer/releases)
 or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
-Without arguments the command prints its manual.
+Homebrew users can also `brew install colfer`.
+
+The command prints its own manual when invoked without arguments.
 
 ```
 NAME
