@@ -14,19 +14,19 @@ import (
 // JavaKeywords are the reserved tokens for Java code.
 // Some entries are redundant due to the use of a Go parser.
 var javaKeywords = map[string]struct{}{
-	"abstract": struct{}{}, "assert": struct{}{}, "boolean": struct{}{}, "break": struct{}{},
-	"byte": struct{}{}, "case": struct{}{}, "catch": struct{}{}, "char": struct{}{},
-	"class": struct{}{}, "const": struct{}{}, "continue": struct{}{}, "default": struct{}{},
-	"do": struct{}{}, "double": struct{}{}, "else": struct{}{}, "enum": struct{}{},
-	"extends": struct{}{}, "final": struct{}{}, "finally": struct{}{}, "float": struct{}{},
-	"for": struct{}{}, "goto": struct{}{}, "if": struct{}{}, "implements": struct{}{},
-	"import": struct{}{}, "instanceof": struct{}{}, "int": struct{}{}, "interface": struct{}{},
-	"long": struct{}{}, "native": struct{}{}, "new": struct{}{}, "package": struct{}{},
-	"private": struct{}{}, "protected": struct{}{}, "public": struct{}{}, "return": struct{}{},
-	"short": struct{}{}, "static": struct{}{}, "strictfp": struct{}{}, "super": struct{}{},
-	"switch": struct{}{}, "synchronized": struct{}{}, "this": struct{}{}, "throw": struct{}{},
-	"throws": struct{}{}, "transient": struct{}{}, "try": struct{}{}, "void": struct{}{},
-	"volatile": struct{}{}, "while": struct{}{},
+	"abstract": {}, "assert": {}, "boolean": {}, "break": {},
+	"byte": {}, "case": {}, "catch": {}, "char": {},
+	"class": {}, "const": {}, "continue": {}, "default": {},
+	"do": {}, "double": {}, "else": {}, "enum": {},
+	"extends": {}, "final": {}, "finally": {}, "float": {},
+	"for": {}, "goto": {}, "if": {}, "implements": {},
+	"import": {}, "instanceof": {}, "int": {}, "interface": {},
+	"long": {}, "native": {}, "new": {}, "package": {},
+	"private": {}, "protected": {}, "public": {}, "return": {},
+	"short": {}, "static": {}, "strictfp": {}, "super": {},
+	"switch": {}, "synchronized": {}, "this": {}, "throw": {},
+	"throws": {}, "transient": {}, "try": {}, "void": {},
+	"volatile": {}, "while": {},
 }
 
 func toJavaName(name string) string {

@@ -12,15 +12,15 @@ import (
 // ECMAKeywords are the reserved tokens for ECMA Script.
 // Some entries are redundant due to the use of a Go parser.
 var eCMAKeywords = map[string]struct{}{
-	"break": struct{}{}, "case": struct{}{}, "catch": struct{}{}, "class": struct{}{},
-	"const": struct{}{}, "continue": struct{}{}, "debugger": struct{}{}, "default": struct{}{},
-	"delete": struct{}{}, "do": struct{}{}, "else": struct{}{}, "enum": struct{}{},
-	"export": struct{}{}, "extends": struct{}{}, "finally": struct{}{}, "for": struct{}{},
-	"function": struct{}{}, "if": struct{}{}, "import": struct{}{}, "in": struct{}{},
-	"instanceof": struct{}{}, "new": struct{}{}, "return": struct{}{}, "super": struct{}{},
-	"switch": struct{}{}, "this": struct{}{}, "throw": struct{}{}, "try": struct{}{},
-	"typeof": struct{}{}, "var": struct{}{}, "void": struct{}{}, "while": struct{}{},
-	"with": struct{}{}, "yield": struct{}{},
+	"break": {}, "case": {}, "catch": {}, "class": {},
+	"const": {}, "continue": {}, "debugger": {}, "default": {},
+	"delete": {}, "do": {}, "else": {}, "enum": {},
+	"export": {}, "extends": {}, "finally": {}, "for": {},
+	"function": {}, "if": {}, "import": {}, "in": {},
+	"instanceof": {}, "new": {}, "return": {}, "super": {},
+	"switch": {}, "this": {}, "throw": {}, "try": {},
+	"typeof": {}, "var": {}, "void": {}, "while": {},
+	"with": {}, "yield": {},
 }
 
 // GenerateECMA writes the code into file "Colfer.js".

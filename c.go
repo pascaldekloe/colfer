@@ -12,14 +12,14 @@ import (
 // CKeywords are the reserved tokens for C code.
 // Some entries are redundant due to the use of a Go parser.
 var cKeywords = map[string]struct{}{
-	"auto": struct{}{}, "break": struct{}{}, "case": struct{}{}, "char": struct{}{},
-	"const": struct{}{}, "continue": struct{}{}, "default": struct{}{}, "do": struct{}{},
-	"double": struct{}{}, "else": struct{}{}, "enum": struct{}{}, "extern": struct{}{},
-	"float": struct{}{}, "for": struct{}{}, "goto": struct{}{}, "if": struct{}{},
-	"int": struct{}{}, "long": struct{}{}, "register": struct{}{}, "return": struct{}{},
-	"short": struct{}{}, "signed": struct{}{}, "sizeof": struct{}{}, "static": struct{}{},
-	"struct": struct{}{}, "switch": struct{}{}, "typedef": struct{}{}, "union": struct{}{},
-	"unsigned": struct{}{}, "void": struct{}{}, "volatile": struct{}{}, "while": struct{}{},
+	"auto": {}, "break": {}, "case": {}, "char": {},
+	"const": {}, "continue": {}, "default": {}, "do": {},
+	"double": {}, "else": {}, "enum": {}, "extern": {},
+	"float": {}, "for": {}, "goto": {}, "if": {},
+	"int": {}, "long": {}, "register": {}, "return": {},
+	"short": {}, "signed": {}, "sizeof": {}, "static": {},
+	"struct": {}, "switch": {}, "typedef": {}, "union": {},
+	"unsigned": {}, "void": {}, "volatile": {}, "while": {},
 }
 
 // GenerateC writes the code into file "Colfer.h" and "Colfer.c".

@@ -70,7 +70,7 @@ func newGoldenCases() []*golden {
 		{"0b01007f7f", O{Os: []*O{{B: true}}}},
 		{"0b027f7f7f", O{Os: []*O{{}, {}}}},
 		{"0c0300016101627f", O{Ss: []string{"", "a", "b"}}},
-		{"0d0201000201027f", O{As: [][]byte{[]byte{0}, []byte{1, 2}}}},
+		{"0d0201000201027f", O{As: [][]byte{{0}, {1, 2}}}},
 		{"0e017f", O{U8: 1}},
 		{"0eff7f", O{U8: math.MaxUint8}},
 		{"8f017f", O{U16: 1}},
