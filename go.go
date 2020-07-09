@@ -187,7 +187,7 @@ func (o *{{.NameNative}}) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is {{.Pkg.NameNative}}.ColferMax.
+// The error return option is ColferMax.
 func (o *{{.NameNative}}) MarshalLen() (int, error) {
 	l := 1
 {{range .Fields}}{{template "marshal-field-len" .}}{{end}}
@@ -201,7 +201,7 @@ func (o *{{.NameNative}}) MarshalLen() (int, error) {
 {{- range .Fields}}{{if and .TypeList .TypeRef}}
 // All nil entries in o.{{.NameNative}} will be replaced with a new value.
 {{- end}}{{end}}
-// The error return option is {{.Pkg.NameNative}}.ColferMax.
+// The error return option is ColferMax.
 func (o *{{.NameNative}}) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -213,7 +213,7 @@ func (o *{{.NameNative}}) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, {{.Pkg.NameNative}}.ColferError and {{.Pkg.NameNative}}.ColferMax.
+// The error return options are io.EOF, ColferError and ColferMax.
 func (o *{{.NameNative}}) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -235,7 +235,7 @@ eof:
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, {{.Pkg.NameNative}}.ColferError, {{.Pkg.NameNative}}.ColferTail and {{.Pkg.NameNative}}.ColferMax.
+// The error return options are io.EOF, ColferError, ColferTail and ColferMax.
 func (o *{{.NameNative}}) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {

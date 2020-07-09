@@ -353,7 +353,7 @@ func (o *O) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *O) MarshalLen() (int, error) {
 	l := 1
 
@@ -542,7 +542,7 @@ func (o *O) MarshalLen() (int, error) {
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
 // All nil entries in o.Os will be replaced with a new value.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *O) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -554,7 +554,7 @@ func (o *O) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, gen.ColferError and gen.ColferMax.
+// The error return options are io.EOF, ColferError and ColferMax.
 func (o *O) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -1240,7 +1240,7 @@ eof:
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, gen.ColferError, gen.ColferTail and gen.ColferMax.
+// The error return options are io.EOF, ColferError, ColferTail and ColferMax.
 func (o *O) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {
@@ -1279,7 +1279,7 @@ func (o *DromedaryCase) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *DromedaryCase) MarshalLen() (int, error) {
 	l := 1
 
@@ -1299,7 +1299,7 @@ func (o *DromedaryCase) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *DromedaryCase) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -1311,7 +1311,7 @@ func (o *DromedaryCase) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, gen.ColferError and gen.ColferMax.
+// The error return options are io.EOF, ColferError and ColferMax.
 func (o *DromedaryCase) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -1372,7 +1372,7 @@ eof:
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, gen.ColferError, gen.ColferTail and gen.ColferMax.
+// The error return options are io.EOF, ColferError, ColferTail and ColferMax.
 func (o *DromedaryCase) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {
@@ -1404,7 +1404,7 @@ func (o *EmbedO) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *EmbedO) MarshalLen() (int, error) {
 	l := 1
 
@@ -1423,7 +1423,7 @@ func (o *EmbedO) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is gen.ColferMax.
+// The error return option is ColferMax.
 func (o *EmbedO) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -1435,7 +1435,7 @@ func (o *EmbedO) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, gen.ColferError and gen.ColferMax.
+// The error return options are io.EOF, ColferError and ColferMax.
 func (o *EmbedO) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -1475,7 +1475,7 @@ eof:
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, gen.ColferError, gen.ColferTail and gen.ColferMax.
+// The error return options are io.EOF, ColferError, ColferTail and ColferMax.
 func (o *EmbedO) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {
