@@ -15,11 +15,11 @@ src/main/resources/amd64/colf-linux: ../../*.go ../../cmd/colf/*.go
 	touch $@
 
 src/main/resources/amd64/colf-darwin: ../../*.go ../../cmd/colf/*.go
-	GOARCH=amd64 GOOS=darwin $(GO) build -o src/main/resources/amd64/build/colf-darwin ../../cmd/colf
+	GOARCH=amd64 GOOS=darwin $(GO) build -o src/main/resources/amd64/colf-darwin ../../cmd/colf
 	touch $@
 
 src/main/resources/amd64/colf-openbsd: ../../*.go ../../cmd/colf/*.go
-	GOARCH=amd64 GOOS=openbsd $(GO) build -o src/main/resources/amd64/build/colf-openbsd ../../cmd/colf
+	GOARCH=amd64 GOOS=openbsd $(GO) build -o src/main/resources/amd64/colf-openbsd ../../cmd/colf
 	touch $@
 
 src/main/resources/amd64/colf.exe: ../../*.go ../../cmd/colf/*.go
