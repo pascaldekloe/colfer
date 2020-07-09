@@ -155,11 +155,6 @@ type Struct struct {
 	TagAdd []string
 }
 
-// NameTitle returns the identification token in title case.
-func (t *Struct) NameTitle() string {
-	return strings.Title(t.Name)
-}
-
 // DocText returns the documentation lines prefixed with ident.
 func (t *Struct) DocText(indent string) string {
 	return docText(t.Docs, indent)
@@ -252,11 +247,6 @@ type Field struct {
 	TypeList bool
 	// TagAdd has optional source code additions.
 	TagAdd []string
-}
-
-// NameTitle returns the identification token in title case.
-func (f *Field) NameTitle() string {
-	return strings.Title(f.Name)
 }
 
 // DocText returns the documentation lines prefixed with ident.

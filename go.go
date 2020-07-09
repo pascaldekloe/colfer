@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/pascaldekloe/name"
 	"golang.org/x/mod/modfile"
 )
 
@@ -55,6 +56,12 @@ func GenerateGo(basedir string, packages Packages) error {
 
 	for _, p := range packages {
 		p.NameNative = p.Name[strings.LastIndexByte(p.Name, '/')+1:]
+		for _, t := range p.Structs {
+			t.NameNative = name.CamelCase(t.Name, true)
+			for _, f := range t.Fields {
+				f.NameNative = name.CamelCase(f.Name, true)
+			}
+		}
 	}
 
 	for _, p := range packages {
@@ -65,7 +72,7 @@ func GenerateGo(basedir string, packages Packages) error {
 					if f.TypeRef == nil {
 						f.TypeNative = f.Type
 					} else {
-						f.TypeNative = f.TypeRef.NameTitle()
+						f.TypeNative = f.TypeRef.NameNative
 						if f.TypeRef.Pkg != p {
 							f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
 						}
@@ -161,17 +168,17 @@ func (i ColferTail) Error() string {
 }
 {{range .Structs}}
 {{.DocText "// "}}
-type {{.NameTitle}} struct {
+type {{.NameNative}} struct {
 {{range .Fields}}{{.DocText "\t// "}}
-	{{.NameTitle}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}{{range .TagAdd}} {{.}}{{end}}
+	{{.NameNative}}	{{if .TypeList}}[]{{end}}{{if .TypeRef}}*{{end}}{{.TypeNative}}{{range .TagAdd}} {{.}}{{end}}
 {{end}}}
 
 // MarshalTo encodes o as Colfer into buf and returns the number of bytes written.
 // If the buffer is too small, MarshalTo will panic.
 {{- range .Fields}}{{if and .TypeList .TypeRef}}
-// All nil entries in o.{{.NameTitle}} will be replaced with a new value.
+// All nil entries in o.{{.NameNative}} will be replaced with a new value.
 {{- end}}{{end}}
-func (o *{{.NameTitle}}) MarshalTo(buf []byte) int {
+func (o *{{.NameNative}}) MarshalTo(buf []byte) int {
 	var i int
 {{range .Fields}}{{template "marshal-field" .}}{{end}}
 	buf[i] = 0x7f
@@ -181,7 +188,7 @@ func (o *{{.NameTitle}}) MarshalTo(buf []byte) int {
 
 // MarshalLen returns the Colfer serial byte size.
 // The error return option is {{.Pkg.NameNative}}.ColferMax.
-func (o *{{.NameTitle}}) MarshalLen() (int, error) {
+func (o *{{.NameNative}}) MarshalLen() (int, error) {
 	l := 1
 {{range .Fields}}{{template "marshal-field-len" .}}{{end}}
 	if l > ColferSizeMax {
@@ -192,10 +199,10 @@ func (o *{{.NameTitle}}) MarshalLen() (int, error) {
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
 {{- range .Fields}}{{if and .TypeList .TypeRef}}
-// All nil entries in o.{{.NameTitle}} will be replaced with a new value.
+// All nil entries in o.{{.NameNative}} will be replaced with a new value.
 {{- end}}{{end}}
 // The error return option is {{.Pkg.NameNative}}.ColferMax.
-func (o *{{.NameTitle}}) MarshalBinary() (data []byte, err error) {
+func (o *{{.NameNative}}) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
 		return nil, err
@@ -207,7 +214,7 @@ func (o *{{.NameTitle}}) MarshalBinary() (data []byte, err error) {
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
 // The error return options are io.EOF, {{.Pkg.NameNative}}.ColferError and {{.Pkg.NameNative}}.ColferMax.
-func (o *{{.NameTitle}}) Unmarshal(data []byte) (int, error) {
+func (o *{{.NameNative}}) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
 	}
@@ -229,7 +236,7 @@ eof:
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
 // The error return options are io.EOF, {{.Pkg.NameNative}}.ColferError, {{.Pkg.NameNative}}.ColferTail and {{.Pkg.NameNative}}.ColferMax.
-func (o *{{.NameTitle}}) UnmarshalBinary(data []byte) error {
+func (o *{{.NameNative}}) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {
 		return ColferTail(i)
@@ -239,19 +246,19 @@ func (o *{{.NameTitle}}) UnmarshalBinary(data []byte) error {
 {{end}}`
 
 const goMarshalField = `{{if eq .Type "bool"}}
-	if o.{{.NameTitle}} {
+	if o.{{.NameNative}} {
 		buf[i] = {{.Index}}
 		i++
 	}
 {{else if eq .Type "uint8"}}
-	if x := o.{{.NameTitle}}; x != 0 {
+	if x := o.{{.NameNative}}; x != 0 {
 		buf[i] = {{.Index}}
 		i++
 		buf[i] = x
 		i++
 	}
 {{else if eq .Type "uint16"}}
-	if x := o.{{.NameTitle}}; x >= 1<<8 {
+	if x := o.{{.NameNative}}; x >= 1<<8 {
 		buf[i] = {{.Index}}
 		i++
 		buf[i] = byte(x >> 8)
@@ -265,7 +272,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		i++
 	}
 {{else if eq .Type "uint32"}}
-	if x := o.{{.NameTitle}}; x >= 1<<21 {
+	if x := o.{{.NameNative}}; x >= 1<<21 {
 		buf[i] = {{.Index}} | 0x80
 		intconv.PutUint32(buf[i+1:], x)
 		i += 5
@@ -281,7 +288,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		i++
 	}
 {{else if eq .Type "uint64"}}
-	if x := o.{{.NameTitle}}; x >= 1<<49 {
+	if x := o.{{.NameNative}}; x >= 1<<49 {
 		buf[i] = {{.Index}} | 0x80
 		intconv.PutUint64(buf[i+1:], x)
 		i += 9
@@ -298,7 +305,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 	}
 {{else if eq .Type "int32"}}
 {{- if .TypeList}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -309,7 +316,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 		buf[i] = byte(x)
 		i++
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			x1 := uint32(v << 1) ^ uint32(v >> 31)
 			for ; x1 >= 0x80; {
 				buf[i] = byte(x1 | 0x80)
@@ -321,7 +328,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 	}
 {{- else}}
-	if v := o.{{.NameTitle}}; v != 0 {
+	if v := o.{{.NameNative}}; v != 0 {
 		x := uint32(v)
 		if v >= 0 {
 			buf[i] = {{.Index}}
@@ -341,7 +348,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 {{end}}
 {{else if eq .Type "int64"}}
 {{- if .TypeList}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -352,7 +359,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 		buf[i] = byte(x)
 		i++
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			x1 := uint64(v << 1) ^ uint64(v >> 63)
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				buf[i] = byte(x1 | 0x80)
@@ -364,7 +371,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 	}
 {{- else}}
-	if v := o.{{.NameTitle}}; v != 0 {
+	if v := o.{{.NameNative}}; v != 0 {
 		x := uint64(v)
 		if v >= 0 {
 			buf[i] = {{.Index}}
@@ -384,7 +391,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 {{- end}}
 {{else if eq .Type "float32"}}
  {{- if .TypeList}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -395,13 +402,13 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 		buf[i] = byte(x)
 		i++
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			intconv.PutUint32(buf[i:], math.Float32bits(v))
 			i += 4
 		}
 	}
  {{- else}}
-	if v := o.{{.NameTitle}}; v != 0 {
+	if v := o.{{.NameNative}}; v != 0 {
 		buf[i] = {{.Index}}
 		intconv.PutUint32(buf[i+1:], math.Float32bits(v))
 		i += 5
@@ -409,7 +416,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
  {{- end}}
 {{else if eq .Type "float64"}}
  {{- if .TypeList}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -420,20 +427,20 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 		buf[i] = byte(x)
 		i++
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			intconv.PutUint64(buf[i:], math.Float64bits(v))
 			i += 8
 		}
 	}
  {{- else}}
-	if v := o.{{.NameTitle}}; v != 0 {
+	if v := o.{{.NameNative}}; v != 0 {
 		buf[i] = {{.Index}}
 		intconv.PutUint64(buf[i+1:], math.Float64bits(v))
 		i += 9
 	}
  {{- end}}
 {{else if eq .Type "timestamp"}}
-	if v := o.{{.NameTitle}}; !v.IsZero() {
+	if v := o.{{.NameNative}}; !v.IsZero() {
 		s, ns := uint64(v.Unix()), uint32(v.Nanosecond())
 		if s < 1<<32 {
 			buf[i] = {{.Index}}
@@ -448,7 +455,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		i += 4
 	}
 {{else if eq .Type "text" "binary"}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -460,7 +467,7 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		buf[i] = byte(x)
 		i++
  {{- if .TypeList}}
-		for _, a := range o.{{.NameTitle}} {
+		for _, a := range o.{{.NameNative}} {
 			x = uint(len(a))
 			for x >= 0x80 {
 				buf[i] = byte(x | 0x80)
@@ -472,11 +479,11 @@ const goMarshalField = `{{if eq .Type "bool"}}
 			i += copy(buf[i:], a)
 		}
  {{- else}}
-		i += copy(buf[i:], o.{{.NameTitle}})
+		i += copy(buf[i:], o.{{.NameNative}})
  {{- end}}
 	}
 {{else if .TypeList}}
-	if l := len(o.{{.NameTitle}}); l != 0 {
+	if l := len(o.{{.NameNative}}); l != 0 {
 		buf[i] = {{.Index}}
 		i++
 		x := uint(l)
@@ -487,16 +494,16 @@ const goMarshalField = `{{if eq .Type "bool"}}
 		}
 		buf[i] = byte(x)
 		i++
-		for vi, v := range o.{{.NameTitle}} {
+		for vi, v := range o.{{.NameNative}} {
 			if v == nil {
 				v = new({{.TypeNative}})
-				o.{{.NameTitle}}[vi] = v
+				o.{{.NameNative}}[vi] = v
 			}
 			i += v.MarshalTo(buf[i:])
 		}
 	}
 {{else}}
-	if v := o.{{.NameTitle}}; v != nil {
+	if v := o.{{.NameNative}}; v != nil {
 		buf[i] = {{.Index}}
 		i++
 		i += v.MarshalTo(buf[i:])
@@ -504,21 +511,21 @@ const goMarshalField = `{{if eq .Type "bool"}}
 {{end}}`
 
 const goMarshalFieldLen = `{{if eq .Type "bool"}}
-	if o.{{.NameTitle}} {
+	if o.{{.NameNative}} {
 		l++
 	}
 {{else if eq .Type "uint8"}}
-	if x := o.{{.NameTitle}}; x != 0 {
+	if x := o.{{.NameNative}}; x != 0 {
 		l += 2
 	}
 {{else if eq .Type "uint16"}}
-	if x := o.{{.NameTitle}}; x >= 1<<8 {
+	if x := o.{{.NameNative}}; x >= 1<<8 {
 		l += 3
 	} else if x != 0 {
 		l += 2
 	}
 {{else if eq .Type "uint32"}}
-	if x := o.{{.NameTitle}}; x >= 1<<21 {
+	if x := o.{{.NameNative}}; x >= 1<<21 {
 		l += 5
 	} else if x != 0 {
 		for l += 2; x >= 0x80; l++ {
@@ -526,7 +533,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
 {{else if eq .Type "uint64"}}
-	if x := o.{{.NameTitle}}; x >= 1<<49 {
+	if x := o.{{.NameNative}}; x >= 1<<49 {
 		l += 9
 	} else if x != 0 {
 		for l += 2; x >= 0x80; l++ {
@@ -535,27 +542,27 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 	}
 {{else if eq .Type "int32"}}
 {{- if .TypeList}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
 		for l += 2; x >= 0x80; l++ {
 			x >>= 7
 		}
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			x1 := uint32(v << 1) ^ uint32(v >> 31)
 			for ; x1 >= 0x80; {
 				x1 >>= 7
 				l++
 			}
 		}
-		l += len(o.{{.NameTitle}})
+		l += len(o.{{.NameNative}})
 		if l >= ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 {{else}}
-	if v := o.{{.NameTitle}}; v != 0 {
+	if v := o.{{.NameNative}}; v != 0 {
 		x := uint32(v)
 		if v < 0 {
 			x = ^x + 1
@@ -567,27 +574,27 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 {{- end}}
 {{else if eq .Type "int64"}}
 {{- if .TypeList}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
 		for l += 2; x >= 0x80; l++ {
 			x >>= 7
 		}
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			x1 := uint64(v << 1) ^ uint64(v >> 63)
 			for n := 0; x1 >= 0x80 && n < 8; n++ {
 				x1 >>= 7
 				l++
 			}
 		}
-		l += len(o.{{.NameTitle}})
+		l += len(o.{{.NameNative}})
 		if l >= ColferSizeMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
 		}
 	}
 	{{else}}
-		if v := o.{{.NameTitle}}; v != 0 {
+		if v := o.{{.NameNative}}; v != 0 {
 			l += 2
 			x := uint64(v)
 			if v < 0 {
@@ -601,7 +608,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 {{- end}}
 {{else if eq .Type "float32"}}
  {{- if .TypeList}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
@@ -610,13 +617,13 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
  {{- else}}
-	if o.{{.NameTitle}} != 0 {
+	if o.{{.NameNative}} != 0 {
 		l += 5
 	}
  {{- end}}
 {{else if eq .Type "float64"}}
  {{- if .TypeList}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
@@ -625,12 +632,12 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
  {{- else}}
-	if o.{{.NameTitle}} != 0 {
+	if o.{{.NameNative}} != 0 {
 		l += 9
 	}
  {{- end}}
 {{else if eq .Type "timestamp"}}
-	if v := o.{{.NameTitle}}; !v.IsZero() {
+	if v := o.{{.NameNative}}; !v.IsZero() {
 		if s := uint64(v.Unix()); s < 1<<32 {
 			l += 9
 		} else {
@@ -638,7 +645,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
 {{else if eq .Type "text" "binary"}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
  {{- if .TypeList}}
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
@@ -646,7 +653,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		for l += 2; x >= 0x80; l++ {
 			x >>= 7
 		}
-		for _, a := range o.{{.NameTitle}} {
+		for _, a := range o.{{.NameNative}} {
 			x = len(a)
 			if x > ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d bytes", ColferSizeMax))
@@ -668,14 +675,14 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
  {{- end}}
 	}
 {{else if .TypeList}}
-	if x := len(o.{{.NameTitle}}); x != 0 {
+	if x := len(o.{{.NameNative}}); x != 0 {
 		if x > ColferListMax {
 			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
 		}
 		for l += 2; x >= 0x80; l++ {
 			x >>= 7
 		}
-		for _, v := range o.{{.NameTitle}} {
+		for _, v := range o.{{.NameNative}} {
 			if v == nil {
 				l++
 				continue
@@ -691,7 +698,7 @@ const goMarshalFieldLen = `{{if eq .Type "bool"}}
 		}
 	}
 {{else}}
-	if v := o.{{.NameTitle}}; v != nil {
+	if v := o.{{.NameNative}}; v != nil {
 		vl, err := v.MarshalLen()
 		if err != nil {
 			return 0, err
@@ -705,7 +712,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = true
+		o.{{.NameNative}} = true
 		header = data[i]
 		i++
 	}
@@ -716,7 +723,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = data[start]
+		o.{{.NameNative}} = data[start]
 		header = data[i]
 		i++
 	}
@@ -727,7 +734,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = intconv.Uint16(data[start:])
+		o.{{.NameNative}} = intconv.Uint16(data[start:])
 		header = data[i]
 		i++
 	} else if header == {{.Index}}|0x80 {
@@ -736,7 +743,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = uint16(data[start])
+		o.{{.NameNative}} = uint16(data[start])
 		header = data[i]
 		i++
 	}
@@ -765,7 +772,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = x
+		o.{{.NameNative}} = x
 
 		header = data[i]
 		i++
@@ -775,7 +782,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = intconv.Uint32(data[start:])
+		o.{{.NameNative}} = intconv.Uint32(data[start:])
 		header = data[i]
 		i++
 	}
@@ -804,7 +811,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = x
+		o.{{.NameNative}} = x
 
 		header = data[i]
 		i++
@@ -814,7 +821,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = intconv.Uint64(data[start:])
+		o.{{.NameNative}} = intconv.Uint64(data[start:])
 		header = data[i]
 		i++
 	}
@@ -856,7 +863,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 
 			a[ai] = int32((x >> 1) ^ (-(x & 1)))
 		}
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		header = data[i]
 		i++
@@ -886,7 +893,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = int32(x)
+		o.{{.NameNative}} = int32(x)
 
 		header = data[i]
 		i++
@@ -914,7 +921,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = int32(^x + 1)
+		o.{{.NameNative}} = int32(^x + 1)
 
 		header = data[i]
 		i++
@@ -958,7 +965,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 
 			a[ai] = int64((x >> 1) ^ (-(x & 1)))
 		}
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		header = data[i]
 		i++
@@ -988,7 +995,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = int64(x)
+		o.{{.NameNative}} = int64(x)
 
 		header = data[i]
 		i++
@@ -1016,7 +1023,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 				x |= (b & 0x7f) << shift
 			}
 		}
-		o.{{.NameTitle}} = int64(^x + 1)
+		o.{{.NameNative}} = int64(^x + 1)
 
 		header = data[i]
 		i++
@@ -1041,7 +1048,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			a[ai] = math.Float32frombits(intconv.Uint32(data[i:]))
 			i += 4
 		}
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		header = data[i]
 		i++
@@ -1053,7 +1060,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = math.Float32frombits(intconv.Uint32(data[start:]))
+		o.{{.NameNative}} = math.Float32frombits(intconv.Uint32(data[start:]))
 		header = data[i]
 		i++
 	}
@@ -1076,7 +1083,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			a[ai] = math.Float64frombits(intconv.Uint64(data[i:]))
 			i += 8
 		}
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		header = data[i]
 		i++
@@ -1088,7 +1095,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = math.Float64frombits(intconv.Uint64(data[start:]))
+		o.{{.NameNative}} = math.Float64frombits(intconv.Uint64(data[start:]))
 		header = data[i]
 		i++
 	}
@@ -1100,7 +1107,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = time.Unix(int64(intconv.Uint32(data[start:])), int64(intconv.Uint32(data[start+4:]))).In(time.UTC)
+		o.{{.NameNative}} = time.Unix(int64(intconv.Uint32(data[start:])), int64(intconv.Uint32(data[start+4:]))).In(time.UTC)
 		header = data[i]
 		i++
 	} else if header == {{.Index}}|0x80 {
@@ -1109,7 +1116,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = time.Unix(int64(intconv.Uint64(data[start:])), int64(intconv.Uint32(data[start+8:]))).In(time.UTC)
+		o.{{.NameNative}} = time.Unix(int64(intconv.Uint64(data[start:])), int64(intconv.Uint32(data[start+8:]))).In(time.UTC)
 		header = data[i]
 		i++
 	}
@@ -1121,7 +1128,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
 		}
 		a := make([]string, int(x))
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		for ai := range a {
 {{template "unmarshal-varint" .}}
@@ -1153,7 +1160,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 		if i >= len(data) {
 			goto eof
 		}
-		o.{{.NameTitle}} = string(data[start:i])
+		o.{{.NameNative}} = string(data[start:i])
 
 		header = data[i]
 		i++
@@ -1174,7 +1181,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			goto eof
 		}
 		copy(v, data[start:i])
-		o.{{.NameTitle}} = v
+		o.{{.NameNative}} = v
 
 		header = data[i]
 		i++
@@ -1183,7 +1190,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
 		}
 		a := make([][]byte, int(x))
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 		for ai := range a {
 {{template "unmarshal-varint" .}}
 			if x > uint(ColferSizeMax) {
@@ -1231,7 +1238,7 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 			}
 			i += n
 		}
-		o.{{.NameTitle}} = a
+		o.{{.NameNative}} = a
 
 		if i >= len(data) {
 			goto eof
@@ -1241,8 +1248,8 @@ const goUnmarshalField = `{{if eq .Type "bool"}}
 	}
 {{else}}
 	if header == {{.Index}} {
-		o.{{.NameTitle}} = new({{.TypeNative}})
-		n, err := o.{{.NameTitle}}.Unmarshal(data[i:])
+		o.{{.NameNative}} = new({{.TypeNative}})
+		n, err := o.{{.NameNative}}.Unmarshal(data[i:])
 		if err != nil {
 			if err == io.EOF && len(data) >= ColferSizeMax {
 				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))

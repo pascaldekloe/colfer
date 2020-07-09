@@ -433,7 +433,7 @@ var gen = new function() {
 			var ns = view.getUint32(i + 8);
 			ms += Math.floor(ns / 1E6);
 			if (ms < -864E13 || ms > 864E13)
-				throw new Error('colfer: gen/ field t exceeds ECMA Date range');
+				throw new Error('colfer: gen/O field t exceeds ECMA Date range');
 			this.t = new Date(ms);
 			this.t_ns = ns % 1E6;
 
@@ -591,7 +591,7 @@ var gen = new function() {
 	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
 	this.DromedaryCase = function(init) {
 
-		this.PascalCase = '';
+		this.pascalCase = '';
 
 		for (var p in init) this[p] = init[p];
 	}
@@ -603,9 +603,9 @@ var gen = new function() {
 		var view = new DataView(buf.buffer);
 
 
-		if (this.PascalCase) {
+		if (this.pascalCase) {
 			buf[i++] = 0;
-			var utf8 = encodeUTF8(this.PascalCase);
+			var utf8 = encodeUTF8(this.pascalCase);
 			i = encodeVarint(buf, i, utf8.length);
 			buf.set(utf8, i);
 			i += utf8.length;
@@ -656,7 +656,7 @@ var gen = new function() {
 			var start = i;
 			i += size;
 			if (i > data.length) throw new Error(EOF);
-			this.PascalCase = decodeUTF8(data.subarray(start, i));
+			this.pascalCase = decodeUTF8(data.subarray(start, i));
 			readHeader();
 		}
 

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/pascaldekloe/name"
 )
 
 // ECMAKeywords are the reserved tokens for ECMA Script.
@@ -30,8 +32,9 @@ func GenerateECMA(basedir string, packages Packages) error {
 		}
 
 		for _, t := range p.Structs {
+			t.NameNative = name.CamelCase(t.Name, true)
 			for _, f := range t.Fields {
-				f.NameNative = f.Name
+				f.NameNative = name.CamelCase(f.Name, false)
 				if _, ok := eCMAKeywords[f.NameNative]; ok {
 					f.NameNative += "_"
 				}
@@ -74,7 +77,7 @@ var {{.NameNative}} = new function() {
 	// Constructor.
 {{.DocText "\t// "}}
 	// When init is provided all enumerable properties are merged into the new object a.k.a. shallow cloning.
-	this.{{.NameTitle}} = function(init) {
+	this.{{.NameNative}} = function(init) {
 {{- range .Fields}}
 {{.DocText "\t\t// "}}
 		this.{{.NameNative}} =
@@ -187,9 +190,9 @@ if (typeof exports !== 'undefined') exports.{{.NameNative}} = {{.NameNative}};
 const ecmaMarshal = `
 	// Serializes the object into an Uint8Array.
 {{- range .Fields}}{{if .TypeList}}{{if eq .Type "float32" "float64"}}{{else}}
-	// All null entries in property {{.NameNative}} will be replaced with {{if eq .Type "text"}}an empty String{{else if eq .Type "binary"}}an empty Array{{else}}a new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}{{end}}.
+	// All null entries in property {{.NameNative}} will be replaced with {{if eq .Type "text"}}an empty String{{else if eq .Type "binary"}}an empty Array{{else}}a new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}{{end}}.
 {{- end}}{{end}}{{end}}
-	this.{{.NameTitle}}.prototype.marshal = function(buf) {
+	this.{{.NameNative}}.prototype.marshal = function(buf) {
 		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
 		var i = 0;
 		var view = new DataView(buf.buffer);
@@ -200,14 +203,14 @@ const ecmaMarshal = `
 {{else if eq .Type "uint8"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 255 || this.{{.NameNative}} < 0)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
 			buf[i++] = {{.Index}};
 			buf[i++] = this.{{.NameNative}};
 		}
 {{else if eq .Type "uint16"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 65535 || this.{{.NameNative}} < 0)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
 			if (this.{{.NameNative}} < 256) {
 				buf[i++] = {{.Index}} | 128;
 				buf[i++] = this.{{.NameNative}};
@@ -220,7 +223,7 @@ const ecmaMarshal = `
 {{else if eq .Type "uint32"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 4294967295 || this.{{.NameNative}} < 0)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
 			if (this.{{.NameNative}} < 0x200000) {
 				buf[i++] = {{.Index}};
 				i = encodeVarint(buf, i, this.{{.NameNative}});
@@ -233,9 +236,9 @@ const ecmaMarshal = `
 {{else if eq .Type "uint64"}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} < 0)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} out of reach: ' + this.{{.NameNative}});
 			if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			if (this.{{.NameNative}} < 0x2000000000000) {
 				buf[i++] = {{.Index}};
 				i = encodeVarint(buf, i, this.{{.NameNative}});
@@ -252,12 +255,12 @@ const ecmaMarshal = `
 			if (this.{{.NameNative}} < 0) {
 				buf[i++] = {{.Index}} | 128;
 				if (this.{{.NameNative}} < -2147483648)
-					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
+					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds 32-bit range');
 				i = encodeVarint(buf, i, -this.{{.NameNative}});
 			} else {
 				buf[i++] = {{.Index}}; 
 				if (this.{{.NameNative}} > 2147483647)
-					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
+					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds 32-bit range');
 				i = encodeVarint(buf, i, this.{{.NameNative}});
 			}
 		}
@@ -266,12 +269,12 @@ const ecmaMarshal = `
 			if (this.{{.NameNative}} < 0) {
 				buf[i++] = {{.Index}} | 128;
 				if (this.{{.NameNative}} < Number.MIN_SAFE_INTEGER)
-					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MIN_SAFE_INTEGER');
+					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MIN_SAFE_INTEGER');
 				i = encodeVarint(buf, i, -this.{{.NameNative}});
 			} else {
 				buf[i++] = {{.Index}}; 
 				if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
-					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+					throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 				i = encodeVarint(buf, i, this.{{.NameNative}});
 			}
 		}
@@ -293,7 +296,7 @@ const ecmaMarshal = `
  {{- else}}
 		if (this.{{.NameNative}}) {
 			if (this.{{.NameNative}} > 3.4028234663852886E38 || this.{{.NameNative}} < -3.4028234663852886E38)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds 32-bit range');
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds 32-bit range');
 			buf[i++] = {{.Index}};
 			view.setFloat32(i, this.{{.NameNative}});
 			i += 4;
@@ -332,7 +335,7 @@ const ecmaMarshal = `
 
 			var ns = this.{{.NameNative}}_ns || 0;
 			if (ns < 0 || ns >= 1E6)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}}_ns not in range (0, 1ms>');
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}}_ns not in range (0, 1ms>');
 			var msf = ms % 1E3;
 			if (ms < 0 && msf) {
 				s--
@@ -431,7 +434,7 @@ const ecmaMarshal = `
 			i = encodeVarint(buf, i, a.length);
 			a.forEach(function(v, vi) {
 				if (v == null) {
-					v = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}();
+					v = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}();
 					a[vi] = v;
 				}
 				var b = v.marshal();
@@ -456,7 +459,7 @@ const ecmaMarshal = `
 
 const ecmaUnmarshal = `
 	// Deserializes the object from an Uint8Array and returns the number of bytes read.
-	this.{{.NameTitle}}.prototype.unmarshal = function(data) {
+	this.{{.NameNative}}.prototype.unmarshal = function(data) {
 		if (!data || ! data.length) throw new Error(EOF);
 		var header = data[0];
 		var i = 1;
@@ -506,7 +509,7 @@ const ecmaUnmarshal = `
 {{else if eq .Type "uint32"}}
 		if (header == {{.Index}}) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = x;
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
@@ -518,7 +521,7 @@ const ecmaUnmarshal = `
 {{else if eq .Type "uint64"}}
 		if (header == {{.Index}}) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = x;
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
@@ -526,7 +529,7 @@ const ecmaUnmarshal = `
 			var x = view.getUint32(i) * 0x100000000;
 			x += view.getUint32(i + 4);
 			if (x > Number.MAX_SAFE_INTEGER)
-				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+				throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = x;
 			i += 8;
 			readHeader();
@@ -534,24 +537,24 @@ const ecmaUnmarshal = `
 {{else if eq .Type "int32"}}
 		if (header == {{.Index}}) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = x;
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = -1 * x;
 			readHeader();
 		}
 {{else if eq .Type "int64"}}
 		if (header == {{.Index}}) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = x;
 			readHeader();
 		} else if (header == ({{.Index}} | 128)) {
 			var x = readVarint();
-			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameTitle}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
+			if (x < 0) throw new Error('colfer: {{.Struct.Pkg.NameNative}}/{{.Struct.NameNative}} field {{.NameNative}} exceeds Number.MAX_SAFE_INTEGER');
 			this.{{.NameNative}} = -1 * x;
 			readHeader();
 		}
@@ -701,7 +704,7 @@ const ecmaUnmarshal = `
 				throw new Error('colfer: {{.String}} length ' + l + ' exceeds ' + colferListMax + ' elements');
 
 			for (var n = 0; n < l; ++n) {
-				var o = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}();
+				var o = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}();
 				i += o.unmarshal(data.subarray(i));
 				this.{{.NameNative}}[n] = o;
 			}
@@ -709,7 +712,7 @@ const ecmaUnmarshal = `
 		}
 {{else}}
 		if (header == {{.Index}}) {
-			var o = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameTitle}}();
+			var o = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}();
 			i += o.unmarshal(data.subarray(i));
 			this.{{.NameNative}} = o;
 			readHeader();

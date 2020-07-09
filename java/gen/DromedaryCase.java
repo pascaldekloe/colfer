@@ -36,7 +36,7 @@ public class DromedaryCase implements Serializable {
 
 	@Deprecated(forRemoval=true)
 	// @javax.validation.constraints.NotNull
-	public String PascalCase;
+	public String pascalCase;
 
 	/** Default constructor */
 	public DromedaryCase() {
@@ -46,7 +46,7 @@ public class DromedaryCase implements Serializable {
 
 	/** Colfer zero values. */
 	private void init() {
-		PascalCase = "";
+		pascalCase = "";
 	}
 
 	/**
@@ -142,7 +142,7 @@ public class DromedaryCase implements Serializable {
 	 * @return the number of bytes.
 	 */
 	public int marshalFit() {
-		long n = 1L + 6 + (long)this.PascalCase.length() * 3;
+		long n = 1L + 6 + (long)this.pascalCase.length() * 3;
 		if (n < 0 || n > (long)DromedaryCase.colferSizeMax) return DromedaryCase.colferSizeMax;
 		return (int) n;
 	}
@@ -181,11 +181,11 @@ public class DromedaryCase implements Serializable {
 		int i = offset;
 
 		try {
-			if (! this.PascalCase.isEmpty()) {
+			if (! this.pascalCase.isEmpty()) {
 				buf[i++] = (byte) 0;
 				int start = ++i;
 
-				String s = this.PascalCase;
+				String s = this.pascalCase;
 				for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
 					char c = s.charAt(sIndex);
 					if (c < '\u0080') {
@@ -279,7 +279,7 @@ public class DromedaryCase implements Serializable {
 
 				int start = i;
 				i += size;
-				this.PascalCase = new String(buf, start, size, StandardCharsets.UTF_8);
+				this.pascalCase = new String(buf, start, size, StandardCharsets.UTF_8);
 				header = buf[i++];
 			}
 
@@ -326,7 +326,7 @@ public class DromedaryCase implements Serializable {
 	 * @return the value.
 	 */
 	public String getPascalCase() {
-		return this.PascalCase;
+		return this.pascalCase;
 	}
 
 	/**
@@ -334,7 +334,7 @@ public class DromedaryCase implements Serializable {
 	 * @param value the replacement.
 	 */
 	public void setPascalCase(String value) {
-		this.PascalCase = value;
+		this.pascalCase = value;
 	}
 
 	/**
@@ -343,14 +343,14 @@ public class DromedaryCase implements Serializable {
 	 * @return {@code this}.
 	 */
 	public DromedaryCase withPascalCase(String value) {
-		this.PascalCase = value;
+		this.pascalCase = value;
 		return this;
 	}
 
 	@Override
 	public final int hashCode() {
 		int h = 1;
-		if (this.PascalCase != null) h = 31 * h + this.PascalCase.hashCode();
+		if (this.pascalCase != null) h = 31 * h + this.pascalCase.hashCode();
 		return h;
 	}
 
@@ -363,7 +363,7 @@ public class DromedaryCase implements Serializable {
 		if (o == null) return false;
 		if (o == this) return true;
 
-		return (this.PascalCase == null ? o.PascalCase == null : this.PascalCase.equals(o.PascalCase));
+		return (this.pascalCase == null ? o.pascalCase == null : this.pascalCase.equals(o.pascalCase));
 	}
 
 }

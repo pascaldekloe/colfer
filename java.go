@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/pascaldekloe/name"
 )
 
 // JavaKeywords are the reserved tokens for Java code.
@@ -44,9 +48,25 @@ func toJavaName(name string) string {
 
 // GenerateJava writes the code into the respective ".java" files.
 func GenerateJava(basedir string, packages Packages) error {
+	titleCache := make(map[string]string)
+	funcs := template.FuncMap{"title": func(s string) string {
+		if t, ok := titleCache[s]; ok {
+			return t
+		}
+
+		r, size := utf8.DecodeRuneInString(s)
+		if size == 0 {
+			return s
+		}
+		t := string([]rune{unicode.ToUpper(r)}) + s[size:]
+
+		titleCache[s] = t
+		return t
+	}}
+
 	packageTemplate := template.New("java-package")
 	template.Must(packageTemplate.Parse(javaPackage))
-	codeTemplate := template.New("java-code")
+	codeTemplate := template.New("java-code").Funcs(funcs)
 	template.Must(codeTemplate.Parse(javaCode))
 
 	for _, p := range packages {
@@ -56,6 +76,16 @@ func GenerateJava(basedir string, packages Packages) error {
 		p.InterfaceNatives = make([]string, len(p.Interfaces))
 		for i, s := range p.Interfaces {
 			p.InterfaceNatives[i] = toJavaName(s)
+		}
+
+		for _, t := range p.Structs {
+			t.NameNative = name.CamelCase(t.Name, true)
+			for _, f := range t.Fields {
+				f.NameNative = name.CamelCase(f.Name, false)
+				if _, ok := javaKeywords[f.NameNative]; ok {
+					f.NameNative += "_"
+				}
+			}
 		}
 	}
 
@@ -84,7 +114,7 @@ func GenerateJava(basedir string, packages Packages) error {
 					if f.TypeRef == nil {
 						f.TypeNative = f.Type
 					} else {
-						f.TypeNative = f.TypeRef.NameTitle()
+						f.TypeNative = f.TypeRef.NameNative
 						if f.TypeRef.Pkg != p {
 							f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
 						}
@@ -110,11 +140,9 @@ func GenerateJava(basedir string, packages Packages) error {
 				case "binary":
 					f.TypeNative = "byte[]"
 				}
-
-				f.NameNative = toJavaName(f.Name)
 			}
 
-			f, err := os.Create(filepath.Join(pkgdir, t.NameTitle()+".java"))
+			f, err := os.Create(filepath.Join(pkgdir, t.NameNative+".java"))
 			if err != nil {
 				return err
 			}
@@ -169,7 +197,7 @@ import java.nio.BufferUnderflowException;
 {{- range .TagAdd}}
 {{.}}
 {{- end}}
-{{$class := .NameTitle}}public class {{$class}} {{if .Pkg.SuperClassNative}}extends {{.Pkg.SuperClassNative}} {{end}}implements Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
+{{$class := .NameNative}}public class {{$class}} {{if .Pkg.SuperClass}}extends {{.Pkg.SuperClassNative}} {{end}}implements Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = {{.Pkg.SizeMax}};
@@ -206,7 +234,7 @@ import java.nio.BufferUnderflowException;
 {{- range .Fields}}
 {{- if .TypeList}}
  {{- if ne .Type "binary"}}
-	private static final {{.TypeNative}}[] _zero{{.NameTitle}} = new {{.TypeNative}}[0];
+	private static final {{.TypeNative}}[] _zero{{title .NameNative}} = new {{.TypeNative}}[0];
  {{- end}}
 {{- end}}
 {{- end}}
@@ -221,7 +249,7 @@ import java.nio.BufferUnderflowException;
 		{{.NameNative}} = _zeroBytes;
 {{- end}}
 {{- else if .TypeList}}
-		{{.NameNative}} = _zero{{.NameTitle}};
+		{{.NameNative}} = _zero{{title .NameNative}};
 {{- else if eq .Type "text"}}
 		{{.NameNative}} = "";
 {{- end}}
@@ -1156,7 +1184,7 @@ import java.nio.BufferUnderflowException;
 	 * Gets {{.String}}.
 	 * @return the value.
 	 */
-	public {{.TypeNative}}{{if .TypeList}}[]{{end}} get{{.NameTitle}}() {
+	public {{.TypeNative}}{{if .TypeList}}[]{{end}} get{{title .NameNative}}() {
 		return this.{{.NameNative}};
 	}
 
@@ -1164,7 +1192,7 @@ import java.nio.BufferUnderflowException;
 	 * Sets {{.String}}.
 	 * @param value the replacement.
 	 */
-	public void set{{.NameTitle}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
+	public void set{{title .NameNative}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
 		this.{{.NameNative}} = value;
 	}
 
@@ -1173,7 +1201,7 @@ import java.nio.BufferUnderflowException;
 	 * @param value the replacement.
 	 * @return {@code this}.
 	 */
-	public {{$class}} with{{.NameTitle}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
+	public {{$class}} with{{title .NameNative}}({{.TypeNative}}{{if .TypeList}}[]{{end}} value) {
 		this.{{.NameNative}} = value;
 		return this;
 	}
