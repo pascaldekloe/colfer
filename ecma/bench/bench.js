@@ -1,5 +1,4 @@
-global._ = require('./lodash.js')
-const Benchmark = require('./benchmark.js');
+const Benchmark = require('benchmark');
 
 const Colfer = require('./Colfer.js')
 
