@@ -2,7 +2,6 @@ package colfer
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,30 +12,37 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
+// GoMod looks for a Go modules definition.
+// ModDir is the root directory when found.
+// ModPkg is the root package when found.
 func goMod(dir string) (modDir, modPkg string, err error) {
-	path := filepath.Join(dir, "go.mod")
-	text, err := ioutil.ReadFile(path)
+	dir, err = filepath.Abs(dir)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return "", "", err
-		}
-		if dir == "." {
-			dir, err = filepath.Abs(dir)
-			if err != nil {
+		return "", "", err
+	}
+
+	for n := 0; n < 32; n++ {
+		path := filepath.Join(dir, "go.mod")
+		text, err := ioutil.ReadFile(path)
+		if err != nil {
+			if !os.IsNotExist(err) {
 				return "", "", err
 			}
+
+			// The path does not end in a separator
+			// unless it is the root directory.
+			if dir[len(dir)-1] == '/' {
+				break
+			}
+			// try parent directory
+			dir = filepath.Dir(dir)
+			continue
 		}
-		if len(dir) == 1 && dir[0] == filepath.Separator {
-			return "", "", nil // not found
-		}
-		// try parent directory
-		return goMod(filepath.Dir(dir))
+
+		return dir, modfile.ModulePath(text), nil
 	}
-	modPkg = modfile.ModulePath(text)
-	if modPkg == "" {
-		return "", "", fmt.Errorf("%s: no module definition", path)
-	}
-	return dir, modPkg, nil
+
+	return "", "", nil // not found
 }
 
 // GenerateGo writes the code into file "Colfer.go".
@@ -52,7 +58,6 @@ func GenerateGo(basedir string, packages Packages) error {
 	if err != nil {
 		return err
 	}
-	modPrefix := modPkg + "/"
 
 	for _, p := range packages {
 		p.NameNative = p.Name[strings.LastIndexByte(p.Name, '/')+1:]
@@ -93,8 +98,8 @@ func GenerateGo(basedir string, packages Packages) error {
 		}
 
 		path := filepath.Join(basedir, p.Name)
-		if modPkg != "" && strings.HasPrefix(p.Name, modPrefix) {
-			path = filepath.Join(modDir, p.Name[len(modPrefix):])
+		if modPkg != "" && strings.HasPrefix(p.Name, modPkg+"/") {
+			path = filepath.Join(modDir, p.Name[len(modPkg):])
 		}
 		if err := os.MkdirAll(path, 0777); err != nil {
 			return err
