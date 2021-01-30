@@ -26,4 +26,4 @@ clean:
 .PHONY: clean-all
 clean-all: clean
 	rm -f Colfer.js
-	rm -fr node_modules package-lock.json
+	rm -fr node_modules
