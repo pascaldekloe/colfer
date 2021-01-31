@@ -11,6 +11,11 @@ arch:
 
 before_install: nvm install 12
 
+addons:
+  apt:
+    packages:
+    - maven
+
 script: make clean test CC=clang
 
 cache:
