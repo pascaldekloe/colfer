@@ -31,7 +31,7 @@ func goMod(dir string) (modDir, modPkg string, err error) {
 
 			// The path does not end in a separator
 			// unless it is the root directory.
-			if dir[len(dir)-1] == '/' {
+			if dir[len(dir)-1] == filepath.Separator {
 				break
 			}
 			// try parent directory
