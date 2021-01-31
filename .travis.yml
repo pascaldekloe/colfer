@@ -1,6 +1,5 @@
 language: go
 go: "1.14"
-node_js: "12"
 
 os: linux
 dist: focal
@@ -9,6 +8,8 @@ arch:
   - ppc64le
   - s390x
   - arm64
+
+before_install: nvm install 0.12
 
 script: make clean test CC=clang
 
