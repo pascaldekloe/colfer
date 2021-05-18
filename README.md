@@ -14,6 +14,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 #### Language Support
 
 * C, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
+* Dart, a.k.a. dartlang compatible
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
@@ -50,6 +51,8 @@ SYNOPSIS
 	colf [-h]
 	colf [-vf] [-b directory] [-p package] \
 		[-s expression] [-l expression] C [file ...]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] Dart [file ...]
 	colf [-vf] [-b directory] [-p package] [-t files] \
 		[-s expression] [-l expression] Go [file ...]
 	colf [-vf] [-b directory] [-p package] [-t files] \
@@ -59,7 +62,7 @@ SYNOPSIS
 		[-s expression] [-l expression] JavaScript [file ...]
 
 DESCRIPTION
-	The output is source code for either C, Go, Java or JavaScript.
+	The output is source code for either C, Dart, Go, Java or JavaScript.
 
 	For each operand that names a file of a type other than
 	directory, colf reads the content as schema input. For each
@@ -128,7 +131,7 @@ BUGS
 	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
 
 	Text validation is not part of the marshalling and unmarshalling
-	process. C and Go just pass any malformed UTF-8 characters. Java
+	process. C, Dart and Go just pass any malformed UTF-8 characters. Java
 	and JavaScript replace unmappable content with the '?' character
 	(ASCII 63).
 
@@ -188,31 +191,33 @@ type hole struct {
 
 See what the generated code looks like in
 [C](https://gist.github.com/pascaldekloe/05e903f12a4f02a995f71d0c18872b65),
+[Dart](https://gist.github.com/vendelin8/be56b25cf60c06e3b090c2483988e73c),
 [Go](https://gist.github.com/pascaldekloe/786fd46e6e4710c14fee7da1f480c2d4),
 [Java](https://gist.github.com/pascaldekloe/b54326e6b7c5e9f036911a8cbea6ccbf) or
 [JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
 The following table shows how Colfer data types are applied per language.
 
-| Colfer	| C			| Go		| Java		| JavaScript	|
-|:--------------|:----------------------|:--------------|:--------------|:--------------|
-| bool		| char			| bool		| boolean	| Boolean	|
-| uint8		| uint8_t		| uint8		| byte †	| Number	|
-| uint16	| uint16_t		| uint16	| short †	| Number	|
-| uint32	| uint32_t		| uint32	| int †		| Number	|
-| uint64	| uint64_t		| uint64	| long †	| Number ‡	|
-| int32		| int32_t		| int32		| int		| Number	|
-| int64		| int64_t		| int64		| long		| Number ‡	|
-| float32	| float			| float32	| float		| Number	|
-| float64	| double		| float64	| double	| Number	|
-| timestamp	| timespec		| time.Time ††	| time.Instant	| Date + Number	|
-| text		| const char* + size_t	| string	| String	| String	|
-| binary	| uint8_t* + size_t	| []byte	| byte[]	| Uint8Array	|
-| list		| * + size_t		| slice		| array		| Array		|
+| Colfer	| C			| Dart          | Go		| Java		| JavaScript	|
+|:--------------|:----------------------|:--------------|:--------------|:--------------|:--------------|
+| bool		| char			| bool		| boolean	| Boolean	| bool		|
+| uint8		| uint8_t		| int		| uint8		| byte †	| Number	|
+| uint16	| uint16_t		| int		| uint16	| short †	| Number	|
+| uint32	| uint32_t		| int		| uint32	| int †		| Number	|
+| uint64	| uint64_t		| int †		| uint64	| long †	| Number ‡	|
+| int32		| int32_t		| int		| int32		| int		| Number	|
+| int64		| int64_t		| int		| int64		| long		| Number ‡	|
+| float32	| float			| double	| float32	| float		| Number	|
+| float64	| double		| double	| float64	| double	| Number	|
+| timestamp	| timespec		| DateTime ‖	| time.Time §	| time.Instant	| Date + Number	|
+| text		| const char* + size_t	| String	| string	| String	| String	|
+| binary	| uint8_t* + size_t	| Uint8List	| []byte	| byte[]	| Uint8Array	|
+| list		| * + size_t		| List		| slice		| array		| Array		|
 
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
-* †† timezone not preserved
+* § timezone not preserved
+* ‖ microsecond precision
 
 Lists may contain floating points, text, binaries or data structures.
 

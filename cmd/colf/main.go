@@ -110,6 +110,23 @@ func main() {
 			log.Fatalf("%s: snippet not supported with ECMAScript", name)
 		}
 
+	case "dart":
+		report.Print("set-up for Dart")
+		gen = colfer.GenerateDart
+		if *superClass != "" {
+			log.Fatalf("%s: super class not supported with Dart", name)
+		}
+		if *interfaces != "" {
+			log.Fatalf("%s: interfaces not supported with Dart", name)
+		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with Dart", name)
+		}
+		if *snippetFile != "" {
+			log.Fatalf("%s: snippet not supported with Dart", name)
+		}
+		tagOptions.FieldAllow = colfer.TagSingle
+
 	default:
 		log.Fatalf("%s: unsupported language %q", name, lang)
 	}
