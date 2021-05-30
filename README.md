@@ -14,7 +14,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 #### Language Support
 
 * C, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
-* Dart, a.k.a. dartlang compatible
+* Dart, a.k.a. dartlang
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
@@ -62,7 +62,8 @@ SYNOPSIS
 		[-s expression] [-l expression] JavaScript [file ...]
 
 DESCRIPTION
-	The output is source code for either C, Dart, Go, Java or JavaScript.
+	The output is source code for either C, Dart, Go, Java or
+	JavaScript.
 
 	For each operand that names a file of a type other than
 	directory, colf reads the content as schema input. For each
@@ -131,9 +132,9 @@ BUGS
 	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
 
 	Text validation is not part of the marshalling and unmarshalling
-	process. C, Dart and Go just pass any malformed UTF-8 characters. Java
-	and JavaScript replace unmappable content with the '?' character
-	(ASCII 63).
+	process. C, Dart and Go just pass any malformed UTF-8 characters.
+	Java and JavaScript replace unmappable content with the '?'
+	character (ASCII 63).
 
 SEE ALSO
 	protoc(1), flatc(1)

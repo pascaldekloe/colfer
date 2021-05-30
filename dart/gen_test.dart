@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 import 'dart:typed_data';
-import './colfer_gen.dart';
+import './Colfer.dart';
 import 'package:convert/convert.dart';
 
 const MaxUint8 = (1 << 8) - 1;
@@ -63,23 +63,24 @@ List<Golden> newGoldenCases() {
     Golden('0600000000000000017f', O(f64: double.minPositive)),
     Golden('067fefffffffffffff7f', O(f64: double.maxFinite)),
     Golden('067ff80000000000017f', O(f64: double.nan)),
+    // the following 4 DateTime tests differ from the ones in other languages because of the nanosecond precision loss
     Golden('0755ef312a2e5da1007f', O(t: DateTime.fromMicrosecondsSinceEpoch(1441739050777888))),
     Golden('87000007d954159c00000003e87f',
         O(t: DateTime.fromMicrosecondsSinceEpoch(8630000000000000001))),
     Golden('87fffff82457de8000000003e87f',
         O(t: DateTime.fromMicrosecondsSinceEpoch(-8639999999999999999))),
     Golden('87ffffffffffffffff2e5da1007f', O(t: DateTime.fromMicrosecondsSinceEpoch(-222112))),
-    Golden('0801417f', O(s_: 'A')),
-    Golden('080261007f', O(s_: 'a\x00')),
-    Golden('0809c280e0a080f09080807f', O(s_: '\u0080\u0800\u{10000}')),
+    Golden('0801417f', O(s: 'A')),
+    Golden('080261007f', O(s: 'a\x00')),
+    Golden('0809c280e0a080f09080807f', O(s: '\u0080\u0800\u{10000}')),
     Golden(
         '08800120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020207f',
-        O(s_: ' ' * 128)),
-    Golden('0901ff7f', O(a_: Uint8List.fromList([MaxUint8]))),
-    Golden('090202007f', O(a_: Uint8List.fromList([2, 0]))),
+        O(s: ' ' * 128)),
+    Golden('0901ff7f', O(a: Uint8List.fromList([MaxUint8]))),
+    Golden('090202007f', O(a: Uint8List.fromList([2, 0]))),
     Golden(
         '09c0010909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909097f',
-        O(a_: tmp)),
+        O(a: tmp)),
     Golden('0a7f7f', O(o: O())),
     Golden('0a007f7f', O(o: O(b: true))),
     Golden('0b01007f7f', O(os: [O(b: true)])),
@@ -104,19 +105,21 @@ void main() {
   var cases = newGoldenCases();
   group('Marshal', () {
     for (final gold in cases) {
-      var buf = BytesBuilder(copy: false);
-      gold.object.marshal(buf);
-      test('marsaled binary should match golden string', () {
+      var buf = Uint8List(gold.object.marshalLen());
+      int size = gold.object.marshalTo(buf);
+      test('marshaled binary should match golden mapping', () {
         List<int> list = hex.decode(gold.serial);
         Uint8List bytes = Uint8List.fromList(list);
-        expect(buf.toBytes(), bytes);
+        buf = Uint8List.view(buf.buffer, 0, size);
+        expect(buf, bytes);
       });
     }
   });
 
   group('Unmarshal', () {
-    for (final gold in cases) {
-      test('struct should match golden string', () {
+    // getting separate cases because of the local changes
+    for (final gold in newGoldenCases()) {
+      test('struct should match golden mapping', () {
         List<int> list = hex.decode(gold.serial);
         Uint8List bytes = Uint8List.fromList(list);
         var obj = O();
@@ -135,7 +138,7 @@ void main() {
     }
   });
 
-  group('Unmarshal RangeError', () {
+  group('Unmarshal Incomplete', () {
     for (final gold in cases) {
       test('should fail with RangeError', () {
         List<int> list = hex.decode(gold.serial);
@@ -147,12 +150,9 @@ void main() {
           } on RangeError {
             continue;
           } catch (e) {
-            print('something else than expected RangeError');
-            expect(true, false);
-            continue;
+            fail('something else then expected RangeError');
           }
-          print('should break with RangeError, but it doesn\'t');
-          expect(true, false);
+          fail('should break with RangeError, but it doesn\'t');
         }
       });
     }

@@ -29,7 +29,7 @@ import java.util.Set;
 public class CompileMojo extends AbstractMojo {
 
 /**
- * The output is source code for either C, Go, Java or JavaScript.
+ * The output is source code for either C, Dart, Go, Java or JavaScript.
  */
 @Parameter(defaultValue="Java", required=true)
 String lang;
