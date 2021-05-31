@@ -150,7 +150,7 @@ void main() {
           } on RangeError {
             continue;
           } catch (e) {
-            fail('something else then expected RangeError');
+            fail('want a RangeError, got: $e');
           }
           fail('should break with RangeError, but it doesn\'t');
         }

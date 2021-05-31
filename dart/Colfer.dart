@@ -149,9 +149,8 @@ class O {
         f64s = f64s ?? Float64List(0);
 
   /// Returns an over estimatation of marshal length.
-
-  /// Throws [Exception] if the size of a list exceeds [colferListMax],
-  /// or if a text, binary, or the estimation exceeds [colferSizeMax].
+  ///
+  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
   /// Returns an over estimated length for the required buffer. String
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
@@ -234,9 +233,6 @@ class O {
       int _x = s.length;
       if (_x != 0) {
         _x *= 4;
-        if (_x > colferSizeMax) {
-          throw Exception('colfer: gen.o.s size $_x exceeds $colferSizeMax bytes');
-        }
         for (_l += _x + 2; _x >= 0x80; _l++) {
           _x >>= 7;
         }
@@ -245,9 +241,6 @@ class O {
     {
       int _x = a.length;
       if (_x != 0) {
-        if (_x > colferSizeMax) {
-          throw Exception('colfer: gen.o.a size $_x exceeds $colferSizeMax bytes');
-        }
         for (_l += _x + 2; _x >= 0x80; _l++) {
           _x >>= 7;
         }
@@ -262,7 +255,7 @@ class O {
       int _x = os.length;
       if (_x != 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.os size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.os', 'colfer');
         }
         for (_l += 2; _x >= 0x80; _l++) {
           _x >>= 7;
@@ -274,16 +267,13 @@ class O {
           }
           _l += _v.marshalLen();
         }
-        if (_l > colferSizeMax) {
-          throw Exception('colfer: gen.o.os size $_l exceeds $colferSizeMax bytes');
-        }
       }
     }
     {
       int _x = ss.length;
       if (_x != 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.ss size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.ss', 'colfer');
         }
         for (_l += 2; _x >= 0x80; _l++) {
           _x >>= 7;
@@ -291,15 +281,9 @@ class O {
         for (final _a in ss) {
           _x = _a.length;
           _x *= 4;
-          if (_x > colferSizeMax) {
-            throw Exception('colfer: gen.o.ss size $_x exceeds $colferSizeMax bytes');
-          }
           for (_l += _x + 1; _x >= 0x80; _l++) {
             _x >>= 7;
           }
-        }
-        if (_l >= colferSizeMax) {
-          throw Exception('colfer: gen.o.ss size $_l exceeds $colferSizeMax bytes');
         }
       }
     }
@@ -307,22 +291,16 @@ class O {
       int _x = as_0.length;
       if (_x != 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.as size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.as', 'colfer');
         }
         for (_l += 2; _x >= 0x80; _l++) {
           _x >>= 7;
         }
         for (final _a in as_0) {
           _x = _a.length;
-          if (_x > colferSizeMax) {
-            throw Exception('colfer: gen.o.as size $_x exceeds $colferSizeMax bytes');
-          }
           for (_l += _x + 1; _x >= 0x80; _l++) {
             _x >>= 7;
           }
-        }
-        if (_l >= colferSizeMax) {
-          throw Exception('colfer: gen.o.as size $_l exceeds $colferSizeMax bytes');
         }
       }
     }
@@ -342,7 +320,7 @@ class O {
       int _x = f32s.length;
       if (_x != 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.f32s size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.f32s', 'colfer');
         }
         for (_l += 2 + _x * 4; _x >= 0x80; _l++) {
           _x >>= 7;
@@ -353,7 +331,7 @@ class O {
       int _x = f64s.length;
       if (_x != 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.f64s size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.f64s', 'colfer');
         }
         for (_l += 2 + _x * 8; _x >= 0x80; _l++) {
           _x >>= 7;
@@ -361,16 +339,17 @@ class O {
       }
     }
     if (_l > colferSizeMax) {
-      throw Exception('colfer: gen.o size $_l exceeds $colferSizeMax bytes');
+      return colferSizeMax;
     }
     return _l;
   }
 
   /// Encodes as Colfer into [_buf].
-
-  /// Throws [Exception] if uint8, uint16, uint32 or int32 value overflows, or
-  /// when the size of a list exceeds [colferListMax], or is a text, binary, or
-  /// [_buf] exceeds [colferSizeMax]. Returns the number of bytes written.
+  ///
+  /// Throws [RangeError] if uint8, uint16, uint32 or int32 value overflows or
+  /// underflows, or when the size of a list exceeds [colferListMax], or if a
+  /// text, binary, or [_buf] exceeds [colferSizeMax]. Returns the number of
+  /// bytes written.
   int marshalTo(Uint8List _buf) {
     var _view = _buf.buffer.asByteData();
     int _i = 0;
@@ -384,7 +363,7 @@ class O {
       int _x = u32;
       if (_x != 0) {
         if (_x > 4294967295 || _x < 0) {
-          throw Exception('colfer: $_x out of reach: u32');
+          throw RangeError.range(_x, 0, 4294967295, 'gen.o.u32', 'colfer');
         }
         if (_x < 0x200000) {
           _buf[_i] = 1;
@@ -428,7 +407,7 @@ class O {
       if (_x != 0) {
         if (_x < 0) {
           if (_x < -2147483648) {
-            throw Exception('colfer: $_x out of reach: i32');
+            throw RangeError.range(_x, -2147483648, null, 'gen.o.i32', 'colfer');
           }
           _buf[_i] = 3 | 128;
           _i++;
@@ -442,7 +421,7 @@ class O {
           _i++;
         } else {
           if (_x > 2147483647) {
-            throw Exception('colfer: $_x out of reach: i32');
+            throw RangeError.range(_x, null, 2147483647, 'gen.o.i32', 'colfer');
           }
           _buf[_i] = 3;
           _i++;
@@ -579,7 +558,7 @@ class O {
       int _x = os.length;
       if (_x > 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.os size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.os', 'colfer');
         }
         _buf[_i] = 11;
         _i++;
@@ -600,7 +579,7 @@ class O {
       int _x = ss.length;
       if (_x > 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.ss size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.ss', 'colfer');
         }
         _buf[_i] = 12;
         _i++;
@@ -629,7 +608,7 @@ class O {
       int _x = as_0.length;
       if (_x > 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.as size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.as', 'colfer');
         }
         _buf[_i] = 13;
         _i++;
@@ -657,7 +636,7 @@ class O {
     {
       if (u8 != 0) {
         if (u8 > 255 || u8 < 0) {
-          throw Exception('colfer: $u8 out of reach: u8');
+          throw RangeError.range(u8, 0, 255, 'gen.o.u8', 'colfer');
         }
         _buf[_i] = 14;
         _buf[_i + 1] = u8;
@@ -667,7 +646,7 @@ class O {
     {
       if (u16 != 0) {
         if (u16 > 65535 || u16 < 0) {
-          throw Exception('colfer: $u16 out of reach: u16');
+          throw RangeError.range(u16, 0, 65535, 'gen.o.u16', 'colfer');
         }
         if (u16 < 256) {
           _buf[_i] = 15 | 128;
@@ -685,7 +664,7 @@ class O {
       int _x = f32s.length;
       if (_x > 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.f32s size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.f32s', 'colfer');
         }
         _buf[_i] = 16;
         _i++;
@@ -711,7 +690,7 @@ class O {
       int _x = f64s.length;
       if (_x > 0) {
         if (_x > colferListMax) {
-          throw Exception('colfer: gen.o.f64s size $_x exceeds $colferListMax');
+          throw RangeError.range(_x, null, colferListMax, 'gen.o.f64s', 'colfer');
         }
         _buf[_i] = 17;
         _i++;
@@ -737,17 +716,18 @@ class O {
 
     _buf[_i] = 127;
     _i++;
-    if (_i >= colferSizeMax) {
-      throw Exception('colfer: gen.o size $_i exceeds $colferSizeMax bytes');
+    if (_i > colferSizeMax) {
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.o', 'colfer');
     }
     return _i;
   }
 
   /// Decodes [_data] as Colfer.
-
-  /// Throws [RangeError] if there is an unexpexted end of data, or [Exception]
-  /// if a list exceeds [colferListMax], or if a text, binary or [_data] exceeds
-  /// [colferSizeMax]. Returns the number of bytes read.
+  ///
+  /// Throws [RangeError] if there is an unexpexted end of data, if a list
+  /// exceeds [colferListMax], or if a text, binary or [_data] exceeds
+  /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
+  /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
     var _view = ByteData.view(_data.buffer);
@@ -932,7 +912,7 @@ class O {
         }
       }
       if (_size < 0 || _size > colferSizeMax) {
-        throw Exception('colfer: gen.o.s size $_size exceeds $colferSizeMax bytes');
+        throw RangeError.range(_size, 0, colferSizeMax, 'gen.o.s', 'colfer');
       }
 
       int _s = _i;
@@ -958,7 +938,7 @@ class O {
         }
       }
       if (_size < 0 || _size > colferSizeMax) {
-        throw Exception('colfer: gen.o.a size $_size exceeds $colferSizeMax bytes');
+        throw RangeError.range(_size, 0, colferSizeMax, 'gen.o.a', 'colfer');
       }
 
       int _start = _i;
@@ -992,7 +972,7 @@ class O {
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: gen.o.os size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, 'gen.o.os', 'colfer');
       }
 
       if (os.length != _c) {
@@ -1022,7 +1002,7 @@ class O {
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: gen.o.ss size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, 'gen.o.ss', 'colfer');
       }
 
       if (ss.length != _c) {
@@ -1044,7 +1024,7 @@ class O {
           }
         }
         if (_size < 0 || _size > colferSizeMax) {
-          throw Exception('colfer: gen.o.ss size $_size exceeds $colferSizeMax bytes');
+          throw RangeError.range(_size, 0, colferSizeMax, 'gen.o.ss', 'colfer');
         }
 
         int _s = _i;
@@ -1071,7 +1051,7 @@ class O {
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: gen.o.as size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, 'gen.o.as', 'colfer');
       }
 
       if (as_0.length != _c) {
@@ -1093,7 +1073,7 @@ class O {
           }
         }
         if (_size < 0 || _size > colferSizeMax) {
-          throw Exception('colfer: gen.o.as size $_size exceeds $colferSizeMax bytes');
+          throw RangeError.range(_size, 0, colferSizeMax, 'gen.o.as', 'colfer');
         }
 
         int _s = _i;
@@ -1136,7 +1116,7 @@ class O {
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: gen.o.f32s size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, 'gen.o.f32s', 'colfer');
       }
 
       if (f32s.length != _c) {
@@ -1166,7 +1146,7 @@ class O {
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: gen.o.f64s size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, 'gen.o.f64s', 'colfer');
       }
 
       if (f64s.length != _c) {
@@ -1181,10 +1161,10 @@ class O {
     }
 
     if (_header != 127) {
-      throw Exception('colfer: unknown header $_header at byte ${_i - 1}');
+      throw StateError('colfer: unknown header $_header at byte ${_i - 1}');
     }
     if (_i > colferSizeMax) {
-      throw Exception('colfer: gen.o size $_i exceeds $colferSizeMax bytes');
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.o', 'colfer');
     }
     return _i;
   }
@@ -1213,9 +1193,8 @@ class DromedaryCase {
   });
 
   /// Returns an over estimatation of marshal length.
-
-  /// Throws [Exception] if the size of a list exceeds [colferListMax],
-  /// or if a text, binary, or the estimation exceeds [colferSizeMax].
+  ///
+  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
   /// Returns an over estimated length for the required buffer. String
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
@@ -1224,26 +1203,23 @@ class DromedaryCase {
       int _x = pascalCase.length;
       if (_x != 0) {
         _x *= 4;
-        if (_x > colferSizeMax) {
-          throw Exception(
-              'colfer: gen.dromedaryCase.PascalCase size $_x exceeds $colferSizeMax bytes');
-        }
         for (_l += _x + 2; _x >= 0x80; _l++) {
           _x >>= 7;
         }
       }
     }
     if (_l > colferSizeMax) {
-      throw Exception('colfer: gen.dromedaryCase size $_l exceeds $colferSizeMax bytes');
+      return colferSizeMax;
     }
     return _l;
   }
 
   /// Encodes as Colfer into [_buf].
-
-  /// Throws [Exception] if uint8, uint16, uint32 or int32 value overflows, or
-  /// when the size of a list exceeds [colferListMax], or is a text, binary, or
-  /// [_buf] exceeds [colferSizeMax]. Returns the number of bytes written.
+  ///
+  /// Throws [RangeError] if uint8, uint16, uint32 or int32 value overflows or
+  /// underflows, or when the size of a list exceeds [colferListMax], or if a
+  /// text, binary, or [_buf] exceeds [colferSizeMax]. Returns the number of
+  /// bytes written.
   int marshalTo(Uint8List _buf) {
     int _i = 0;
     {
@@ -1266,17 +1242,18 @@ class DromedaryCase {
 
     _buf[_i] = 127;
     _i++;
-    if (_i >= colferSizeMax) {
-      throw Exception('colfer: gen.dromedaryCase size $_i exceeds $colferSizeMax bytes');
+    if (_i > colferSizeMax) {
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.dromedaryCase', 'colfer');
     }
     return _i;
   }
 
   /// Decodes [_data] as Colfer.
-
-  /// Throws [RangeError] if there is an unexpexted end of data, or [Exception]
-  /// if a list exceeds [colferListMax], or if a text, binary or [_data] exceeds
-  /// [colferSizeMax]. Returns the number of bytes read.
+  ///
+  /// Throws [RangeError] if there is an unexpexted end of data, if a list
+  /// exceeds [colferListMax], or if a text, binary or [_data] exceeds
+  /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
+  /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
     _header = _data[_i];
@@ -1298,8 +1275,7 @@ class DromedaryCase {
         }
       }
       if (_size < 0 || _size > colferSizeMax) {
-        throw Exception(
-            'colfer: gen.dromedaryCase.PascalCase size $_size exceeds $colferSizeMax bytes');
+        throw RangeError.range(_size, 0, colferSizeMax, 'gen.dromedaryCase.PascalCase', 'colfer');
       }
 
       int _s = _i;
@@ -1310,10 +1286,10 @@ class DromedaryCase {
     }
 
     if (_header != 127) {
-      throw Exception('colfer: unknown header $_header at byte ${_i - 1}');
+      throw StateError('colfer: unknown header $_header at byte ${_i - 1}');
     }
     if (_i > colferSizeMax) {
-      throw Exception('colfer: gen.dromedaryCase size $_i exceeds $colferSizeMax bytes');
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.dromedaryCase', 'colfer');
     }
     return _i;
   }
@@ -1343,9 +1319,8 @@ class EmbedO {
   });
 
   /// Returns an over estimatation of marshal length.
-
-  /// Throws [Exception] if the size of a list exceeds [colferListMax],
-  /// or if a text, binary, or the estimation exceeds [colferSizeMax].
+  ///
+  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
   /// Returns an over estimated length for the required buffer. String
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
@@ -1356,16 +1331,17 @@ class EmbedO {
       }
     }
     if (_l > colferSizeMax) {
-      throw Exception('colfer: gen.EmbedO size $_l exceeds $colferSizeMax bytes');
+      return colferSizeMax;
     }
     return _l;
   }
 
   /// Encodes as Colfer into [_buf].
-
-  /// Throws [Exception] if uint8, uint16, uint32 or int32 value overflows, or
-  /// when the size of a list exceeds [colferListMax], or is a text, binary, or
-  /// [_buf] exceeds [colferSizeMax]. Returns the number of bytes written.
+  ///
+  /// Throws [RangeError] if uint8, uint16, uint32 or int32 value overflows or
+  /// underflows, or when the size of a list exceeds [colferListMax], or if a
+  /// text, binary, or [_buf] exceeds [colferSizeMax]. Returns the number of
+  /// bytes written.
   int marshalTo(Uint8List _buf) {
     int _i = 0;
     {
@@ -1378,17 +1354,18 @@ class EmbedO {
 
     _buf[_i] = 127;
     _i++;
-    if (_i >= colferSizeMax) {
-      throw Exception('colfer: gen.EmbedO size $_i exceeds $colferSizeMax bytes');
+    if (_i > colferSizeMax) {
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.EmbedO', 'colfer');
     }
     return _i;
   }
 
   /// Decodes [_data] as Colfer.
-
-  /// Throws [RangeError] if there is an unexpexted end of data, or [Exception]
-  /// if a list exceeds [colferListMax], or if a text, binary or [_data] exceeds
-  /// [colferSizeMax]. Returns the number of bytes read.
+  ///
+  /// Throws [RangeError] if there is an unexpexted end of data, if a list
+  /// exceeds [colferListMax], or if a text, binary or [_data] exceeds
+  /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
+  /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
     _header = _data[_i];
@@ -1403,10 +1380,10 @@ class EmbedO {
     }
 
     if (_header != 127) {
-      throw Exception('colfer: unknown header $_header at byte ${_i - 1}');
+      throw StateError('colfer: unknown header $_header at byte ${_i - 1}');
     }
     if (_i > colferSizeMax) {
-      throw Exception('colfer: gen.EmbedO size $_i exceeds $colferSizeMax bytes');
+      throw RangeError.range(_i, null, colferSizeMax, 'gen.EmbedO', 'colfer');
     }
     return _i;
   }

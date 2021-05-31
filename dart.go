@@ -242,16 +242,15 @@ class {{.NameNative}} {
 {{- end}};
 
   /// Returns an over estimatation of marshal length.
-
-  /// Throws [Exception] if the size of a list exceeds [colferListMax],
-  /// or if a text, binary, or the estimation exceeds [colferSizeMax].
+  ///
+  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
   /// Returns an over estimated length for the required buffer. String
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
     int _l = 1;
 {{range .Fields}} { {{template "marshal-len" .}} } {{end}}
 	if (_l > colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_l exceeds $colferSizeMax bytes');
+      return colferSizeMax;
 	}
 	return _l;
 }
@@ -324,7 +323,7 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
   int _x = {{.NameNative}}.length;
   if (_x != 0) {
     if (_x > colferListMax) {
-      throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
     }
     for (_l += 2+_x*4; _x >= 0x80; _l++) {
       _x >>= 7;
@@ -340,7 +339,7 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
   int _x = {{.NameNative}}.length;
   if (_x != 0) {
     if (_x > colferListMax) {
-      throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
     }
     for (_l += 2+_x*8; _x >= 0x80; _l++) {
       _x >>= 7;
@@ -367,7 +366,7 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
   if (_x != 0) {
 {{- if .TypeList}}
     if (_x > colferListMax) {
-      throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
     }
     for (_l += 2; _x >= 0x80; _l++) {
       _x >>= 7;
@@ -377,23 +376,14 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
 {{- if eq .Type "text"}}
       _x *= 4;
 {{- end}}
-      if (_x > colferSizeMax) {
-        throw Exception('colfer: {{.String}} size $_x exceeds $colferSizeMax bytes');
-      }
       for (_l += _x+1; _x >= 0x80; _l++) {
         _x >>= 7;
       }
-    }
-    if (_l >= colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_l exceeds $colferSizeMax bytes');
     }
 {{- else}}
 {{- if eq .Type "text"}}
     _x *= 4;
 {{- end}}
-    if (_x > colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_x exceeds $colferSizeMax bytes');
-    }
     for (_l += _x+2; _x >= 0x80; _l++) {
       _x >>= 7;
     }
@@ -403,7 +393,7 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
   int _x = {{.NameNative}}.length;
   if (_x != 0) {
     if (_x > colferListMax) {
-      throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
     }
     for (_l += 2; _x >= 0x80; _l++) {
       _x >>= 7;
@@ -415,9 +405,6 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
       }
       _l += _v.marshalLen();
     }
-    if (_l > colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_l exceeds $colferSizeMax bytes');
-    }
   }
 {{else}}
   if ({{.NameNative}} != null) {
@@ -427,10 +414,11 @@ const dartMarshalLen = `{{if eq .Type "bool"}}
 
 const dartMarshal = `
   /// Encodes as Colfer into [_buf].
-
-  /// Throws [Exception] if uint8, uint16, uint32 or int32 value overflows, or
-  /// when the size of a list exceeds [colferListMax], or is a text, binary, or
-  /// [_buf] exceeds [colferSizeMax]. Returns the number of bytes written.
+  ///
+  /// Throws [RangeError] if uint8, uint16, uint32 or int32 value overflows or
+  /// underflows, or when the size of a list exceeds [colferListMax], or if a
+  /// text, binary, or [_buf] exceeds [colferSizeMax]. Returns the number of
+  /// bytes written.
   int marshalTo(Uint8List _buf) {
 {{- if or .HasFloat .HasUint32 .HasTimestamp}}
     var _view = _buf.buffer.asByteData();
@@ -444,7 +432,7 @@ const dartMarshal = `
 {{else if eq .Type "uint8"}}
     if ({{.NameNative}} != 0) {
       if ({{.NameNative}} > 255 || {{.NameNative}} < 0) {
-        throw Exception('colfer: ${{.NameNative}} out of reach: {{.NameNative}}');
+        throw RangeError.range({{.NameNative}}, 0, 255, '{{.String}}', 'colfer');
       }
       _buf[_i] = {{.Index}};
       _buf[_i+1] = {{.NameNative}};
@@ -453,7 +441,7 @@ const dartMarshal = `
 {{else if eq .Type "uint16"}}
     if ({{.NameNative}} != 0) {
       if ({{.NameNative}} > 65535 || {{.NameNative}} < 0) {
-        throw Exception('colfer: ${{.NameNative}} out of reach: {{.NameNative}}');
+        throw RangeError.range({{.NameNative}}, 0, 65535, '{{.String}}', 'colfer');
       }
       if ({{.NameNative}} < 256) {
         _buf[_i] = {{.Index}} | 128;
@@ -470,7 +458,7 @@ const dartMarshal = `
     int _x = {{.NameNative}};
     if (_x != 0) {
       if (_x > 4294967295 || _x < 0) {
-        throw Exception('colfer: $_x out of reach: {{.NameNative}}');
+        throw RangeError.range(_x, 0, 4294967295, '{{.String}}', 'colfer');
       }
       if (_x < 0x200000) {
         _buf[_i] = {{.Index}};
@@ -512,7 +500,7 @@ const dartMarshal = `
     if (_x != 0) {
       if (_x < 0) {
         if (_x < -2147483648) {
-          throw Exception('colfer: $_x out of reach: {{.NameNative}}');
+          throw RangeError.range(_x, -2147483648, null, '{{.String}}', 'colfer');
         }
         _buf[_i] = {{.Index}} | 128;
         _i++;
@@ -526,7 +514,7 @@ const dartMarshal = `
         _i++;
       } else {
         if (_x > 2147483647) {
-          throw Exception('colfer: $_x out of reach: {{.NameNative}}');
+          throw RangeError.range(_x, null, 2147483647, '{{.String}}', 'colfer');
         }
         _buf[_i] = {{.Index}};
         _i++;
@@ -575,7 +563,7 @@ const dartMarshal = `
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
       if (_x > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+        throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
       }
       _buf[_i] = {{.Index}};
       _i++;
@@ -613,7 +601,7 @@ const dartMarshal = `
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
       if (_x > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+        throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
       }
       _buf[_i] = {{.Index}};
       _i++;
@@ -673,7 +661,7 @@ const dartMarshal = `
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
       if (_x > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+        throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
       }
       _buf[_i] = {{.Index}};
       _i++;
@@ -726,7 +714,7 @@ const dartMarshal = `
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
       if (_x > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_x exceeds $colferListMax');
+        throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
       }
       _buf[_i] = {{.Index}};
       _i++;
@@ -753,8 +741,8 @@ const dartMarshal = `
 
     _buf[_i] = 127;
     _i++;
-    if (_i >= colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_i exceeds $colferSizeMax bytes');
+    if (_i > colferSizeMax) {
+      throw RangeError.range(_i, null, colferSizeMax, '{{.String}}', 'colfer');
     }
     return _i;
   }
@@ -762,10 +750,11 @@ const dartMarshal = `
 
 const dartUnmarshal = `
   /// Decodes [_data] as Colfer.
-
-  /// Throws [RangeError] if there is an unexpexted end of data, or [Exception]
-  /// if a list exceeds [colferListMax], or if a text, binary or [_data] exceeds
-  /// [colferSizeMax]. Returns the number of bytes read.
+  ///
+  /// Throws [RangeError] if there is an unexpexted end of data, if a list
+  /// exceeds [colferListMax], or if a text, binary or [_data] exceeds
+  /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
+  /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
 {{- if or .HasTimestamp .HasFloat .HasUint32}}
@@ -939,7 +928,7 @@ const dartUnmarshal = `
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, '{{.String}}', 'colfer');
       }
 
       if ({{.NameNative}}.length != _c) {
@@ -974,7 +963,7 @@ const dartUnmarshal = `
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, '{{.String}}', 'colfer');
       }
 
       if ({{.NameNative}}.length != _c) {
@@ -1025,7 +1014,7 @@ const dartUnmarshal = `
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, '{{.String}}', 'colfer');
       }
 
       if ({{.NameNative}}.length != _c) {
@@ -1047,7 +1036,7 @@ const dartUnmarshal = `
           }
         }
         if (_size < 0 || _size > colferSizeMax) {
-          throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
+          throw RangeError.range(_size, 0, colferSizeMax, '{{.String}}', 'colfer');
         }
 
         int _s = _i;
@@ -1070,7 +1059,7 @@ const dartUnmarshal = `
         }
       }
       if (_size < 0 || _size > colferSizeMax) {
-        throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
+        throw RangeError.range(_size, 0, colferSizeMax, '{{.String}}', 'colfer');
       }
 
       int _s = _i;
@@ -1098,7 +1087,7 @@ const dartUnmarshal = `
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, '{{.String}}', 'colfer');
       }
 
       if ({{.NameNative}}.length != _c) {
@@ -1120,7 +1109,7 @@ const dartUnmarshal = `
           }
         }
         if (_size < 0 || _size > colferSizeMax) {
-          throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
+          throw RangeError.range(_size, 0, colferSizeMax, '{{.String}}', 'colfer');
         }
 
         int _s = _i;
@@ -1143,7 +1132,7 @@ const dartUnmarshal = `
         }
       }
       if (_size < 0 || _size > colferSizeMax) {
-        throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
+        throw RangeError.range(_size, 0, colferSizeMax, '{{.String}}', 'colfer');
       }
 
       int _start = _i;
@@ -1170,7 +1159,7 @@ const dartUnmarshal = `
         }
       }
       if (_c < 0 || _c > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
+        throw RangeError.range(_c, 0, colferListMax, '{{.String}}', 'colfer');
       }
 
       if ({{.NameNative}}.length != _c) {
@@ -1193,10 +1182,10 @@ const dartUnmarshal = `
     }
 {{end}}{{end}}
     if (_header != 127) {
-      throw Exception('colfer: unknown header $_header at byte ${_i - 1}');
+      throw StateError('colfer: unknown header $_header at byte ${_i - 1}');
     }
     if (_i > colferSizeMax) {
-      throw Exception('colfer: {{.String}} size $_i exceeds $colferSizeMax bytes');
+      throw RangeError.range(_i, null, colferSizeMax, '{{.String}}', 'colfer');
     }
     return _i;
   }
