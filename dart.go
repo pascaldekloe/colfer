@@ -210,7 +210,7 @@ class {{.NameNative}} {
 {{- end}};
 
   {{.NameNative}}({
-{{- range .Fields -}}
+{{- range .Fields}}
 {{- if and .TypeList (or (eq .Type "text") (eq .Type "binary") (eq .Type "bool") (eq .Type "timestamp") .TypeRef)}}List<{{.TypeNative }}>? {{.NameNative}}
 {{- else if or .TypeList (and (not .TypeList) (eq .Type "binary"))}}{{.TypeNative}}? {{.NameNative}}
 {{- else if eq .Type "bool"}}this.{{.NameNative}} = false
@@ -223,7 +223,7 @@ class {{.NameNative}} {
 })
 {{- if or .HasList .HasBinary}}:
 {{- $first := true}}
-{{- range .Fields -}}
+{{- range .Fields}}
 {{- if .TypeList}}
 {{- if $first}}{{$first = false}}
 {{- else}},
@@ -768,20 +768,59 @@ const dartUnmarshal = `
   /// [colferSizeMax]. Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
-{{- if or .HasTimestamp .HasFloat .HasUint32 -}}
+{{- if or .HasTimestamp .HasFloat .HasUint32}}
     var _view = ByteData.view(_data.buffer);
-{{- end -}}
-
-    int _nextData() {
-      int _dataI = _data[_i];
+{{- end}}
+    _header = _data[_i];
+    _i++;
+{{range .Fields}}{{if eq .Type "bool"}}
+    if (_header == {{.Index}}) {
+      {{.NameNative}} = true;
+      _header = _data[_i];
       _i++;
-      return _dataI;
     }
-
-    _header = _nextData();
-{{- if or .HasText .HasBinary .HasFloatList .HasUint32 .HasInt32 .HasRefList}}
-
-    int _readVarint() {
+{{else if eq .Type "uint8"}}
+    if (_header == {{.Index}}) {
+      {{.NameNative}} = _data[_i];
+      _header = _data[_i+1];
+      _i += 2;
+    }
+{{else if eq .Type "uint16"}}
+    if (_header == {{.Index}}) {
+      {{.NameNative}} = (_data[_i] << 8) | _data[_i+1];
+      _header = _data[_i+2];
+      _i += 3;
+    } else if (_header == ({{.Index}} | 128)) {
+      {{.NameNative}} = _data[_i];
+      _header = _data[_i+1];
+      _i += 2;
+    }
+{{else if eq .Type "uint32"}}
+    if (_header == {{.Index}}) {
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      {{.NameNative}} = _c;
+      _header = _data[_i];
+      _i++;
+    } else if (_header == ({{.Index}} | 128)) {
+      {{.NameNative}} = _view.getUint32(_i);
+      _header = _data[_i+4];
+      _i += 5;
+    }
+{{else if eq .Type "uint64"}}
+    if (_header == {{.Index}}) {
       int _c = _data[_i];
       _i++;
       if (_c >= 0x80) {
@@ -796,104 +835,161 @@ const dartUnmarshal = `
           _c |= (_b & 0x7f) << _shift;
         }
       }
-      return _c;
-    }
-{{- end -}}
-{{range .Fields}}{{if eq .Type "bool"}}
-    if (_header == {{.Index}}) {
-      {{.NameNative}} = true;
-      _header = _nextData();
-    }
-{{else if eq .Type "uint8"}}
-    if (_header == {{.Index}}) {
-      {{.NameNative}} = _nextData();
-      _header = _nextData();
-    }
-{{else if eq .Type "uint16"}}
-    if (_header == {{.Index}}) {
-      {{.NameNative}} = (_nextData() << 8) | _nextData();
-      _header = _nextData();
-    } else if (_header == ({{.Index}} | 128)) {
-      {{.NameNative}} = _nextData();
-      _header = _nextData();
-    }
-{{else if eq .Type "uint32"}}
-    if (_header == {{.Index}}) {
-      {{.NameNative}} = _readVarint();
-      _header = _nextData();
-    } else if (_header == ({{.Index}} | 128)) {
-      {{.NameNative}} = _view.getUint32(_i);
-      _i += 4;
-      _header = _nextData();
-    }
-{{else if eq .Type "uint64"}}
-    if (_header == {{.Index}}) {
-      {{.NameNative}} = _readVarint();
-      _header = _nextData();
+      {{.NameNative}} = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == ({{.Index}} | 128)) {
       int _v = _view.getUint32(_i) * 0x100000000;
       _v += _view.getUint32(_i + 4);
       {{.NameNative}} = _v;
-      _i += 8;
-      _header = _nextData();
+      _header = _data[_i+8];
+      _i += 9;
     }
 {{else if eq .Type "int32"}}
     if (_header == {{.Index}}) {
-      {{.NameNative}} = _readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      {{.NameNative}} = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == ({{.Index}} | 128)) {
-      {{.NameNative}} = -1 * _readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      {{.NameNative}} = -1 * _c;
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "int64"}}
     if (_header == {{.Index}}) {
-      {{.NameNative}} = _readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      {{.NameNative}} = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == ({{.Index}} | 128)) {
-      {{.NameNative}} = -1 * _readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      {{.NameNative}} = -1 * _c;
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "float32"}}
     if (_header == {{.Index}}) {
  {{- if .TypeList}}
-      int _v = _readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
       }
 
-      if ({{.NameNative}}.length != _v) {
-        {{.NameNative}} = Float32List(_v);
+      if ({{.NameNative}}.length != _c) {
+        {{.NameNative}} = Float32List(_c);
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        {{.NameNative}}[_vi] = _view.getFloat32(_i);
+      for (int _ci = 0; _ci < _c; _ci++) {
+        {{.NameNative}}[_ci] = _view.getFloat32(_i);
         _i += 4;
       }
  {{- else}}
       {{.NameNative}} = _view.getFloat32(_i);
       _i += 4;
  {{- end}}
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "float64"}}
     if (_header == {{.Index}}) {
  {{- if .TypeList}}
-      int _v = _readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
       }
 
-      if ({{.NameNative}}.length != _v) {
-        {{.NameNative}} = Float64List(_v);
+      if ({{.NameNative}}.length != _c) {
+        {{.NameNative}} = Float64List(_c);
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        {{.NameNative}}[_vi] = _view.getFloat64(_i);
+      for (int _ci = 0; _ci < _c; _ci++) {
+        {{.NameNative}}[_ci] = _view.getFloat64(_i);
         _i += 8;
       }
  {{- else}}
       {{.NameNative}} = _view.getFloat64(_i);
       _i += 8;
  {{- end}}
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "timestamp"}}
     if (_header == {{.Index}}) {
@@ -901,37 +997,78 @@ const dartUnmarshal = `
       int _us = _view.getUint32(_i + 4) ~/ 1000;
       {{.NameNative}} = DateTime.fromMicrosecondsSinceEpoch(_s * 1000000 + _us);
       _i += 8;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     } else if (_header == ({{.Index}} | 128)) {
       int _s = _view.getInt64(_i);
       int _us = _view.getUint32(_i + 8) ~/ 1000;
       {{.NameNative}} = DateTime.fromMicrosecondsSinceEpoch(_s * 1000000 + _us);
       _i += 12;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "text"}}
     if (_header == {{.Index}}) {
  {{- if .TypeList}}
-      int _v = _readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
       }
 
-      if ({{.NameNative}}.length != _v) {
-        {{.NameNative}} = List<String>.filled(_v, '');
+      if ({{.NameNative}}.length != _c) {
+        {{.NameNative}} = List<String>.filled(_c, '');
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        int _size = _readVarint();
+      for (int _ci = 0; _ci < _c; _ci++) {
+        int _size = _data[_i];
+        _i++;
+        if (_size >= 0x80) {
+          _size &= 0x7f;
+          for (int _shift = 7; ; _shift += 7) {
+            int _b = _data[_i];
+            _i++;
+            if (_b < 0x80 || _shift == 56) {
+              _size |= _b << _shift;
+              break;
+            }
+            _size |= (_b & 0x7f) << _shift;
+          }
+        }
         if (_size < 0 || _size > colferSizeMax) {
           throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
         }
 
         int _s = _i;
         _i += _size;
-        {{.NameNative}}[_vi] = utf8.decode(_data.sublist(_s, _i));
+        {{.NameNative}}[_ci] = utf8.decode(_data.sublist(_s, _i));
       }
  {{- else}}
-      int _size = _readVarint();
+      int _size = _data[_i];
+      _i++;
+      if (_size >= 0x80) {
+        _size &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _size |= _b << _shift;
+            break;
+          }
+          _size |= (_b & 0x7f) << _shift;
+        }
+      }
       if (_size < 0 || _size > colferSizeMax) {
         throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
       }
@@ -940,31 +1077,71 @@ const dartUnmarshal = `
       _i += _size;
       {{.NameNative}} = utf8.decode(_data.sublist(_s, _i));
  {{- end}}
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else if eq .Type "binary"}}
     if (_header == {{.Index}}) {
  {{- if .TypeList}}
-      int _v = _readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
       }
 
-      if ({{.NameNative}}.length != _v) {
-        {{.NameNative}} = List<Uint8List>.filled(_v, Uint8List(0));
+      if ({{.NameNative}}.length != _c) {
+        {{.NameNative}} = List<Uint8List>.filled(_c, Uint8List(0));
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        int _size = _readVarint();
+      for (int _ci = 0; _ci < _c; _ci++) {
+        int _size = _data[_i];
+        _i++;
+        if (_size >= 0x80) {
+          _size &= 0x7f;
+          for (int _shift = 7; ; _shift += 7) {
+            int _b = _data[_i];
+            _i++;
+            if (_b < 0x80 || _shift == 56) {
+              _size |= _b << _shift;
+              break;
+            }
+            _size |= (_b & 0x7f) << _shift;
+          }
+        }
         if (_size < 0 || _size > colferSizeMax) {
           throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
         }
 
         int _s = _i;
         _i += _size;
-        {{.NameNative}}[_vi] = _data.sublist(_s, _i);
+        {{.NameNative}}[_ci] = _data.sublist(_s, _i);
       }
  {{- else}}
-      int _size = _readVarint();
+      int _size = _data[_i];
+      _i++;
+      if (_size >= 0x80) {
+        _size &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _size |= _b << _shift;
+            break;
+          }
+          _size |= (_b & 0x7f) << _shift;
+        }
+      }
       if (_size < 0 || _size > colferSizeMax) {
         throw Exception('colfer: {{.String}} size $_size exceeds $colferSizeMax bytes');
       }
@@ -973,30 +1150,46 @@ const dartUnmarshal = `
       _i += _size;
       {{.NameNative}} = _data.sublist(_start, _i);
  {{- end}}
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else if .TypeList}}
     if (_header == {{.Index}}) {
-      int _v = _readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: {{.String}} size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7; ; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: {{.String}} size $_c exceeds $colferListMax');
       }
 
-      if ({{.NameNative}}.length != _v) {
-        {{.NameNative}} = List<{{.TypeNative}}>.filled(_v, {{.TypeNative}}());
+      if ({{.NameNative}}.length != _c) {
+        {{.NameNative}} = List<{{.TypeNative}}>.filled(_c, {{.TypeNative}}());
       }
-      for (var _vi in {{.NameNative}}) {
-        _vi ??= {{.TypeNative}}();
-        _i += _vi.unmarshal(_data.sublist(_i));
+      for (var _ci in {{.NameNative}}) {
+        _ci ??= {{.TypeNative}}();
+        _i += _ci.unmarshal(_data.sublist(_i));
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{else}}
     if (_header == {{.Index}}) {
       var _s = {{.TypeNative}}();
       _i += _s.unmarshal(_data.sublist(_i));
       {{.NameNative}} = _s;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 {{end}}{{end}}
     if (_header != 127) {

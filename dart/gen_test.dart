@@ -88,7 +88,7 @@ List<Golden> newGoldenCases() {
     Golden('0c0300016101627f', O(ss: ['', 'a', 'b'])),
     Golden(
         '0d0201000201027f',
-        O(as_: [
+        O(as_0: [
           Uint8List.fromList([0]),
           Uint8List.fromList([1, 2])
         ])),

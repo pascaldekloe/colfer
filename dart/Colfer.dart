@@ -9,10 +9,10 @@ import 'package:quiver/core.dart';
 import 'dart:convert';
 
 /// The upper limit for serial byte sizes.
-final colferSizeMax = 16 * 1024 * 1024;
+const colferSizeMax = 16 * 1024 * 1024;
 
 /// The upper limit for the number of elements in a list.
-final colferListMax = 64 * 1024;
+const colferListMax = 64 * 1024;
 
 /// O contains all supported data types.
 class O {
@@ -56,7 +56,7 @@ class O {
   List<String> ss;
 
   /// As tests binary lists.
-  List<Uint8List> as_;
+  List<Uint8List> as_0;
 
   /// U8 tests unsigned 8-bit integers.
   int u8;
@@ -71,28 +71,29 @@ class O {
   Float64List f64s;
 
   @override
-  bool operator ==(_other) {
-    return (_other is O) &&
-        _other.b == b &&
-        _other.u32 == u32 &&
-        _other.u64 == u64 &&
-        _other.i32 == i32 &&
-        _other.i64 == i64 &&
-        _other.f32 == f32 &&
-        _other.f64 == f64 &&
-        _other.t == t &&
-        _other.s == s &&
-        IterableEquality().equals(_other.a, a) &&
-        _other.o == o &&
-        IterableEquality().equals(_other.os, os) &&
-        IterableEquality().equals(_other.ss, ss) &&
-        DeepCollectionEquality().equals(_other.as_, as_) &&
-        _other.u8 == u8 &&
-        _other.u16 == u16 &&
-        IterableEquality().equals(_other.f32s, f32s) &&
-        IterableEquality().equals(_other.f64s, f64s);
+  bool operator ==(other) {
+    return (other is O) &&
+        other.b == b &&
+        other.u32 == u32 &&
+        other.u64 == u64 &&
+        other.i32 == i32 &&
+        other.i64 == i64 &&
+        other.f32 == f32 &&
+        other.f64 == f64 &&
+        other.t == t &&
+        other.s == s &&
+        const IterableEquality().equals(other.a, a) &&
+        other.o == o &&
+        const IterableEquality().equals(other.os, os) &&
+        const IterableEquality().equals(other.ss, ss) &&
+        const DeepCollectionEquality().equals(other.as_0, as_0) &&
+        other.u8 == u8 &&
+        other.u16 == u16 &&
+        const IterableEquality().equals(other.f32s, f32s) &&
+        const IterableEquality().equals(other.f64s, f64s);
   }
 
+  @override
   String toString() {
     return 'class O {'
             'b: ${b.toString()}'
@@ -110,7 +111,7 @@ class O {
             ', ss: [' +
         (ss.isNotEmpty ? '"${ss.join('", "')}"' : '') +
         ']'
-            ', as_: List<Uint8List>${as_.toString()}'
+            ', as_0: List<Uint8List>${as_0.toString()}'
             ', u8: ${u8.toString()}'
             ', u16: ${u16.toString()}'
             ', f32s: List<Float32List>${f32s.toString()}'
@@ -119,7 +120,7 @@ class O {
 
   @override
   int get hashCode =>
-      hashObjects([b, u32, u64, i32, i64, f32, f64, t, s, a, o, os, ss, as_, u8, u16, f32s, f64s]);
+      hashObjects([b, u32, u64, i32, i64, f32, f64, t, s, a, o, os, ss, as_0, u8, u16, f32s, f64s]);
 
   O({
     this.b = false,
@@ -135,7 +136,7 @@ class O {
     this.o,
     List<O>? os,
     List<String>? ss,
-    List<Uint8List>? as_,
+    List<Uint8List>? as_0,
     this.u8 = 0,
     this.u16 = 0,
     Float32List? f32s,
@@ -143,7 +144,7 @@ class O {
   })  : a = a ?? Uint8List(0),
         os = os ?? [],
         ss = ss ?? [],
-        as_ = as_ ?? [],
+        as_0 = as_0 ?? [],
         f32s = f32s ?? Float32List(0),
         f64s = f64s ?? Float64List(0);
 
@@ -303,7 +304,7 @@ class O {
       }
     }
     {
-      int _x = as_.length;
+      int _x = as_0.length;
       if (_x != 0) {
         if (_x > colferListMax) {
           throw Exception('colfer: gen.o.as size $_x exceeds $colferListMax');
@@ -311,7 +312,7 @@ class O {
         for (_l += 2; _x >= 0x80; _l++) {
           _x >>= 7;
         }
-        for (final _a in as_) {
+        for (final _a in as_0) {
           _x = _a.length;
           if (_x > colferSizeMax) {
             throw Exception('colfer: gen.o.as size $_x exceeds $colferSizeMax bytes');
@@ -590,9 +591,7 @@ class O {
         _buf[_i] = _x;
         _i++;
         for (var _vi in os) {
-          if (_vi == null) {
-            _vi = O();
-          }
+          _vi ??= O();
           _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _i));
         }
       }
@@ -627,7 +626,7 @@ class O {
       }
     }
     {
-      int _x = as_.length;
+      int _x = as_0.length;
       if (_x > 0) {
         if (_x > colferListMax) {
           throw Exception('colfer: gen.o.as size $_x exceeds $colferListMax');
@@ -641,7 +640,7 @@ class O {
         }
         _buf[_i] = _x;
         _i++;
-        for (final _vi in as_) {
+        for (final _vi in as_0) {
           var _v = _vi;
           _x = _v.length;
           while (_x > 127) {
@@ -752,15 +751,40 @@ class O {
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
     var _view = ByteData.view(_data.buffer);
-    int _nextData() {
-      int _dataI = _data[_i];
+    _header = _data[_i];
+    _i++;
+
+    if (_header == 0) {
+      b = true;
+      _header = _data[_i];
       _i++;
-      return _dataI;
     }
 
-    _header = _nextData();
+    if (_header == 1) {
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      u32 = _c;
+      _header = _data[_i];
+      _i++;
+    } else if (_header == (1 | 128)) {
+      u32 = _view.getUint32(_i);
+      _header = _data[_i + 4];
+      _i += 5;
+    }
 
-    int readVarint() {
+    if (_header == 2) {
       int _c = _data[_i];
       _i++;
       if (_c >= 0x80) {
@@ -775,60 +799,105 @@ class O {
           _c |= (_b & 0x7f) << _shift;
         }
       }
-      return _c;
-    }
-
-    if (_header == 0) {
-      b = true;
-      _header = _nextData();
-    }
-
-    if (_header == 1) {
-      u32 = readVarint();
-      _header = _nextData();
-    } else if (_header == (1 | 128)) {
-      u32 = _view.getUint32(_i);
-      _i += 4;
-      _header = _nextData();
-    }
-
-    if (_header == 2) {
-      u64 = readVarint();
-      _header = _nextData();
+      u64 = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == (2 | 128)) {
       int _v = _view.getUint32(_i) * 0x100000000;
       _v += _view.getUint32(_i + 4);
       u64 = _v;
-      _i += 8;
-      _header = _nextData();
+      _header = _data[_i + 8];
+      _i += 9;
     }
 
     if (_header == 3) {
-      i32 = readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      i32 = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == (3 | 128)) {
-      i32 = -1 * readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      i32 = -1 * _c;
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 4) {
-      i64 = readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      i64 = _c;
+      _header = _data[_i];
+      _i++;
     } else if (_header == (4 | 128)) {
-      i64 = -1 * readVarint();
-      _header = _nextData();
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      i64 = -1 * _c;
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 5) {
       f32 = _view.getFloat32(_i);
       _i += 4;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 6) {
       f64 = _view.getFloat64(_i);
       _i += 8;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 7) {
@@ -836,17 +905,32 @@ class O {
       int _us = _view.getUint32(_i + 4) ~/ 1000;
       t = DateTime.fromMicrosecondsSinceEpoch(_s * 1000000 + _us);
       _i += 8;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     } else if (_header == (7 | 128)) {
       int _s = _view.getInt64(_i);
       int _us = _view.getUint32(_i + 8) ~/ 1000;
       t = DateTime.fromMicrosecondsSinceEpoch(_s * 1000000 + _us);
       _i += 12;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 8) {
-      int _size = readVarint();
+      int _size = _data[_i];
+      _i++;
+      if (_size >= 0x80) {
+        _size &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _size |= _b << _shift;
+            break;
+          }
+          _size |= (_b & 0x7f) << _shift;
+        }
+      }
       if (_size < 0 || _size > colferSizeMax) {
         throw Exception('colfer: gen.o.s size $_size exceeds $colferSizeMax bytes');
       }
@@ -854,11 +938,25 @@ class O {
       int _s = _i;
       _i += _size;
       s = utf8.decode(_data.sublist(_s, _i));
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 9) {
-      int _size = readVarint();
+      int _size = _data[_i];
+      _i++;
+      if (_size >= 0x80) {
+        _size &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _size |= _b << _shift;
+            break;
+          }
+          _size |= (_b & 0x7f) << _shift;
+        }
+      }
       if (_size < 0 || _size > colferSizeMax) {
         throw Exception('colfer: gen.o.a size $_size exceeds $colferSizeMax bytes');
       }
@@ -866,121 +964,220 @@ class O {
       int _start = _i;
       _i += _size;
       a = _data.sublist(_start, _i);
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 10) {
       var _s = O();
       _i += _s.unmarshal(_data.sublist(_i));
       o = _s;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 11) {
-      int _v = readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: gen.o.os size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: gen.o.os size $_c exceeds $colferListMax');
       }
 
-      if (os.length != _v) {
-        os = List<O>.filled(_v, O());
+      if (os.length != _c) {
+        os = List<O>.filled(_c, O());
       }
-      for (var _vi in os) {
-        if (_vi == null) {
-          _vi = O();
-        }
-        _i += _vi.unmarshal(_data.sublist(_i));
+      for (var _ci in os) {
+        _ci ??= O();
+        _i += _ci.unmarshal(_data.sublist(_i));
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 12) {
-      int _v = readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: gen.o.ss size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: gen.o.ss size $_c exceeds $colferListMax');
       }
 
-      if (ss.length != _v) {
-        ss = List<String>.filled(_v, '');
+      if (ss.length != _c) {
+        ss = List<String>.filled(_c, '');
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        int _size = readVarint();
+      for (int _ci = 0; _ci < _c; _ci++) {
+        int _size = _data[_i];
+        _i++;
+        if (_size >= 0x80) {
+          _size &= 0x7f;
+          for (int _shift = 7;; _shift += 7) {
+            int _b = _data[_i];
+            _i++;
+            if (_b < 0x80 || _shift == 56) {
+              _size |= _b << _shift;
+              break;
+            }
+            _size |= (_b & 0x7f) << _shift;
+          }
+        }
         if (_size < 0 || _size > colferSizeMax) {
           throw Exception('colfer: gen.o.ss size $_size exceeds $colferSizeMax bytes');
         }
 
         int _s = _i;
         _i += _size;
-        ss[_vi] = utf8.decode(_data.sublist(_s, _i));
+        ss[_ci] = utf8.decode(_data.sublist(_s, _i));
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 13) {
-      int _v = readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: gen.o.as size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: gen.o.as size $_c exceeds $colferListMax');
       }
 
-      if (as_.length != _v) {
-        as_ = List<Uint8List>.filled(_v, Uint8List(0));
+      if (as_0.length != _c) {
+        as_0 = List<Uint8List>.filled(_c, Uint8List(0));
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        int _size = readVarint();
+      for (int _ci = 0; _ci < _c; _ci++) {
+        int _size = _data[_i];
+        _i++;
+        if (_size >= 0x80) {
+          _size &= 0x7f;
+          for (int _shift = 7;; _shift += 7) {
+            int _b = _data[_i];
+            _i++;
+            if (_b < 0x80 || _shift == 56) {
+              _size |= _b << _shift;
+              break;
+            }
+            _size |= (_b & 0x7f) << _shift;
+          }
+        }
         if (_size < 0 || _size > colferSizeMax) {
           throw Exception('colfer: gen.o.as size $_size exceeds $colferSizeMax bytes');
         }
 
         int _s = _i;
         _i += _size;
-        as_[_vi] = _data.sublist(_s, _i);
+        as_0[_ci] = _data.sublist(_s, _i);
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 14) {
-      u8 = _nextData();
-      _header = _nextData();
+      u8 = _data[_i];
+      _header = _data[_i + 1];
+      _i += 2;
     }
 
     if (_header == 15) {
-      u16 = (_nextData() << 8) | _nextData();
-      _header = _nextData();
+      u16 = (_data[_i] << 8) | _data[_i + 1];
+      _header = _data[_i + 2];
+      _i += 3;
     } else if (_header == (15 | 128)) {
-      u16 = _nextData();
-      _header = _nextData();
+      u16 = _data[_i];
+      _header = _data[_i + 1];
+      _i += 2;
     }
 
     if (_header == 16) {
-      int _v = readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: gen.o.f32s size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: gen.o.f32s size $_c exceeds $colferListMax');
       }
 
-      if (f32s.length != _v) {
-        f32s = Float32List(_v);
+      if (f32s.length != _c) {
+        f32s = Float32List(_c);
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        f32s[_vi] = _view.getFloat32(_i);
+      for (int _ci = 0; _ci < _c; _ci++) {
+        f32s[_ci] = _view.getFloat32(_i);
         _i += 4;
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header == 17) {
-      int _v = readVarint();
-      if (_v < 0 || _v > colferListMax) {
-        throw Exception('colfer: gen.o.f64s size $_v exceeds $colferListMax');
+      int _c = _data[_i];
+      _i++;
+      if (_c >= 0x80) {
+        _c &= 0x7f;
+        for (int _shift = 7;; _shift += 7) {
+          int _b = _data[_i];
+          _i++;
+          if (_b < 0x80 || _shift == 56) {
+            _c |= _b << _shift;
+            break;
+          }
+          _c |= (_b & 0x7f) << _shift;
+        }
+      }
+      if (_c < 0 || _c > colferListMax) {
+        throw Exception('colfer: gen.o.f64s size $_c exceeds $colferListMax');
       }
 
-      if (f64s.length != _v) {
-        f64s = Float64List(_v);
+      if (f64s.length != _c) {
+        f64s = Float64List(_c);
       }
-      for (int _vi = 0; _vi < _v; _vi++) {
-        f64s[_vi] = _view.getFloat64(_i);
+      for (int _ci = 0; _ci < _c; _ci++) {
+        f64s[_ci] = _view.getFloat64(_i);
         _i += 8;
       }
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header != 127) {
@@ -998,10 +1195,11 @@ class DromedaryCase {
   String pascalCase;
 
   @override
-  bool operator ==(_other) {
-    return (_other is DromedaryCase) && _other.pascalCase == pascalCase;
+  bool operator ==(other) {
+    return (other is DromedaryCase) && other.pascalCase == pascalCase;
   }
 
+  @override
   String toString() {
     return 'class DromedaryCase {'
         'pascalCase: "$pascalCase"';
@@ -1081,34 +1279,24 @@ class DromedaryCase {
   /// [colferSizeMax]. Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
-    int _nextData() {
-      int _dataI = _data[_i];
-      _i++;
-      return _dataI;
-    }
+    _header = _data[_i];
+    _i++;
 
-    _header = _nextData();
-
-    int readVarint() {
-      int _c = _data[_i];
+    if (_header == 0) {
+      int _size = _data[_i];
       _i++;
-      if (_c >= 0x80) {
-        _c &= 0x7f;
+      if (_size >= 0x80) {
+        _size &= 0x7f;
         for (int _shift = 7;; _shift += 7) {
           int _b = _data[_i];
           _i++;
           if (_b < 0x80 || _shift == 56) {
-            _c |= _b << _shift;
+            _size |= _b << _shift;
             break;
           }
-          _c |= (_b & 0x7f) << _shift;
+          _size |= (_b & 0x7f) << _shift;
         }
       }
-      return _c;
-    }
-
-    if (_header == 0) {
-      int _size = readVarint();
       if (_size < 0 || _size > colferSizeMax) {
         throw Exception(
             'colfer: gen.dromedaryCase.PascalCase size $_size exceeds $colferSizeMax bytes');
@@ -1117,7 +1305,8 @@ class DromedaryCase {
       int _s = _i;
       _i += _size;
       pascalCase = utf8.decode(_data.sublist(_s, _i));
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header != 127) {
@@ -1136,10 +1325,11 @@ class EmbedO {
   O? inner;
 
   @override
-  bool operator ==(_other) {
-    return (_other is EmbedO) && _other.inner == inner;
+  bool operator ==(other) {
+    return (other is EmbedO) && other.inner == inner;
   }
 
+  @override
   String toString() {
     return 'class EmbedO {'
         'inner: ${inner.toString()}';
@@ -1201,18 +1391,15 @@ class EmbedO {
   /// [colferSizeMax]. Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
     int _header = 0, _i = 0;
-    int _nextData() {
-      int _dataI = _data[_i];
-      _i++;
-      return _dataI;
-    }
+    _header = _data[_i];
+    _i++;
 
-    _header = _nextData();
     if (_header == 0) {
       var _s = O();
       _i += _s.unmarshal(_data.sublist(_i));
       inner = _s;
-      _header = _nextData();
+      _header = _data[_i];
+      _i++;
     }
 
     if (_header != 127) {

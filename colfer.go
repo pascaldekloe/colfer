@@ -118,16 +118,6 @@ func (p *Package) HasFloat() bool {
 	return false
 }
 
-// HasFloatList returns whether p has one or more list of floating point fields.
-func (p *Package) HasFloatList() bool {
-	for _, t := range p.Structs {
-		if t.HasFloatList() {
-			return true
-		}
-	}
-	return false
-}
-
 // HasText returns whether p has one or more text fields.
 func (p *Package) HasText() bool {
 	for _, t := range p.Structs {
@@ -195,32 +185,11 @@ func (t *Struct) HasFloat() bool {
 	return false
 }
 
-// HasFloatList returns whether s has one or more list of floating point fields.
-func (t *Struct) HasFloatList() bool {
-	for _, f := range t.Fields {
-		if (f.Type == "float32" || f.Type == "float64") && f.TypeList {
-			return true
-		}
-	}
-	return false
-}
-
 // HasUint32 returns whether s has one or more 4 or 8 byte unsigned integer fields.
 func (t *Struct) HasUint32() bool {
 	for _, f := range t.Fields {
 		switch f.Type {
 		case "uint32", "uint64":
-			return true
-		}
-	}
-	return false
-}
-
-// HasInt32 returns whether s has one or more 4 or 8 byte signed integer fields.
-func (t *Struct) HasInt32() bool {
-	for _, f := range t.Fields {
-		switch f.Type {
-		case "int32", "int64":
 			return true
 		}
 	}
@@ -271,16 +240,6 @@ func (t *Struct) HasTimestamp() bool {
 func (t *Struct) HasList() bool {
 	for _, f := range t.Fields {
 		if f.TypeList {
-			return true
-		}
-	}
-	return false
-}
-
-// HasRefList returns whether s has one or more reference list fields.
-func (t *Struct) HasRefList() bool {
-	for _, f := range t.Fields {
-		if f.TypeList && f.TypeRef != nil {
 			return true
 		}
 	}
