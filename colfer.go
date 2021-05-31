@@ -118,6 +118,16 @@ func (p *Package) HasFloat() bool {
 	return false
 }
 
+// HasFloatList returns whether p has one or more list of floating point fields.
+func (p *Package) HasFloatList() bool {
+	for _, t := range p.Structs {
+		if t.HasFloatList() {
+			return true
+		}
+	}
+	return false
+}
+
 // HasText returns whether p has one or more text fields.
 func (p *Package) HasText() bool {
 	for _, t := range p.Structs {
@@ -179,6 +189,16 @@ func (t *Struct) String() string {
 func (t *Struct) HasFloat() bool {
 	for _, f := range t.Fields {
 		if f.Type == "float32" || f.Type == "float64" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasFloatList returns whether s has one or more list of floating point fields.
+func (t *Struct) HasFloatList() bool {
+	for _, f := range t.Fields {
+		if (f.Type == "float32" || f.Type == "float64") && f.TypeList {
 			return true
 		}
 	}
