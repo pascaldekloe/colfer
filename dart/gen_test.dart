@@ -1,62 +1,61 @@
-import 'package:test/test.dart';
 import 'dart:typed_data';
-import './Colfer.dart';
 import 'package:convert/convert.dart';
+import 'package:test/test.dart';
+import './Colfer.dart';
 
-const MaxUint8 = (1 << 8) - 1;
-const MaxUint16 = (1 << 16) - 1;
-const MaxUint32 = (1 << 32) - 1;
-const MaxUint64 = -1;
-const MaxInt8 = MaxUint8 >> 1;
-const MinInt8 = -MaxInt8 - 1;
-const MaxInt16 = MaxUint16 >> 1;
-const MinInt16 = -MaxInt16 - 1;
-const MaxInt32 = MaxUint32 >> 1;
-const MinInt32 = -MaxInt32 - 1;
-const MaxInt64 = (1 << 63) - 1;
-const MinInt64 = -MaxInt64 - 1;
+const maxUint8 = (1 << 8) - 1;
+const maxUint16 = (1 << 16) - 1;
+const maxUint32 = (1 << 32) - 1;
+const maxUint64 = -1;
+const maxInt8 = maxUint8 >> 1;
+const minInt8 = -maxInt8 - 1;
+const maxInt16 = maxUint16 >> 1;
+const minInt16 = -maxInt16 - 1;
+const maxInt32 = maxUint32 >> 1;
+const minInt32 = -maxInt32 - 1;
+const maxInt64 = (1 << 63) - 1;
+const minInt64 = -maxInt64 - 1;
 
 class Golden {
+  Golden(this.serial, this.object);
+
   final String serial;
   final O object;
-
-  Golden(this.serial, this.object);
 }
 
 List<Golden> newGoldenCases() {
-  var tmp = Uint8List(192);
-  tmp.fillRange(0, 192, 9);
+  var tmp = Uint8List(192)..fillRange(0, 192, 9);
   return [
     Golden('7f', O()),
     Golden('007f', O(b: true)),
     Golden('01017f', O(u32: 1)),
-    Golden('01ff017f', O(u32: MaxUint8)),
-    Golden('01ffff037f', O(u32: MaxUint16)),
-    Golden('81ffffffff7f', O(u32: MaxUint32)),
+    Golden('01ff017f', O(u32: maxUint8)),
+    Golden('01ffff037f', O(u32: maxUint16)),
+    Golden('81ffffffff7f', O(u32: maxUint32)),
     Golden('02017f', O(u64: 1)),
-    Golden('02ff017f', O(u64: MaxUint8)),
-    Golden('02ffff037f', O(u64: MaxUint16)),
-    Golden('02ffffffff0f7f', O(u64: MaxUint32)),
-    Golden('82ffffffffffffffff7f', O(u64: MaxUint64)),
+    Golden('02ff017f', O(u64: maxUint8)),
+    Golden('02ffff037f', O(u64: maxUint16)),
+    Golden('02ffffffff0f7f', O(u64: maxUint32)),
+    Golden('82ffffffffffffffff7f', O(u64: maxUint64)),
     Golden('03017f', O(i32: 1)),
     Golden('83017f', O(i32: -1)),
-    Golden('037f7f', O(i32: MaxInt8)),
-    Golden('8380017f', O(i32: MinInt8)),
-    Golden('03ffff017f', O(i32: MaxInt16)),
-    Golden('838080027f', O(i32: MinInt16)),
-    Golden('03ffffffff077f', O(i32: MaxInt32)),
-    Golden('8380808080087f', O(i32: MinInt32)),
+    Golden('037f7f', O(i32: maxInt8)),
+    Golden('8380017f', O(i32: minInt8)),
+    Golden('03ffff017f', O(i32: maxInt16)),
+    Golden('838080027f', O(i32: minInt16)),
+    Golden('03ffffffff077f', O(i32: maxInt32)),
+    Golden('8380808080087f', O(i32: minInt32)),
     Golden('04017f', O(i64: 1)),
     Golden('84017f', O(i64: -1)),
-    Golden('047f7f', O(i64: MaxInt8)),
-    Golden('8480017f', O(i64: MinInt8)),
-    Golden('04ffff017f', O(i64: MaxInt16)),
-    Golden('848080027f', O(i64: MinInt16)),
-    Golden('04ffffffff077f', O(i64: MaxInt32)),
-    Golden('8480808080087f', O(i64: MinInt32)),
-    Golden('04ffffffffffffffff7f7f', O(i64: MaxInt64)),
-    Golden('848080808080808080807f', O(i64: MinInt64)),
-    Golden('84ffffffffffffffff7f7f', O(i64: MinInt64 + 1)),
+    Golden('047f7f', O(i64: maxInt8)),
+    Golden('8480017f', O(i64: minInt8)),
+    Golden('04ffff017f', O(i64: maxInt16)),
+    Golden('848080027f', O(i64: minInt16)),
+    Golden('04ffffffff077f', O(i64: maxInt32)),
+    Golden('8480808080087f', O(i64: minInt32)),
+    Golden('04ffffffffffffffff7f7f', O(i64: maxInt64)),
+    Golden('848080808080808080807f', O(i64: minInt64)),
+    Golden('84ffffffffffffffff7f7f', O(i64: minInt64 + 1)),
     Golden('05000000017f', O(f32: 1.401298464324817e-45)),
     Golden('057f7fffff7f', O(f32: 3.4028234663852886e+38)),
     Golden('057fc000007f', O(f32: double.nan)),
@@ -76,7 +75,7 @@ List<Golden> newGoldenCases() {
     Golden(
         '08800120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020207f',
         O(s: ' ' * 128)),
-    Golden('0901ff7f', O(a: Uint8List.fromList([MaxUint8]))),
+    Golden('0901ff7f', O(a: Uint8List.fromList([maxUint8]))),
     Golden('090202007f', O(a: Uint8List.fromList([2, 0]))),
     Golden(
         '09c0010909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909097f',
@@ -93,9 +92,9 @@ List<Golden> newGoldenCases() {
           Uint8List.fromList([1, 2])
         ])),
     Golden('0e017f', O(u8: 1)),
-    Golden('0eff7f', O(u8: MaxUint8)),
+    Golden('0eff7f', O(u8: maxUint8)),
     Golden('8f017f', O(u16: 1)),
-    Golden('0fffff7f', O(u16: MaxUint16)),
+    Golden('0fffff7f', O(u16: maxUint16)),
     Golden('1002000000003f8000007f', O(f32s: Float32List.fromList([0, 1]))),
     Golden('11014058c000000000007f', O(f64s: Float64List.fromList([99]))),
   ];
@@ -122,8 +121,7 @@ void main() {
       test('struct should match golden mapping', () {
         List<int> list = hex.decode(gold.serial);
         Uint8List bytes = Uint8List.fromList(list);
-        var obj = O();
-        obj.unmarshal(bytes);
+        var obj = O()..unmarshal(bytes);
         // work around NaN != NaN
         if (obj.f32.isNaN && gold.object.f32.isNaN) {
           obj.f32 = 0;
@@ -152,7 +150,7 @@ void main() {
           } catch (e) {
             fail('want a RangeError, got: $e');
           }
-          fail('should break with RangeError, but it doesn\'t');
+          fail("should break with RangeError, but it doesn't");
         }
       });
     }

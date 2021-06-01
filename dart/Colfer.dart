@@ -2,11 +2,10 @@
 // The compiler used schema file test.colf for package gen.
 
 /// Package gen tests all field mapping options.
-
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:quiver/core.dart';
-import 'dart:convert';
 
 /// The upper limit for serial byte sizes.
 const colferSizeMax = 16 * 1024 * 1024;
@@ -16,6 +15,32 @@ const colferListMax = 64 * 1024;
 
 /// O contains all supported data types.
 class O {
+  O({
+    this.b = false,
+    this.u32 = 0,
+    this.u64 = 0,
+    this.i32 = 0,
+    this.i64 = 0,
+    this.f32 = 0.0,
+    this.f64 = 0.0,
+    this.t,
+    this.s = '',
+    Uint8List? a,
+    this.o,
+    List<O>? os,
+    List<String>? ss,
+    List<Uint8List>? as_0,
+    this.u8 = 0,
+    this.u16 = 0,
+    Float32List? f32s,
+    Float64List? f64s,
+  })  : a = a ?? Uint8List(0),
+        os = os ?? [],
+        ss = ss ?? [],
+        as_0 = as_0 ?? [],
+        f32s = f32s ?? Float32List(0),
+        f64s = f64s ?? Float64List(0);
+
   /// B tests booleans.
   bool b;
 
@@ -71,82 +96,51 @@ class O {
   Float64List f64s;
 
   @override
-  bool operator ==(other) {
-    return (other is O) &&
-        other.b == b &&
-        other.u32 == u32 &&
-        other.u64 == u64 &&
-        other.i32 == i32 &&
-        other.i64 == i64 &&
-        other.f32 == f32 &&
-        other.f64 == f64 &&
-        other.t == t &&
-        other.s == s &&
-        const IterableEquality().equals(other.a, a) &&
-        other.o == o &&
-        const IterableEquality().equals(other.os, os) &&
-        const IterableEquality().equals(other.ss, ss) &&
-        const DeepCollectionEquality().equals(other.as_0, as_0) &&
-        other.u8 == u8 &&
-        other.u16 == u16 &&
-        const IterableEquality().equals(other.f32s, f32s) &&
-        const IterableEquality().equals(other.f64s, f64s);
-  }
+  bool operator ==(Object other) =>
+      (other is O) &&
+      other.b == b &&
+      other.u32 == u32 &&
+      other.u64 == u64 &&
+      other.i32 == i32 &&
+      other.i64 == i64 &&
+      other.f32 == f32 &&
+      other.f64 == f64 &&
+      other.t == t &&
+      other.s == s &&
+      const IterableEquality().equals(other.a, a) &&
+      other.o == o &&
+      const IterableEquality().equals(other.os, os) &&
+      const IterableEquality().equals(other.ss, ss) &&
+      const DeepCollectionEquality().equals(other.as_0, as_0) &&
+      other.u8 == u8 &&
+      other.u16 == u16 &&
+      const IterableEquality().equals(other.f32s, f32s) &&
+      const IterableEquality().equals(other.f64s, f64s);
 
   @override
-  String toString() {
-    return 'class O {'
-            'b: ${b.toString()}'
-            ', u32: ${u32.toString()}'
-            ', u64: ${u64.toString()}'
-            ', i32: ${i32.toString()}'
-            ', i64: ${i64.toString()}'
-            ', f32: ${f32.toString()}'
-            ', f64: ${f64.toString()}'
-            ', t: ${t.toString()}'
-            ', s: "$s"'
-            ', a: ${a.toString()}'
-            ', o: ${o.toString()}'
-            ', os: List<O>${os.toString()}'
-            ', ss: [' +
-        (ss.isNotEmpty ? '"${ss.join('", "')}"' : '') +
-        ']'
-            ', as_0: List<Uint8List>${as_0.toString()}'
-            ', u8: ${u8.toString()}'
-            ', u16: ${u16.toString()}'
-            ', f32s: List<Float32List>${f32s.toString()}'
-            ', f64s: List<Float64List>${f64s.toString()}';
-  }
+  String toString() => 'class O {'
+      'b: ${b.toString()}'
+      ', u32: ${u32.toString()}'
+      ', u64: ${u64.toString()}'
+      ', i32: ${i32.toString()}'
+      ', i64: ${i64.toString()}'
+      ', f32: ${f32.toString()}'
+      ', f64: ${f64.toString()}'
+      ', t: ${t.toString()}'
+      ', s: "$s"'
+      ', a: ${a.toString()}'
+      ', o: ${o.toString()}'
+      ', os: List<O>${os.toString()}'
+      ', ss: [${ss.isNotEmpty ? "\"ss.join('\", \"')}" : ""}]'
+      ', as_0: List<Uint8List>${as_0.toString()}'
+      ', u8: ${u8.toString()}'
+      ', u16: ${u16.toString()}'
+      ', f32s: List<Float32List>${f32s.toString()}'
+      ', f64s: List<Float64List>${f64s.toString()}';
 
   @override
   int get hashCode =>
       hashObjects([b, u32, u64, i32, i64, f32, f64, t, s, a, o, os, ss, as_0, u8, u16, f32s, f64s]);
-
-  O({
-    this.b = false,
-    this.u32 = 0,
-    this.u64 = 0,
-    this.i32 = 0,
-    this.i64 = 0,
-    this.f32 = 0.0,
-    this.f64 = 0.0,
-    this.t,
-    this.s = '',
-    Uint8List? a,
-    this.o,
-    List<O>? os,
-    List<String>? ss,
-    List<Uint8List>? as_0,
-    this.u8 = 0,
-    this.u16 = 0,
-    Float32List? f32s,
-    Float64List? f64s,
-  })  : a = a ?? Uint8List(0),
-        os = os ?? [],
-        ss = ss ?? [],
-        as_0 = as_0 ?? [],
-        f32s = f32s ?? Float32List(0),
-        f64s = f64s ?? Float64List(0);
 
   /// Returns an over estimatation of marshal length.
   ///
@@ -218,7 +212,7 @@ class O {
       }
     }
     {
-      final _v = t;
+      DateTime? _v = t;
       if (_v != null) {
         int _us = _v.microsecondsSinceEpoch;
         int _s = _us ~/ 1E6;
@@ -729,7 +723,8 @@ class O {
   /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
   /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
-    int _header = 0, _i = 0;
+    int _header = 0;
+    int _i = 0;
     var _view = ByteData.view(_data.buffer);
     _header = _data[_i];
     _i++;
@@ -1172,25 +1167,21 @@ class O {
 
 /// DromedaryCase oposes name casings.
 class DromedaryCase {
-  String pascalCase;
-
-  @override
-  bool operator ==(other) {
-    return (other is DromedaryCase) && other.pascalCase == pascalCase;
-  }
-
-  @override
-  String toString() {
-    return 'class DromedaryCase {'
-        'pascalCase: "$pascalCase"';
-  }
-
-  @override
-  int get hashCode => pascalCase.hashCode;
-
   DromedaryCase({
     this.pascalCase = '',
   });
+
+  String pascalCase;
+
+  @override
+  bool operator ==(Object other) => (other is DromedaryCase) && other.pascalCase == pascalCase;
+
+  @override
+  String toString() => 'class DromedaryCase {'
+      'pascalCase: "$pascalCase"';
+
+  @override
+  int get hashCode => pascalCase.hashCode;
 
   /// Returns an over estimatation of marshal length.
   ///
@@ -1255,7 +1246,8 @@ class DromedaryCase {
   /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
   /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
-    int _header = 0, _i = 0;
+    int _header = 0;
+    int _i = 0;
     _header = _data[_i];
     _i++;
 
@@ -1298,25 +1290,21 @@ class DromedaryCase {
 /// EmbedO has an inner object only.
 /// Covers regression of issue #66.
 class EmbedO {
-  O? inner;
-
-  @override
-  bool operator ==(other) {
-    return (other is EmbedO) && other.inner == inner;
-  }
-
-  @override
-  String toString() {
-    return 'class EmbedO {'
-        'inner: ${inner.toString()}';
-  }
-
-  @override
-  int get hashCode => inner.hashCode;
-
   EmbedO({
     this.inner,
   });
+
+  O? inner;
+
+  @override
+  bool operator ==(Object other) => (other is EmbedO) && other.inner == inner;
+
+  @override
+  String toString() => 'class EmbedO {'
+      'inner: ${inner.toString()}';
+
+  @override
+  int get hashCode => inner.hashCode;
 
   /// Returns an over estimatation of marshal length.
   ///
@@ -1367,7 +1355,8 @@ class EmbedO {
   /// [colferSizeMax]. Throws [StateError] if ending header mismatches.
   /// Returns the number of bytes read.
   int unmarshal(Uint8List _data) {
-    int _header = 0, _i = 0;
+    int _header = 0;
+    int _i = 0;
     _header = _data[_i];
     _i++;
 
