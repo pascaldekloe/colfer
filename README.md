@@ -14,7 +14,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 #### Language Support
 
 * C, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
-* Dart, a.k.a. dartlang, thanks to @vendelin8
+* Dart, a.k.a. dartlang, thanks to [Gergely Bódi](@vendelin8)
 * Go, a.k.a. golang
 * Java, Android compatible
 * JavaScript, a.k.a. ECMAScript, NodeJS compatible
