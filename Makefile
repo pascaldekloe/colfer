@@ -5,7 +5,9 @@ test:
 	$(GO) test -v
 
 	$(MAKE) -C c test
-	$(MAKE) -C dart test
+# Dart is excluded from the main tests at this stage.
+# See commit 1c6af109bb5ac3b7797c7e34bbf4ff270195f98e.
+#	$(MAKE) -C dart test
 	$(MAKE) -C ecma test
 	$(MAKE) -C go test
 	$(MAKE) -C java test
