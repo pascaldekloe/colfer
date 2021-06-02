@@ -248,6 +248,12 @@ func printManual() {
 		" [file ...]\n\t" +
 		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
 		bold + "-b" + clear + " directory] [" +
+		bold + "-p" + clear + " package] \\\n\t\t[" +
+		bold + "-s" + clear + " expression] [" +
+		bold + "-l" + clear + " expression] " + bold + "Dart" + clear +
+		" [file ...]\n\t" +
+		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
+		bold + "-b" + clear + " directory] [" +
 		bold + "-p" + clear + " package] [" +
 		bold + "-t" + clear + " files] \\\n\t\t[" +
 		bold + "-s" + clear + " expression] [" +
@@ -271,7 +277,8 @@ func printManual() {
 		" [file ...]\n"
 
 	descriptionSection := bold + "DESCRIPTION" + clear + "\n" +
-		"\tThe output is source code for either C, Dart, Go, Java or JavaScript.\n\n" +
+		"\tThe output is source code for either C, Dart, Go, Java or\n" +
+		"\tJavaScript.\n\n" +
 		"\tFor each operand that names a file of a type other than\n" +
 		"\tdirectory, " + bold + "colf" + clear + " reads the content as schema input. For each\n" +
 		"\tnamed directory, " + bold + "colf" + clear + " reads all files with a .colf extension\n" +
@@ -306,9 +313,9 @@ func printManual() {
 	bugsSection := bold + "BUGS" + clear + "\n" +
 		"\tReport bugs at <https://github.com/pascaldekloe/colfer/issues>.\n\n" +
 		"\tText validation is not part of the marshalling and unmarshalling\n" +
-		"\tprocess. C, Dart and Go just pass any malformed UTF-8 characters.\n" +
-		"\tJava and JavaScript replace unmappable content with the '?'\n" +
-		"\tcharacter (ASCII 63).\n"
+		"\tprocess. C, Dart and Go just pass any malformed UTF-8 characters\n" +
+		"\twhile Java and JavaScript replace unmappable content with the\n" +
+		"\t'?' character (ASCII 63).\n"
 
 	seeAlsoSection := bold + "SEE ALSO" + clear + "\n\tprotoc(1), flatc(1)\n"
 

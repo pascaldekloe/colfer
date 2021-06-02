@@ -132,9 +132,9 @@ BUGS
 	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
 
 	Text validation is not part of the marshalling and unmarshalling
-	process. C, Dart and Go just pass any malformed UTF-8 characters.
-	Java and JavaScript replace unmappable content with the '?'
-	character (ASCII 63).
+	process. C, Dart and Go just pass any malformed UTF-8 characters
+	while Java and JavaScript replace unmappable content with the
+	'?' character (ASCII 63).
 
 SEE ALSO
 	protoc(1), flatc(1)
