@@ -13,7 +13,10 @@ before_install: nvm install 12
 
 addons:
   apt:
+    sources:
+    - sourceline: 'deb https://storage.googleapis.com/download.dartlang.org/linux/debian stable main'
     packages:
+    - dart
     - maven
 
 script: make clean test CC=clang
