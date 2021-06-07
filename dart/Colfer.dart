@@ -107,15 +107,15 @@ class O {
       other.f64 == f64 &&
       other.t == t &&
       other.s == s &&
-      const IterableEquality().equals(other.a, a) &&
+      const ListEquality().equals(other.a, a) &&
       other.o == o &&
-      const IterableEquality().equals(other.os, os) &&
-      const IterableEquality().equals(other.ss, ss) &&
+      const ListEquality().equals(other.os, os) &&
+      const ListEquality().equals(other.ss, ss) &&
       const DeepCollectionEquality().equals(other.as_0, as_0) &&
       other.u8 == u8 &&
       other.u16 == u16 &&
-      const IterableEquality().equals(other.f32s, f32s) &&
-      const IterableEquality().equals(other.f64s, f64s);
+      const ListEquality().equals(other.f32s, f32s) &&
+      const ListEquality().equals(other.f64s, f64s);
 
   @override
   String toString() => 'class O {'

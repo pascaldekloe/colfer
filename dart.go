@@ -203,10 +203,11 @@ class {{.NameNative}} {
   @override
   bool operator ==(Object other) => (other is {{.NameNative}})
 {{range .Fields}}      &&
-{{- if or .TypeList (eq .Type "binary")}}
-{{- if and .TypeList (eq .Type "binary")}} const DeepCollectionEquality().equals(other.{{.NameNative}}, {{.NameNative}})
-{{- else}} const IterableEquality().equals(other.{{.NameNative}}, {{.NameNative}})
+{{- if eq .Type "binary"}}
+{{- if .TypeList}} const DeepCollectionEquality().equals(other.{{.NameNative}}, {{.NameNative}})
+{{- else}} const ListEquality().equals(other.{{.NameNative}}, {{.NameNative}})
 {{- end}}
+{{- else if .TypeList}} const ListEquality().equals(other.{{.NameNative}}, {{.NameNative}})
 {{- else}} other.{{.NameNative}} == {{.NameNative}}
 {{- end}}
 {{- end}};
