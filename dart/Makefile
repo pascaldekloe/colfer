@@ -4,7 +4,7 @@ DART ?= dart
 
 .PHONY: test
 test: gen/Colfer.dart gen_test.dart breaktest
-	$(DART) analyze .
+	$(DART) analyze --fatal-infos .
 	$(DART) test .
 
 gen/Colfer.dart: ../testdata/test.colf ../*.go ../cmd/colf/*.go
@@ -12,7 +12,7 @@ gen/Colfer.dart: ../testdata/test.colf ../*.go ../cmd/colf/*.go
 
 breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
 	$(COLF) -b $@ Dart ../testdata/break*.colf
-	$(DART) analyze ./$@
+	$(DART) analyze --fatal-infos ./$@
 	touch $@
 
 .PHONY: clean
