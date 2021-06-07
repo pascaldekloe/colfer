@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:convert/convert.dart';
 import 'package:test/test.dart';
-import './Colfer.dart';
+import 'gen/Colfer.dart';
 
 const maxUint8 = (1 << 8) - 1;
 const maxUint16 = (1 << 16) - 1;
