@@ -101,6 +101,21 @@ List<Golden> newGoldenCases() {
 
 void main() {
   var cases = newGoldenCases();
+
+  group('Identity', () {
+    for (int i = 0; i < cases.length; i++) {
+      for (int j = 0; j < cases.length; j++) {
+        var a = cases[i];
+        var b = cases[j];
+        if (i == j && a.hashCode != b.hashCode) {
+          fail('inconsistent hash on object $a');
+        } else if (i != j && a.hashCode == b.hashCode) {
+          fail('hash collision on object $a & $b');
+        }
+      }
+    }
+  });
+
   group('Marshal', () {
     for (final gold in cases) {
       var buf = Uint8List(gold.object.marshalLen());
