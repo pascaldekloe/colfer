@@ -51,7 +51,7 @@ packages:
     source: hosted
     version: "0.3.0"
   collection:
-    dependency: "direct dev"
+    dependency: transitive
     description:
       name: collection
       url: "https://pub.dartlang.org"
@@ -127,13 +127,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.6.3"
-  lint:
-    dependency: "direct dev"
-    description:
-      name: lint
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.5.3"
   logging:
     dependency: transitive
     description:
@@ -204,13 +197,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.0"
-  quiver:
-    dependency: "direct dev"
-    description:
-      name: quiver
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.0.1"
   shelf:
     dependency: transitive
     description:

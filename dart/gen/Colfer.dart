@@ -3,8 +3,6 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:collection/collection.dart';
-import 'package:quiver/core.dart';
 
 /// Package gen tests all field mapping options.
 
@@ -97,30 +95,68 @@ class O {
   Float64List f64s;
 
   @override
-  bool operator ==(Object other) =>
-      (other is O) &&
-      other.b == b &&
-      other.u32 == u32 &&
-      other.u64 == u64 &&
-      other.i32 == i32 &&
-      other.i64 == i64 &&
-      other.f32 == f32 &&
-      other.f64 == f64 &&
-      other.t == t &&
-      other.s == s &&
-      const ListEquality().equals(other.a, a) &&
-      other.o == o &&
-      const ListEquality().equals(other.os, os) &&
-      const ListEquality().equals(other.ss, ss) &&
-      const DeepCollectionEquality().equals(other.as_0, as_0) &&
-      other.u8 == u8 &&
-      other.u16 == u16 &&
-      const ListEquality().equals(other.f32s, f32s) &&
-      const ListEquality().equals(other.f64s, f64s);
+  bool operator ==(_other) {
+    if (_other is! O ||
+        b != _other.b ||
+        u32 != _other.u32 ||
+        u64 != _other.u64 ||
+        i32 != _other.i32 ||
+        i64 != _other.i64 ||
+        f32 != _other.f32 ||
+        f64 != _other.f64 ||
+        t != _other.t ||
+        s != _other.s ||
+        a.length != _other.a.length ||
+        o != _other.o ||
+        os.length != _other.os.length ||
+        ss.length != _other.ss.length ||
+        as_0.length != _other.as_0.length ||
+        u8 != _other.u8 ||
+        u16 != _other.u16 ||
+        f32s.length != _other.f32s.length ||
+        f64s.length != _other.f64s.length) return false;
+    for (int _i = 0; _i < a.length; _i++) if (a[_i] != _other.a[_i]) return false;
+    for (int _i = 0; _i < os.length; _i++) if (os[_i] != _other.os[_i]) return false;
+    for (int _i = 0; _i < ss.length; _i++) if (ss[_i] != _other.ss[_i]) return false;
+    for (int _i = 0; _i < as_0.length; _i++) {
+      var _l1 = as_0[_i];
+      var _l2 = _other.as_0[_i];
+      if (_l1.length != _l2.length) return false;
+      for (int _i = 0; _i < _l1.length; _i++) if (_l1[_i] != _l2[_i]) return false;
+    }
+    for (int _i = 0; _i < f32s.length; _i++) if (f32s[_i] != _other.f32s[_i]) return false;
+    for (int _i = 0; _i < f64s.length; _i++) if (f64s[_i] != _other.f64s[_i]) return false;
+    return true;
+  }
 
   @override
-  int get hashCode =>
-      hashObjects([b, u32, u64, i32, i64, f32, f64, t, s, a, o, os, ss, as_0, u8, u16, f32s, f64s]);
+  int get hashCode {
+    int _h = 0;
+    _h = 31 * _h + b.hashCode;
+    _h = 31 * _h + u32.hashCode;
+    _h = 31 * _h + u64.hashCode;
+    _h = 31 * _h + i32.hashCode;
+    _h = 31 * _h + i64.hashCode;
+    _h = 31 * _h + f32.hashCode;
+    _h = 31 * _h + f64.hashCode;
+    _h = 31 * _h + t.hashCode;
+    _h = 31 * _h + s.hashCode;
+    _h = 31 * _h + a.hashCode;
+    _h = 31 * _h + o.hashCode;
+    _h = 31 * _h + os.length;
+    for (var _e in os) _h = 31 * _h + _e.hashCode;
+    _h = 31 * _h + ss.length;
+    for (var _e in ss) _h = 31 * _h + _e.hashCode;
+    _h = 31 * _h + as_0.length;
+    for (var _e in as_0) _h = 31 * _h + _e.hashCode;
+    _h = 31 * _h + u8.hashCode;
+    _h = 31 * _h + u16.hashCode;
+    _h = 31 * _h + f32s.length;
+    for (var _e in f32s) _h = 31 * _h + _e.hashCode;
+    _h = 31 * _h + f64s.length;
+    for (var _e in f64s) _h = 31 * _h + _e.hashCode;
+    return _h;
+  }
 
   @override
   String toString() => 'class O {'
@@ -1175,10 +1211,17 @@ class DromedaryCase {
   String pascalCase;
 
   @override
-  bool operator ==(Object other) => (other is DromedaryCase) && other.pascalCase == pascalCase;
+  bool operator ==(_other) {
+    if (_other is! DromedaryCase || pascalCase != _other.pascalCase) return false;
+    return true;
+  }
 
   @override
-  int get hashCode => pascalCase.hashCode;
+  int get hashCode {
+    int _h = 0;
+    _h = 31 * _h + pascalCase.hashCode;
+    return _h;
+  }
 
   @override
   String toString() => 'class DromedaryCase {'
@@ -1298,10 +1341,17 @@ class EmbedO {
   O? inner;
 
   @override
-  bool operator ==(Object other) => (other is EmbedO) && other.inner == inner;
+  bool operator ==(_other) {
+    if (_other is! EmbedO || inner != _other.inner) return false;
+    return true;
+  }
 
   @override
-  int get hashCode => inner.hashCode;
+  int get hashCode {
+    int _h = 0;
+    _h = 31 * _h + inner.hashCode;
+    return _h;
+  }
 
   @override
   String toString() => 'class EmbedO {'
