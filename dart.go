@@ -194,6 +194,23 @@ class {{.NameNative}} {
 {{- end}}
 {{- end}} {{.NameNative}};{{end}}
 
+  /// Returns an over estimatation of marshal length.
+  ///
+  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
+  /// Returns an over estimated length for the required buffer. String
+  /// characters are counted for 4 bytes, everything has its exact size.
+  int marshalLen() {
+    int _l = 1;
+{{range .Fields}} { {{template "marshal-len" .}} } {{end}}
+    if (_l > colferSizeMax) {
+      return colferSizeMax;
+    }
+    return _l;
+  }
+
+{{template "marshal" .}}
+{{template "unmarshal" .}}
+
   @override
   bool operator ==(_other) {
     if (_other is! {{.NameNative}}
@@ -248,23 +265,6 @@ class {{.NameNative}} {
 {{- if .TypeList}} List<{{.TypeNative}}>{{else}} {{end}}${ {{.NameNative}}.toString()}
 {{- end}}'
 {{- end}};
-
-  /// Returns an over estimatation of marshal length.
-  ///
-  /// Throws [RangeError] if the size of a list exceeds [colferListMax].
-  /// Returns an over estimated length for the required buffer. String
-  /// characters are counted for 4 bytes, everything has its exact size.
-  int marshalLen() {
-    int _l = 1;
-{{range .Fields}} { {{template "marshal-len" .}} } {{end}}
-	if (_l > colferSizeMax) {
-      return colferSizeMax;
-	}
-	return _l;
-}
-
-{{template "marshal" .}}
-{{template "unmarshal" .}}
 }
 {{- end}}
 `
