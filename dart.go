@@ -256,7 +256,7 @@ class {{.NameNative}} {
   String toString() => 'class {{.NameNative}} {'
 {{- $first := true}}
 {{- range .Fields}}
-  '{{if $first}}{{$first = false}}{{else}}, {{end}}{{.NameNative}}: 
+  '{{if $first}}{{$first = false}}{{else}}, {{end}}{{.NameNative}}:
 {{- if eq .Type "text"}}
 {{- if .TypeList}} [${ {{.NameNative}}.isNotEmpty ? "\"{{.NameNative}}.join('\", \"')}" : ""}]
 {{- else}} "${{.NameNative}}"
@@ -429,7 +429,7 @@ const dartMarshal = `
   /// bytes written.
   int marshalTo(Uint8List _buf) {
 {{- if or .HasFloat .HasUint32 .HasTimestamp}}
-    var _view = _buf.buffer.asByteData();
+    var _view = _buf.buffer.asByteData(_buf.offsetInBytes);
 {{- end}}
     int _i = 0;
 {{range .Fields}} { {{if eq .Type "bool"}}
