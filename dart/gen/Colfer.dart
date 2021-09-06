@@ -497,7 +497,7 @@ class O {
       if (o != null) {
         _buf[_i] = 10;
         _i++;
-        _i += o!.marshalTo(Uint8List.view(_buf.buffer, _i));
+        _i += o!.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }
     {
@@ -517,7 +517,7 @@ class O {
         _i++;
         for (var _vi in os) {
           _vi ??= O();
-          _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _i));
+          _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
         }
       }
     }
@@ -1372,7 +1372,7 @@ class EmbedO {
       if (inner != null) {
         _buf[_i] = 0;
         _i++;
-        _i += inner!.marshalTo(Uint8List.view(_buf.buffer, _i));
+        _i += inner!.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }
 

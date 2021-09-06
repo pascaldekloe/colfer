@@ -736,14 +736,14 @@ const dartMarshal = `
       _i++;
       for (var _vi in {{.NameNative}}) {
         _vi ??= {{.TypeNative}}();
-        _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _i));
+        _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }
 {{else}}
     if ({{.NameNative}} != null) {
       _buf[_i] = {{.Index}};
       _i++;
-      _i += {{.NameNative}}!.marshalTo(Uint8List.view(_buf.buffer, _i));
+      _i += {{.NameNative}}!.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
     }
 {{end}} }
 {{end}}
