@@ -264,7 +264,8 @@ class {{.NameNative}} {
 {{- else}}
 {{- if .TypeList}} List<{{.TypeNative}}>{{else}} {{end}}${ {{.NameNative}}.toString()}
 {{- end}}'
-{{- end}};
+{{- end}}
+'}';
 }
 {{- end}}
 `

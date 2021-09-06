@@ -297,7 +297,7 @@ class O {
   /// text, binary, or [_buf] exceeds [colferSizeMax]. Returns the number of
   /// bytes written.
   int marshalTo(Uint8List _buf) {
-    var _view = _buf.buffer.asByteData();
+    var _view = _buf.buffer.asByteData(_buf.offsetInBytes);
     int _i = 0;
     {
       if (b) {
@@ -1199,7 +1199,8 @@ class O {
       ', u8: ${u8.toString()}'
       ', u16: ${u16.toString()}'
       ', f32s: List<Float32List>${f32s.toString()}'
-      ', f64s: List<Float64List>${f64s.toString()}';
+      ', f64s: List<Float64List>${f64s.toString()}'
+      '}';
 }
 
 /// DromedaryCase oposes name casings.
@@ -1328,7 +1329,8 @@ class DromedaryCase {
 
   @override
   String toString() => 'class DromedaryCase {'
-      'pascalCase: "$pascalCase"';
+      'pascalCase: "$pascalCase"'
+      '}';
 }
 
 /// EmbedO has an inner object only.
@@ -1426,5 +1428,6 @@ class EmbedO {
 
   @override
   String toString() => 'class EmbedO {'
-      'inner: ${inner.toString()}';
+      'inner: ${inner.toString()}'
+      '}';
 }
