@@ -110,6 +110,22 @@ func main() {
 			log.Fatalf("%s: snippet not supported with ECMAScript", name)
 		}
 
+	case "typescript", "ts":
+		report.Print("set-up for Typescript")
+		gen = colfer.GenerateTS
+		if *superClass != "" {
+			log.Fatalf("%s: super class not supported with Typescript", name)
+		}
+		if *interfaces != "" {
+			log.Fatalf("%s: interfaces not supported with Typescript", name)
+		}
+		if *tagFiles != "" {
+			log.Fatalf("%s: tags not supported with Typescript", name)
+		}
+		if *snippetFile != "" {
+			log.Fatalf("%s: snippet not supported with Typescript", name)
+		}
+
 	default:
 		log.Fatalf("%s: unsupported language %q", name, lang)
 	}

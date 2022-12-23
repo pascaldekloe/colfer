@@ -6,6 +6,7 @@ test:
 
 	$(MAKE) -C c test
 	$(MAKE) -C ecma test
+	$(MAKE) -C ts test
 	$(MAKE) -C go test
 	$(MAKE) -C java test
 	$(MAKE) -C java/maven target
