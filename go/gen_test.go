@@ -187,3 +187,25 @@ func TestFuzzSeed(t *testing.T) {
 		}
 	}
 }
+
+func FuzzO(f *testing.F) {
+	for _, gold := range newGoldenCases() {
+		bytes, err := hex.DecodeString(gold.serial)
+		if err != nil {
+			f.Fatalf("malformed golden serial %q: %s", gold.serial, err)
+		}
+		f.Add(bytes)
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		o := new(O)
+		err := o.UnmarshalBinary(data)
+		if err != nil {
+			return
+		}
+		_, err = o.MarshalBinary()
+		if err != nil {
+			t.Fatal("marshal error:", err)
+		}
+	})
+}

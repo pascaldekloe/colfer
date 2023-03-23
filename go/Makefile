@@ -14,6 +14,10 @@ breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
 	$(GO) build ./$@/...
 	touch $@
 
+.PHONY: fuzz
+fuzz: test
+	$(GO) test -fuzz O
+
 .PHONY: clean
 clean:
 	rm -fr breaktest
