@@ -19,5 +19,5 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
       
-    - name: make
+    - name: make CC=clang
       run: make
