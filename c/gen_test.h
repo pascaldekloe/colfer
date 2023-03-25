@@ -9,7 +9,7 @@ typedef struct golden {
 	const gen_o o;
 } golden;
 
-struct golden golden_cases[] = {
+const struct golden golden_cases[] = {
 	{"7f", {.b = 0}},
 	{"007f", {.b = 1}},
 	{"01017f", {.u32 = 1}},
