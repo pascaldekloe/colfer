@@ -267,7 +267,7 @@ func printManual() {
 	tagsSection := bold + "TAGS" + clear + "\n" +
 		"\tTags, a.k.a. annotations, are source code additions for structs\n" +
 		"\tand/or fields. Input for the compiler can be specified with the\n" +
-		bold + "\t-f" + clear + " option. The data format is " + italic +
+		bold + "\t-t" + clear + " option. The data format is " + italic +
 		"line-oriented" + clear + ".\n\n" +
 		"\t\t<line> :≡ <qual> <space> <code> ;\n" +
 		"\t\t<qual> :≡ <package> '.' <dest> ;\n" +

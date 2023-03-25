@@ -101,7 +101,7 @@ OPTIONS
 TAGS
 	Tags, a.k.a. annotations, are source code additions for structs
 	and/or fields. Input for the compiler can be specified with the
-	-f option. The data format is line-oriented.
+	-t option. The data format is line-oriented.
 
 		<line> :≡ <qual> <space> <code> ;
 		<qual> :≡ <package> '.' <dest> ;
