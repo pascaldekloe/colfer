@@ -181,7 +181,7 @@ int main() {
 	}
 
 	void* buf = malloc(colfer_size_max);
-	void* hex = malloc(colfer_size_max * 2 + 1);
+	char* hex = malloc(colfer_size_max * 2 + 1);
 
 	printf("TEST marshalling...\n");
 	for (int i = 0; i < n; ++i) {

@@ -1,12 +1,12 @@
 module github.com/pascaldekloe/colfer
 
-go 1.14
+go 1.18
 
 require (
-	github.com/dvyukov/go-fuzz v0.0.0-20200318091601-be3528f3a813 // indirect
-	github.com/gogo/protobuf v1.3.1
-	github.com/google/flatbuffers v1.12.0
-	github.com/pascaldekloe/name v1.0.0
+	github.com/gogo/protobuf v1.3.2
+	github.com/google/flatbuffers v23.3.3+incompatible
+	github.com/pascaldekloe/name v1.0.1
 	golang.org/x/mod v0.3.0
-	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 )
+
+require golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect

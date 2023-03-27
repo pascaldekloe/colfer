@@ -7,12 +7,12 @@ NPM ?= npm
 test: test.js Colfer.js node_modules/.bin/qunit breaktest
 	node_modules/.bin/qunit test.js
 
-breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) -b $@ JavaScript ../testdata/break*.colf
 	$(NODE) --check $@/*.js
 	touch $@
 
-Colfer.js: ../testdata/test.colf ../*.go ../cmd/colf/*.go
+Colfer.js: ../testdata/test.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) JavaScript ../testdata/test.colf
 	$(NODE) --check $@
 

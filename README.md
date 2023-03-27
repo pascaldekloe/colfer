@@ -1,4 +1,4 @@
-# Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
+# Colfer
 
 Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec)
 optimized for speed and size.
@@ -9,6 +9,8 @@ to marshal and unmarshall data structures.
 This is free and unencumbered software released into the
 [public domain](http://creativecommons.org/publicdomain/zero/1.0).
 The format is inspired by Proto**col** Buf**fer**s.
+
+[![CI](https://github.com/pascaldekloe/colfer/actions/workflows/ci.yml/badge.svg)](https://github.com/pascaldekloe/colfer/actions/workflows/ci.yml)
 
 
 #### Language Support
@@ -105,7 +107,7 @@ OPTIONS
 TAGS
 	Tags, a.k.a. annotations, are source code additions for structs
 	and/or fields. Input for the compiler can be specified with the
-	-f option. The data format is line-oriented.
+	-t option. The data format is line-oriented.
 
 		<line> :≡ <qual> <space> <code> ;
 		<qual> :≡ <package> '.' <dest> ;

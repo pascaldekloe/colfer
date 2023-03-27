@@ -8,13 +8,13 @@ JAVADOC ?= javadoc
 test: test.class breaktest
 	$(JAVA) test
 
-breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) -b $@ -x java/util/ArrayList Java ../testdata/break*.colf
 	$(JAVAC) $@/*/*.java
 	$(JAVADOC) -d $@ $@/*/*.java
 	touch $@
 
-gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../cmd/colf/*.go
+gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) -t ../testdata/test-java.tags Java ../testdata/test.colf
 	$(JAVAC) $@/*.java
 	touch $@

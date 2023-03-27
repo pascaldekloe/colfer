@@ -1,0 +1,264 @@
+{{if eq .Type "bool"}}
+	if o.{{.NameNative}} {
+		buf[i] = {{.Index}}
+		i++
+	}
+{{else if eq .Type "uint8"}}
+	if x := o.{{.NameNative}}; x != 0 {
+		buf[i] = {{.Index}}
+		i++
+		buf[i] = x
+		i++
+	}
+{{else if eq .Type "uint16"}}
+	if x := o.{{.NameNative}}; x >= 1<<8 {
+		buf[i] = {{.Index}}
+		i++
+		buf[i] = byte(x >> 8)
+		i++
+		buf[i] = byte(x)
+		i++
+	} else if x != 0 {
+		buf[i] = {{.Index}} | 0x80
+		i++
+		buf[i] = byte(x)
+		i++
+	}
+{{else if eq .Type "uint32"}}
+	if x := o.{{.NameNative}}; x >= 1<<21 {
+		buf[i] = {{.Index}} | 0x80
+		intconv.PutUint32(buf[i+1:], x)
+		i += 5
+	} else if x != 0 {
+		buf[i] = {{.Index}}
+		i++
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+{{else if eq .Type "uint64"}}
+	if x := o.{{.NameNative}}; x >= 1<<49 {
+		buf[i] = {{.Index}} | 0x80
+		intconv.PutUint64(buf[i+1:], x)
+		i += 9
+	} else if x != 0 {
+		buf[i] = {{.Index}}
+		i++
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+{{else if eq .Type "int32"}}
+{{- if .TypeList}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameNative}} {
+			x1 := uint32(v << 1) ^ uint32(v >> 31)
+			for ; x1 >= 0x80; {
+				buf[i] = byte(x1 | 0x80)
+				x1 >>= 7
+				i++
+			}
+			buf[i] = byte(x1)
+			i++
+		}
+	}
+{{- else}}
+	if v := o.{{.NameNative}}; v != 0 {
+		x := uint32(v)
+		if v >= 0 {
+			buf[i] = {{.Index}}
+		} else {
+			x = ^x + 1
+			buf[i] = {{.Index}} | 0x80
+		}
+		i++
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+{{end}}
+{{else if eq .Type "int64"}}
+{{- if .TypeList}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameNative}} {
+			x1 := uint64(v << 1) ^ uint64(v >> 63)
+			for n := 0; x1 >= 0x80 && n < 8; n++ {
+				buf[i] = byte(x1 | 0x80)
+				x1 >>= 7
+				i++
+			}
+			buf[i] = byte(x1)
+			i++
+		}
+	}
+{{- else}}
+	if v := o.{{.NameNative}}; v != 0 {
+		x := uint64(v)
+		if v >= 0 {
+			buf[i] = {{.Index}}
+		} else {
+			x = ^x + 1
+			buf[i] = {{.Index}} | 0x80
+		}
+		i++
+		for n := 0; x >= 0x80 && n < 8; n++ {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+	}
+{{- end}}
+{{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameNative}} {
+			intconv.PutUint32(buf[i:], math.Float32bits(v))
+			i += 4
+		}
+	}
+ {{- else}}
+	if v := o.{{.NameNative}}; v != 0 {
+		buf[i] = {{.Index}}
+		intconv.PutUint32(buf[i+1:], math.Float32bits(v))
+		i += 5
+	}
+ {{- end}}
+{{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for _, v := range o.{{.NameNative}} {
+			intconv.PutUint64(buf[i:], math.Float64bits(v))
+			i += 8
+		}
+	}
+ {{- else}}
+	if v := o.{{.NameNative}}; v != 0 {
+		buf[i] = {{.Index}}
+		intconv.PutUint64(buf[i+1:], math.Float64bits(v))
+		i += 9
+	}
+ {{- end}}
+{{else if eq .Type "timestamp"}}
+	if v := o.{{.NameNative}}; !v.IsZero() {
+		s, ns := uint64(v.Unix()), uint32(v.Nanosecond())
+		if s < 1<<32 {
+			buf[i] = {{.Index}}
+			intconv.PutUint32(buf[i+1:], uint32(s))
+			i += 5
+		} else {
+			buf[i] = {{.Index}} | 0x80
+			intconv.PutUint64(buf[i+1:], s)
+			i += 9
+		}
+		intconv.PutUint32(buf[i:], ns)
+		i += 4
+	}
+{{else if eq .Type "text" "binary"}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+ {{- if .TypeList}}
+		for _, a := range o.{{.NameNative}} {
+			x = uint(len(a))
+			for x >= 0x80 {
+				buf[i] = byte(x | 0x80)
+				x >>= 7
+				i++
+			}
+			buf[i] = byte(x)
+			i++
+			i += copy(buf[i:], a)
+		}
+ {{- else}}
+		i += copy(buf[i:], o.{{.NameNative}})
+ {{- end}}
+	}
+{{else if .TypeList}}
+	if l := len(o.{{.NameNative}}); l != 0 {
+		buf[i] = {{.Index}}
+		i++
+		x := uint(l)
+		for x >= 0x80 {
+			buf[i] = byte(x | 0x80)
+			x >>= 7
+			i++
+		}
+		buf[i] = byte(x)
+		i++
+		for vi, v := range o.{{.NameNative}} {
+			if v == nil {
+				v = new({{.TypeNative}})
+				o.{{.NameNative}}[vi] = v
+			}
+			i += v.MarshalTo(buf[i:])
+		}
+	}
+{{else}}
+	if v := o.{{.NameNative}}; v != nil {
+		buf[i] = {{.Index}}
+		i++
+		i += v.MarshalTo(buf[i:])
+	}
+{{end}}

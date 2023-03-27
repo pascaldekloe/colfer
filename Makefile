@@ -25,7 +25,6 @@ clean:
 	$(MAKE) -C ecma/bench clean
 	$(MAKE) -C go clean
 	$(MAKE) -C go/bench clean
-	$(MAKE) -C go/fuzz clean
 	$(MAKE) -C java clean
 	$(MAKE) -C java/bench clean
 	$(MAKE) -C java/maven clean

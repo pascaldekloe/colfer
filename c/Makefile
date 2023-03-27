@@ -11,7 +11,7 @@ breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
 	$(CC) $(CFLAGS) -c -std=c11 $@/Colfer.c
 	touch $@
 
-Colfer.h Colfer.c &: ../testdata/test.colf ../*.go ../cmd/colf/*.go
+Colfer.h Colfer.c &: ../testdata/test.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) C ../testdata/test.colf
 
 Colfer.o: Colfer.h Colfer.c

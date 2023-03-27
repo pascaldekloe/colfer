@@ -145,6 +145,10 @@ func addSpec(pkg *Package, decl *ast.GenDecl, spec ast.Spec, schemaPath string) 
 }
 
 func mapStruct(dst *Struct, src *ast.StructType) error {
+	if len(src.Fields.List) == 0 {
+		return fmt.Errorf("colfer: %s has no fields", dst)
+	}
+
 	for i, f := range src.Fields.List {
 		field := &Field{Struct: dst, Index: i}
 		dst.Fields = append(dst.Fields, field)
