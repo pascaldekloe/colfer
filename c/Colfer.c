@@ -21,7 +21,6 @@ size_t colfer_size_max = 16 * 1024 * 1024;
 size_t colfer_list_max = 64 * 1024;
 
 
-
 size_t gen_o_marshal_len(const gen_o* o) {
 	size_t l = 1;
 

@@ -1,0 +1,268 @@
+	// Serializes the object into an Uint8Array.
+{{- range .Fields}}{{if .TypeList}}{{if eq .Type "float32" "float64"}}{{else}}
+	// All null entries in property {{.NameNative}} will be replaced with {{if eq .Type "text"}}an empty String{{else if eq .Type "binary"}}an empty Array{{else}}a new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}{{end}}.
+{{- end}}{{end}}{{end}}
+	this.{{.NameNative}}.prototype.marshal = function(buf) {
+		if (! buf || !buf.length) buf = new Uint8Array(colferSizeMax);
+		var i = 0;
+		var view = new DataView(buf.buffer);
+
+{{range .Fields}}{{if eq .Type "bool"}}
+		if (this.{{.NameNative}})
+			buf[i++] = {{.Index}};
+{{else if eq .Type "uint8"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} > 255 || this.{{.NameNative}} < 0)
+				throw new Error('colfer: {{.String}} out of reach: ' + this.{{.NameNative}});
+			buf[i++] = {{.Index}};
+			buf[i++] = this.{{.NameNative}};
+		}
+{{else if eq .Type "uint16"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} > 65535 || this.{{.NameNative}} < 0)
+				throw new Error('colfer: {{.String}} out of reach: ' + this.{{.NameNative}});
+			if (this.{{.NameNative}} < 256) {
+				buf[i++] = {{.Index}} | 128;
+				buf[i++] = this.{{.NameNative}};
+			} else {
+				buf[i++] = {{.Index}};
+				buf[i++] = this.{{.NameNative}} >>> 0;
+				buf[i++] = this.{{.NameNative}} & 255;
+			}
+		}
+{{else if eq .Type "uint32"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} > 4294967295 || this.{{.NameNative}} < 0)
+				throw new Error('colfer: {{.String}} out of reach: ' + this.{{.NameNative}});
+			if (this.{{.NameNative}} < 0x200000) {
+				buf[i++] = {{.Index}};
+				i = encodeVarint(buf, i, this.{{.NameNative}});
+			} else {
+				buf[i++] = {{.Index}} | 128;
+				view.setUint32(i, this.{{.NameNative}});
+				i += 4;
+			}
+		}
+{{else if eq .Type "uint64"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} < 0)
+				throw new Error('colfer: {{.String}} out of reach: ' + this.{{.NameNative}});
+			if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
+				throw new Error('colfer: {{.String}} exceeds Number.MAX_SAFE_INTEGER');
+			if (this.{{.NameNative}} < 0x2000000000000) {
+				buf[i++] = {{.Index}};
+				i = encodeVarint(buf, i, this.{{.NameNative}});
+			} else {
+				buf[i++] = {{.Index}} | 128;
+				view.setUint32(i, this.{{.NameNative}} / 0x100000000);
+				i += 4;
+				view.setUint32(i, this.{{.NameNative}} % 0x100000000);
+				i += 4;
+			}
+		}
+{{else if eq .Type "int32"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} < 0) {
+				buf[i++] = {{.Index}} | 128;
+				if (this.{{.NameNative}} < -2147483648)
+					throw new Error('colfer: {{.String}} exceeds 32-bit range');
+				i = encodeVarint(buf, i, -this.{{.NameNative}});
+			} else {
+				buf[i++] = {{.Index}}; 
+				if (this.{{.NameNative}} > 2147483647)
+					throw new Error('colfer: {{.String}} exceeds 32-bit range');
+				i = encodeVarint(buf, i, this.{{.NameNative}});
+			}
+		}
+{{else if eq .Type "int64"}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} < 0) {
+				buf[i++] = {{.Index}} | 128;
+				if (this.{{.NameNative}} < Number.MIN_SAFE_INTEGER)
+					throw new Error('colfer: {{.String}} exceeds Number.MIN_SAFE_INTEGER');
+				i = encodeVarint(buf, i, -this.{{.NameNative}});
+			} else {
+				buf[i++] = {{.Index}}; 
+				if (this.{{.NameNative}} > Number.MAX_SAFE_INTEGER)
+					throw new Error('colfer: {{.String}} exceeds Number.MAX_SAFE_INTEGER');
+				i = encodeVarint(buf, i, this.{{.NameNative}});
+			}
+		}
+{{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
+				throw new Error('colfer: {{.String}} exceeds colferListMax');
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f, fi) {
+				if (f > 3.4028234663852886E38 || f < -3.4028234663852886E38)
+					throw new Error('colfer: {{.String}}[' + fi + '] exceeds 32-bit range');
+				view.setFloat32(i, f);
+				i += 4;
+			});
+		}
+ {{- else}}
+		if (this.{{.NameNative}}) {
+			if (this.{{.NameNative}} > 3.4028234663852886E38 || this.{{.NameNative}} < -3.4028234663852886E38)
+				throw new Error('colfer: {{.String}} exceeds 32-bit range');
+			buf[i++] = {{.Index}};
+			view.setFloat32(i, this.{{.NameNative}});
+			i += 4;
+		} else if (Number.isNaN(this.{{.NameNative}})) {
+			buf.set([{{.Index}}, 0x7f, 0xc0, 0, 0], i);
+			i += 5;
+		}
+ {{- end}}
+{{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
+				throw new Error('colfer: {{.String}} exceeds colferListMax');
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(f) {
+				view.setFloat64(i, f);
+				i += 8;
+			});
+		}
+ {{- else}}
+		if (this.{{.NameNative}}) {
+			buf[i++] = {{.Index}};
+			view.setFloat64(i, this.{{.NameNative}});
+			i += 8;
+		} else if (Number.isNaN(this.{{.NameNative}})) {
+			buf.set([{{.Index}}, 0x7f, 0xf8, 0, 0, 0, 0, 0, 0], i);
+			i += 9;
+		}
+ {{- end}}
+{{else if eq .Type "timestamp"}}
+		if ((this.{{.NameNative}} && this.{{.NameNative}}.getTime()) || this.{{.NameNative}}_ns) {
+			var ms = this.{{.NameNative}} ? this.{{.NameNative}}.getTime() : 0;
+			var s = ms / 1E3;
+
+			var ns = this.{{.NameNative}}_ns || 0;
+			if (ns < 0 || ns >= 1E6)
+				throw new Error('colfer: {{.String}} ns not in range (0, 1ms>');
+			var msf = ms % 1E3;
+			if (ms < 0 && msf) {
+				s--
+				msf = 1E3 + msf;
+			}
+			ns += msf * 1E6;
+
+			if (s > 0xffffffff || s < 0) {
+				buf[i++] = {{.Index}} | 128;
+				if (s > 0) {
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
+				} else {
+					s = -s;
+					view.setUint32(i, s / 0x100000000);
+					view.setUint32(i + 4, s);
+					var carry = 1;
+					for (var j = i + 7; j >= i; j--) {
+						var b = (buf[j] ^ 255) + carry;
+						buf[j] = b & 255;
+						carry = b >> 8;
+					}
+				}
+				view.setUint32(i + 8, ns);
+				i += 12;
+			} else {
+				buf[i++] = {{.Index}};
+				view.setUint32(i, s);
+				i += 4;
+				view.setUint32(i, ns);
+				i += 4;
+			}
+		}
+{{else if eq .Type "text"}}
+ {{- if .TypeList}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
+				throw new Error('colfer: {{.String}} exceeds colferListMax');
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+
+			a.forEach(function(s, si) {
+				if (s == null) {
+					s = "";
+					a[si] = s;
+				}
+				var utf8 = encodeUTF8(s);
+				i = encodeVarint(buf, i, utf8.length);
+				buf.set(utf8, i);
+				i += utf8.length;
+			});
+		}
+ {{- else}}
+		if (this.{{.NameNative}}) {
+			buf[i++] = {{.Index}};
+			var utf8 = encodeUTF8(this.{{.NameNative}});
+			i = encodeVarint(buf, i, utf8.length);
+			buf.set(utf8, i);
+			i += utf8.length;
+		}
+ {{- end}}
+{{else if eq .Type "binary"}}
+ {{- if .TypeList}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
+				throw new Error('colfer: {{.String}} exceeds colferListMax');
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(b, bi) {
+				if (b == null) {
+					b = "";
+					a[bi] = b;
+				}
+				i = encodeVarint(buf, i, b.length);
+				buf.set(b, i);
+				i += b.length;
+			});
+		}
+ {{- else}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			buf[i++] = {{.Index}};
+			var b = this.{{.NameNative}};
+			i = encodeVarint(buf, i, b.length);
+			buf.set(b, i);
+			i += b.length;
+		}
+ {{- end}}
+{{else if .TypeList}}
+		if (this.{{.NameNative}} && this.{{.NameNative}}.length) {
+			var a = this.{{.NameNative}};
+			if (a.length > colferListMax)
+				throw new Error('colfer: {{.String}} exceeds colferListMax');
+			buf[i++] = {{.Index}};
+			i = encodeVarint(buf, i, a.length);
+			a.forEach(function(v, vi) {
+				if (v == null) {
+					v = new {{.TypeRef.Pkg.NameNative}}.{{.TypeRef.NameNative}}();
+					a[vi] = v;
+				}
+				var b = v.marshal();
+				buf.set(b, i);
+				i += b.length;
+			});
+		}
+{{else}}
+		if (this.{{.NameNative}}) {
+			buf[i++] = {{.Index}};
+			var b = this.{{.NameNative}}.marshal();
+			buf.set(b, i);
+			i += b.length;
+		}
+{{end}}{{end}}
+
+		buf[i++] = 127;
+		if (i >= colferSizeMax)
+			throw new Error('colfer: {{.String}} serial size ' + i + ' exceeds ' + colferSizeMax + ' bytes');
+		return buf.subarray(0, i);
+	}

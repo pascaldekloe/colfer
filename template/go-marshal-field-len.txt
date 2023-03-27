@@ -1,0 +1,196 @@
+{{if eq .Type "bool"}}
+	if o.{{.NameNative}} {
+		l++
+	}
+{{else if eq .Type "uint8"}}
+	if x := o.{{.NameNative}}; x != 0 {
+		l += 2
+	}
+{{else if eq .Type "uint16"}}
+	if x := o.{{.NameNative}}; x >= 1<<8 {
+		l += 3
+	} else if x != 0 {
+		l += 2
+	}
+{{else if eq .Type "uint32"}}
+	if x := o.{{.NameNative}}; x >= 1<<21 {
+		l += 5
+	} else if x != 0 {
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+{{else if eq .Type "uint64"}}
+	if x := o.{{.NameNative}}; x >= 1<<49 {
+		l += 9
+	} else if x != 0 {
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+{{else if eq .Type "int32"}}
+{{- if .TypeList}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+		for _, v := range o.{{.NameNative}} {
+			x1 := uint32(v << 1) ^ uint32(v >> 31)
+			for ; x1 >= 0x80; {
+				x1 >>= 7
+				l++
+			}
+		}
+		l += len(o.{{.NameNative}})
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+		}
+	}
+{{else}}
+	if v := o.{{.NameNative}}; v != 0 {
+		x := uint32(v)
+		if v < 0 {
+			x = ^x + 1
+		}
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+{{- end}}
+{{else if eq .Type "int64"}}
+{{- if .TypeList}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+		for _, v := range o.{{.NameNative}} {
+			x1 := uint64(v << 1) ^ uint64(v >> 63)
+			for n := 0; x1 >= 0x80 && n < 8; n++ {
+				x1 >>= 7
+				l++
+			}
+		}
+		l += len(o.{{.NameNative}})
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+		}
+	}
+	{{else}}
+		if v := o.{{.NameNative}}; v != 0 {
+			l += 2
+			x := uint64(v)
+			if v < 0 {
+				x = ^x + 1
+			}
+			for n := 0; x >= 0x80 && n < 8; n++ {
+				x >>= 7
+				l++
+			}
+		}
+{{- end}}
+{{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2+x*4; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+ {{- else}}
+	if o.{{.NameNative}} != 0 {
+		l += 5
+	}
+ {{- end}}
+{{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2+x*8; x >= 0x80; l++ {
+			x >>= 7
+		}
+	}
+ {{- else}}
+	if o.{{.NameNative}} != 0 {
+		l += 9
+	}
+ {{- end}}
+{{else if eq .Type "timestamp"}}
+	if v := o.{{.NameNative}}; !v.IsZero() {
+		if s := uint64(v.Unix()); s < 1<<32 {
+			l += 9
+		} else {
+			l += 13
+		}
+	}
+{{else if eq .Type "text" "binary"}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+ {{- if .TypeList}}
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+		for _, a := range o.{{.NameNative}} {
+			x = len(a)
+			if x > ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d bytes", ColferSizeMax))
+			}
+			for l += x+1; x >= 0x80; l++ {
+				x >>= 7
+			}
+		}
+		if l >= ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+		}
+ {{- else}}
+		if x > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d bytes", ColferSizeMax))
+		}
+		for l += x+2; x >= 0x80; l++ {
+			x >>= 7
+		}
+ {{- end}}
+	}
+{{else if .TypeList}}
+	if x := len(o.{{.NameNative}}); x != 0 {
+		if x > ColferListMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: field {{.String}} exceeds %d elements", ColferListMax))
+		}
+		for l += 2; x >= 0x80; l++ {
+			x >>= 7
+		}
+		for _, v := range o.{{.NameNative}} {
+			if v == nil {
+				l++
+				continue
+			}
+			vl, err := v.MarshalLen()
+			if err != nil {
+				return 0, err
+			}
+			l += vl
+		}
+		if l > ColferSizeMax {
+			return 0, ColferMax(fmt.Sprintf("colfer: struct {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+		}
+	}
+{{else}}
+	if v := o.{{.NameNative}}; v != nil {
+		vl, err := v.MarshalLen()
+		if err != nil {
+			return 0, err
+		}
+		l += vl + 1
+	}
+{{end}}
