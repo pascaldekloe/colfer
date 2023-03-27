@@ -1,0 +1,150 @@
+{{if eq .Type "bool"}}
+  if ({{.NameNative}}) {
+    _l++;
+  }
+{{else if eq .Type "uint8"}}
+  if ({{.NameNative}} != 0) {
+    _l += 2;
+  }
+{{else if eq .Type "uint16"}}
+  if ({{.NameNative}} >= 1<<8) {
+    _l += 3;
+  } else if ({{.NameNative}} != 0) {
+    _l += 2;
+  }
+{{else if eq .Type "uint32"}}
+  int _x = {{.NameNative}};
+  if (_x >= 1<<21) {
+    _l += 5;
+  } else if (_x != 0) {
+    for (_l += 2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+  }
+{{else if eq .Type "uint64"}}
+  int _x = {{.NameNative}};
+  if (_x < 0 || 0x2000000000000 <= _x) {
+    _l += 9;
+  } else if (_x != 0) {
+    for (_l += 2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+  }
+{{else if eq .Type "int32"}}
+  int _x = {{.NameNative}};
+  if (_x != 0) {
+    if (_x < 0) {
+      _x = -_x;
+    }
+    for (_l += 2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+  }
+{{else if eq .Type "int64"}}
+  int _x = {{.NameNative}};
+  if (_x != 0) {
+    if (-_x == _x) {
+      _l += 10;
+    } else {
+      _l += 2;
+      if (_x < 0) {
+        _x = -_x;
+      }
+      for (; _x >= 0x80; _l++) {
+        _x >>= 7;
+      }
+    }
+  }
+{{else if eq .Type "float32"}}
+{{- if .TypeList}}
+  int _x = {{.NameNative}}.length;
+  if (_x != 0) {
+    if (_x > colferListMax) {
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
+    }
+    for (_l += 2+_x*4; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+  }
+{{- else}}
+  if ({{.NameNative}} != 0) {
+    _l += 5;
+  }
+{{- end}}
+{{else if eq .Type "float64"}}
+{{- if .TypeList}}
+  int _x = {{.NameNative}}.length;
+  if (_x != 0) {
+    if (_x > colferListMax) {
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
+    }
+    for (_l += 2+_x*8; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+  }
+{{- else}}
+  if ({{.NameNative}} != 0) {
+    _l += 9;
+  }
+{{- end}}
+{{else if eq .Type "timestamp"}}
+  DateTime? _v = {{.NameNative}};
+  if (_v != null) {
+    int _us = _v.microsecondsSinceEpoch;
+    int _s = _us ~/ 1E6;
+    if (_s >= 1 << 33 || _us < 0) {
+      _l += 13;
+    } else {
+      _l += 9;
+    }
+  }
+{{else if eq .Type "text" "binary"}}
+  int _x = {{.NameNative}}.length;
+  if (_x != 0) {
+{{- if .TypeList}}
+    if (_x > colferListMax) {
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
+    }
+    for (_l += 2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+    for (final _a in {{.NameNative}}) {
+      _x = _a.length;
+{{- if eq .Type "text"}}
+      _x *= 4;
+{{- end}}
+      for (_l += _x+1; _x >= 0x80; _l++) {
+        _x >>= 7;
+      }
+    }
+{{- else}}
+{{- if eq .Type "text"}}
+    _x *= 4;
+{{- end}}
+    for (_l += _x+2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+{{- end}}
+  }
+{{else if .TypeList}}
+  int _x = {{.NameNative}}.length;
+  if (_x != 0) {
+    if (_x > colferListMax) {
+      throw RangeError.range(_x, null, colferListMax, '{{.String}}', 'colfer');
+    }
+    for (_l += 2; _x >= 0x80; _l++) {
+      _x >>= 7;
+    }
+    for (final _v in {{.NameNative}}) {
+      if (_v == null) {
+        _l++;
+        continue;
+      }
+      _l += _v.marshalLen();
+    }
+  }
+{{else}}
+  if ({{.NameNative}} != null) {
+    _l += {{.NameNative}}!.marshalLen() + 1;
+  }
+{{end}}
