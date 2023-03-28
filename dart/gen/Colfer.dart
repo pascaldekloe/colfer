@@ -1222,28 +1222,6 @@ class O {
     for (var _e in f64s) _h = 31 * _h + _e.hashCode;
     return _h;
   }
-
-  @override
-  String toString() => 'class O {'
-      'b: ${b.toString()}'
-      ', u32: ${u32.toString()}'
-      ', u64: ${u64.toString()}'
-      ', i32: ${i32.toString()}'
-      ', i64: ${i64.toString()}'
-      ', f32: ${f32.toString()}'
-      ', f64: ${f64.toString()}'
-      ', t: ${t.toString()}'
-      ', s: "$s"'
-      ', a: ${a.toString()}'
-      ', o: ${o.toString()}'
-      ', os: List<O>${os.toString()}'
-      ', ss: [${ss.isNotEmpty ? "\"ss.join('\", \"')}" : ""}]'
-      ', as_0: List<List<Uint8List>>${as_0.toString()}'
-      ', u8: ${u8.toString()}'
-      ', u16: ${u16.toString()}'
-      ', f32s: List<Float32List>${f32s.toString()}'
-      ', f64s: List<Float64List>${f64s.toString()}'
-      '}';
 }
 
 /// DromedaryCase oposes name casings.
@@ -1373,11 +1351,6 @@ class DromedaryCase {
     _h = 31 * _h + pascalCase.hashCode;
     return _h;
   }
-
-  @override
-  String toString() => 'class DromedaryCase {'
-      'pascalCase: "$pascalCase"'
-      '}';
 }
 
 /// EmbedO has an inner object only.
@@ -1476,9 +1449,4 @@ class EmbedO {
     _h = 31 * _h + inner.hashCode;
     return _h;
   }
-
-  @override
-  String toString() => 'class EmbedO {'
-      'inner: ${inner.toString()}'
-      '}';
 }

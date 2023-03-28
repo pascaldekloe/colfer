@@ -121,19 +121,5 @@ class {{.NameNative}} {
     return _h;
   }
 
-  @override
-  String toString() => 'class {{.NameNative}} {'
-{{- $first := true}}
-{{- range .Fields}}
-  '{{if $first}}{{$first = false}}{{else}}, {{end}}{{.NameNative}}:
-{{- if eq .Type "text"}}
-{{- if .TypeList}} [${ {{.NameNative}}.isNotEmpty ? "\"{{.NameNative}}.join('\", \"')}" : ""}]
-{{- else}} "${{.NameNative}}"
-{{- end}}
-{{- else}}
-{{- if .TypeList}} List<{{.TypeNative}}>{{else}} {{end}}${ {{.NameNative}}.toString()}
-{{- end}}'
-{{- end}}
-'}';
 }
 {{- end}}
