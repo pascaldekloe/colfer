@@ -14,45 +14,6 @@ const colferListMax = 64 * 1024;
 
 /// O contains all supported data types.
 class O {
-  // Constructor
-  O({
-    bool? b,
-    int? u32,
-    int? u64,
-    int? i32,
-    int? i64,
-    double? f32,
-    double? f64,
-    DateTime? t,
-    String? s,
-    Uint8List? a,
-    O? o,
-    List<O>? os,
-    List<String>? ss,
-    List<Uint8List>? as_0,
-    int? u8,
-    int? u16,
-    Float32List? f32s,
-    Float64List? f64s,
-  })  : b = b ?? false,
-        u32 = u32 ?? 0,
-        u64 = u64 ?? 0,
-        i32 = i32 ?? 0,
-        i64 = i64 ?? 0,
-        f32 = f32 ?? 0.0,
-        f64 = f64 ?? 0.0,
-        t = t ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-        s = s ?? '',
-        a = a ?? Uint8List(0),
-        o = o,
-        os = os ?? [],
-        ss = ss ?? [],
-        as_0 = as_0 ?? [],
-        u8 = u8 ?? 0,
-        u16 = u16 ?? 0,
-        f32s = f32s ?? Float32List(0),
-        f64s = f64s ?? Float64List(0);
-
   /// B tests booleans.
   bool b;
 
@@ -106,6 +67,45 @@ class O {
 
   /// F64s tests 64-bit floating point lists.
   Float64List f64s;
+
+  // Constructor
+  O({
+    bool? b,
+    int? u32,
+    int? u64,
+    int? i32,
+    int? i64,
+    double? f32,
+    double? f64,
+    DateTime? t,
+    String? s,
+    Uint8List? a,
+    O? o,
+    List<O>? os,
+    List<String>? ss,
+    List<Uint8List>? as_0,
+    int? u8,
+    int? u16,
+    Float32List? f32s,
+    Float64List? f64s,
+  })  : b = b ?? false,
+        u32 = u32 ?? 0,
+        u64 = u64 ?? 0,
+        i32 = i32 ?? 0,
+        i64 = i64 ?? 0,
+        f32 = f32 ?? 0.0,
+        f64 = f64 ?? 0.0,
+        t = t ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        s = s ?? '',
+        a = a ?? Uint8List(0),
+        o = o,
+        os = os ?? [],
+        ss = ss ?? [],
+        as_0 = as_0 ?? [],
+        u8 = u8 ?? 0,
+        u16 = u16 ?? 0,
+        f32s = f32s ?? Float32List(0),
+        f64s = f64s ?? Float64List(0);
 
   /// Returns an over estimatation of marshal length.
   ///
@@ -1211,12 +1211,12 @@ class O {
 
 /// DromedaryCase oposes name casings.
 class DromedaryCase {
+  String pascalCase;
+
   // Constructor
   DromedaryCase({
     String? pascalCase,
   }) : pascalCase = pascalCase ?? '';
-
-  String pascalCase;
 
   /// Returns an over estimatation of marshal length.
   ///
@@ -1343,12 +1343,12 @@ class DromedaryCase {
 /// EmbedO has an inner object only.
 /// Covers regression of issue #66.
 class EmbedO {
+  O? inner;
+
   // Constructor
   EmbedO({
     O? inner,
   }) : inner = inner;
-
-  O? inner;
 
   /// Returns an over estimatation of marshal length.
   ///
