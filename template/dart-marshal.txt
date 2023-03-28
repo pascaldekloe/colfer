@@ -9,12 +9,14 @@
     var _view = _buf.buffer.asByteData(_buf.offsetInBytes);
 {{- end}}
     int _i = 0;
-{{range .Fields}} { {{if eq .Type "bool"}}
+{{range .Fields}}
+    {
+{{if eq .Type "bool"}}
     if ({{.NameNative}}) {
       _buf[_i] = {{.Index}};
       _i++;
     }
-{{else if eq .Type "uint8"}}
+{{- else if eq .Type "uint8"}}
     if ({{.NameNative}} != 0) {
       if ({{.NameNative}} > 255 || {{.NameNative}} < 0) {
         throw RangeError.range({{.NameNative}}, 0, 255, '{{.String}}', 'colfer');
@@ -23,7 +25,7 @@
       _buf[_i+1] = {{.NameNative}};
       _i += 2;
     }
-{{else if eq .Type "uint16"}}
+{{- else if eq .Type "uint16"}}
     if ({{.NameNative}} != 0) {
       if ({{.NameNative}} > 65535 || {{.NameNative}} < 0) {
         throw RangeError.range({{.NameNative}}, 0, 65535, '{{.String}}', 'colfer');
@@ -39,7 +41,7 @@
         _i += 3;
       }
     }
-{{else if eq .Type "uint32"}}
+{{- else if eq .Type "uint32"}}
     int _x = {{.NameNative}};
     if (_x != 0) {
       if (_x > 4294967295 || _x < 0) {
@@ -61,7 +63,7 @@
         _i += 5;
       }
     }
-{{else if eq .Type "uint64"}}
+{{- else if eq .Type "uint64"}}
     int _x = {{.NameNative}};
     if (_x != 0) {
       if (0 < _x && _x < 0x2000000000000) {
@@ -80,7 +82,7 @@
         _i += 9;
       }
     }
-{{else if eq .Type "int32"}}
+{{- else if eq .Type "int32"}}
     int _x = {{.NameNative}};
     if (_x != 0) {
       if (_x < 0) {
@@ -112,7 +114,7 @@
         _i++;
       }
     }
-{{else if eq .Type "int64"}}
+{{- else if eq .Type "int64"}}
     int _x = {{.NameNative}};
     if (_x != 0) {
       if (_x < 0) {
@@ -143,7 +145,7 @@
         _i++;
       }
     }
-{{else if eq .Type "float32"}}
+{{- else if eq .Type "float32"}}
 {{- if .TypeList}}
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
@@ -181,7 +183,7 @@
       _i += 5;
     }
 {{- end}}
-{{else if eq .Type "float64"}}
+{{- else if eq .Type "float64"}}
 {{- if .TypeList}}
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
@@ -221,7 +223,7 @@
       _i += 9;
     }
 {{- end}}
-{{else if eq .Type "timestamp"}}
+{{- else if eq .Type "timestamp"}}
     int _us = {{.NameNative}}.microsecondsSinceEpoch;
     if (_us != 0) {
       int _res = _us % 1000000;
@@ -241,7 +243,7 @@
       _view.setInt32(_i, _ns);
       _i += 4;
     }
-{{else if eq .Type "text" "binary"}}
+{{- else if eq .Type "text" "binary"}}
 {{- if .TypeList}}
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
@@ -295,7 +297,7 @@
       _i += 1 + _v.length;
     }
 {{- end}}
-{{else if .TypeList}}
+{{- else if .TypeList}}
     int _x = {{.NameNative}}.length;
     if (_x > 0) {
       if (_x > colferListMax) {
@@ -314,13 +316,14 @@
         _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }
-{{else}}
+{{- else}}
     if ({{.NameNative}} != null) {
       _buf[_i] = {{.Index}};
       _i++;
       _i += {{.NameNative}}!.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
     }
-{{end}} }
+{{- end}}
+  }
 {{end}}
 
     _buf[_i] = 127;

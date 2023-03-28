@@ -63,7 +63,14 @@ class {{.NameNative}} {
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
     int _l = 1;
-{{range .Fields}} { {{template "marshal-len" .}} } {{end}}
+
+{{range .Fields}}
+    {
+{{template "marshal-len" .}}
+    }
+
+{{end}}
+
     if (_l > colferSizeMax) {
       return colferSizeMax;
     }

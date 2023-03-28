@@ -114,11 +114,13 @@ class O {
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
     int _l = 1;
+
     {
       if (b) {
         _l++;
       }
     }
+
     {
       int _x = u32;
       if (_x >= 1 << 21) {
@@ -129,6 +131,7 @@ class O {
         }
       }
     }
+
     {
       int _x = u64;
       if (_x < 0 || 0x2000000000000 <= _x) {
@@ -139,6 +142,7 @@ class O {
         }
       }
     }
+
     {
       int _x = i32;
       if (_x != 0) {
@@ -150,6 +154,7 @@ class O {
         }
       }
     }
+
     {
       int _x = i64;
       if (_x != 0) {
@@ -166,16 +171,19 @@ class O {
         }
       }
     }
+
     {
       if (f32 != 0) {
         _l += 5;
       }
     }
+
     {
       if (f64 != 0) {
         _l += 9;
       }
     }
+
     {
       int _us = t.microsecondsSinceEpoch;
       if (_us != 0) {
@@ -187,6 +195,7 @@ class O {
         }
       }
     }
+
     {
       int _x = s.length;
       if (_x != 0) {
@@ -196,6 +205,7 @@ class O {
         }
       }
     }
+
     {
       int _x = a.length;
       if (_x != 0) {
@@ -204,11 +214,13 @@ class O {
         }
       }
     }
+
     {
       if (o != null) {
         _l += o!.marshalLen() + 1;
       }
     }
+
     {
       int _x = os.length;
       if (_x != 0) {
@@ -223,6 +235,7 @@ class O {
         }
       }
     }
+
     {
       int _x = ss.length;
       if (_x != 0) {
@@ -241,6 +254,7 @@ class O {
         }
       }
     }
+
     {
       int _x = as_0.length;
       if (_x != 0) {
@@ -258,11 +272,13 @@ class O {
         }
       }
     }
+
     {
       if (u8 != 0) {
         _l += 2;
       }
     }
+
     {
       if (u16 >= 1 << 8) {
         _l += 3;
@@ -270,6 +286,7 @@ class O {
         _l += 2;
       }
     }
+
     {
       int _x = f32s.length;
       if (_x != 0) {
@@ -281,6 +298,7 @@ class O {
         }
       }
     }
+
     {
       int _x = f64s.length;
       if (_x != 0) {
@@ -292,6 +310,7 @@ class O {
         }
       }
     }
+
     if (_l > colferSizeMax) {
       return colferSizeMax;
     }
@@ -307,12 +326,14 @@ class O {
   int marshalTo(Uint8List _buf) {
     var _view = _buf.buffer.asByteData(_buf.offsetInBytes);
     int _i = 0;
+
     {
       if (b) {
         _buf[_i] = 0;
         _i++;
       }
     }
+
     {
       int _x = u32;
       if (_x != 0) {
@@ -336,6 +357,7 @@ class O {
         }
       }
     }
+
     {
       int _x = u64;
       if (_x != 0) {
@@ -356,6 +378,7 @@ class O {
         }
       }
     }
+
     {
       int _x = i32;
       if (_x != 0) {
@@ -389,6 +412,7 @@ class O {
         }
       }
     }
+
     {
       int _x = i64;
       if (_x != 0) {
@@ -421,6 +445,7 @@ class O {
         }
       }
     }
+
     {
       if (f32 != 0) {
         _buf[_i] = 5;
@@ -433,6 +458,7 @@ class O {
         _i += 5;
       }
     }
+
     {
       if (f64 != 0) {
         _buf[_i] = 6;
@@ -446,6 +472,7 @@ class O {
         _i += 9;
       }
     }
+
     {
       int _us = t.microsecondsSinceEpoch;
       if (_us != 0) {
@@ -467,6 +494,7 @@ class O {
         _i += 4;
       }
     }
+
     {
       int _x = s.length;
       if (_x > 0) {
@@ -484,6 +512,7 @@ class O {
         _i += 1 + _v.length;
       }
     }
+
     {
       int _x = a.length;
       if (_x > 0) {
@@ -501,6 +530,7 @@ class O {
         _i += 1 + _v.length;
       }
     }
+
     {
       if (o != null) {
         _buf[_i] = 10;
@@ -508,6 +538,7 @@ class O {
         _i += o!.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }
+
     {
       int _x = os.length;
       if (_x > 0) {
@@ -528,6 +559,7 @@ class O {
         }
       }
     }
+
     {
       int _x = ss.length;
       if (_x > 0) {
@@ -557,6 +589,7 @@ class O {
         }
       }
     }
+
     {
       int _x = as_0.length;
       if (_x > 0) {
@@ -586,6 +619,7 @@ class O {
         }
       }
     }
+
     {
       if (u8 != 0) {
         if (u8 > 255 || u8 < 0) {
@@ -596,6 +630,7 @@ class O {
         _i += 2;
       }
     }
+
     {
       if (u16 != 0) {
         if (u16 > 65535 || u16 < 0) {
@@ -613,6 +648,7 @@ class O {
         }
       }
     }
+
     {
       int _x = f32s.length;
       if (_x > 0) {
@@ -639,6 +675,7 @@ class O {
         }
       }
     }
+
     {
       int _x = f64s.length;
       if (_x > 0) {
@@ -1225,6 +1262,7 @@ class DromedaryCase {
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
     int _l = 1;
+
     {
       int _x = pascalCase.length;
       if (_x != 0) {
@@ -1234,6 +1272,7 @@ class DromedaryCase {
         }
       }
     }
+
     if (_l > colferSizeMax) {
       return colferSizeMax;
     }
@@ -1248,6 +1287,7 @@ class DromedaryCase {
   /// bytes written.
   int marshalTo(Uint8List _buf) {
     int _i = 0;
+
     {
       int _x = pascalCase.length;
       if (_x > 0) {
@@ -1357,11 +1397,13 @@ class EmbedO {
   /// characters are counted for 4 bytes, everything has its exact size.
   int marshalLen() {
     int _l = 1;
+
     {
       if (inner != null) {
         _l += inner!.marshalLen() + 1;
       }
     }
+
     if (_l > colferSizeMax) {
       return colferSizeMax;
     }
@@ -1376,6 +1418,7 @@ class EmbedO {
   /// bytes written.
   int marshalTo(Uint8List _buf) {
     int _i = 0;
+
     {
       if (inner != null) {
         _buf[_i] = 0;
