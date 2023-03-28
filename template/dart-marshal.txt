@@ -222,8 +222,8 @@
     }
 {{- end}}
 {{else if eq .Type "timestamp"}}
-    if ({{.NameNative}} != null) {
-      int _us = {{.NameNative}}!.microsecondsSinceEpoch;
+    int _us = {{.NameNative}}.microsecondsSinceEpoch;
+    if (_us != 0) {
       int _res = _us % 1000000;
       _us -= _res;
       int _s = _us ~/ 1E6;
@@ -311,7 +311,6 @@
       _buf[_i] = _x;
       _i++;
       for (var _vi in {{.NameNative}}) {
-        _vi ??= {{.TypeNative}}();
         _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
       }
     }

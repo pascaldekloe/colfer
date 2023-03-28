@@ -88,9 +88,8 @@
   }
 {{- end}}
 {{else if eq .Type "timestamp"}}
-  DateTime? _v = {{.NameNative}};
-  if (_v != null) {
-    int _us = _v.microsecondsSinceEpoch;
+  int _us = {{.NameNative}}.microsecondsSinceEpoch;
+  if (_us != 0) {
     int _s = _us ~/ 1E6;
     if (_s >= 1 << 33 || _us < 0) {
       _l += 13;
@@ -136,10 +135,6 @@
       _x >>= 7;
     }
     for (final _v in {{.NameNative}}) {
-      if (_v == null) {
-        _l++;
-        continue;
-      }
       _l += _v.marshalLen();
     }
   }

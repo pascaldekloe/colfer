@@ -123,9 +123,7 @@ func GenerateDart(basedir string, packages Packages) error {
 	template.Must(t.New("unmarshal").Parse(dartUnmarshal))
 
 	nativeTypes := map[string]string{
-		"text":      "String",
-		"binary":    "Uint8List",
-		"timestamp": "DateTime?",
+		"bool":      "bool",
 		"uint8":     "int",
 		"uint16":    "int",
 		"uint32":    "int",
@@ -134,6 +132,9 @@ func GenerateDart(basedir string, packages Packages) error {
 		"int64":     "int",
 		"float32":   "double",
 		"float64":   "double",
+		"timestamp": "DateTime",
+		"text":      "String",
+		"binary":    "Uint8List",
 	}
 	nativeListTypes := map[string]string{
 		"uint8":   "Uint8List",
@@ -168,25 +169,20 @@ func GenerateDart(basedir string, packages Packages) error {
 	for _, p := range packages {
 		for _, t := range p.Structs {
 			for _, f := range t.Fields {
-				if f.TypeRef != nil {
+				switch {
+				case f.TypeRef != nil:
 					f.TypeNative = f.TypeRef.NameNative
 					if f.TypeRef.Pkg != p {
 						f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
 					}
-					continue
-				}
-				if f.TypeList {
+				case f.TypeList:
 					if nativeType, ok := nativeListTypes[f.Type]; ok {
 						f.TypeNative = nativeType
 					} else {
-						f.TypeNative = nativeTypes[f.Type]
+						f.TypeNative = "List<" + nativeTypes[f.Type] + ">"
 					}
-				} else {
-					if nativeType, ok := nativeTypes[f.Type]; ok {
-						f.TypeNative = nativeType
-					} else {
-						f.TypeNative = f.Type
-					}
+				default:
+					f.TypeNative = nativeTypes[f.Type]
 				}
 			}
 		}

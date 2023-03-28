@@ -416,7 +416,6 @@
         {{.NameNative}} = List<{{.TypeNative}}>.filled(_c, {{.TypeNative}}());
       }
       for (var _ci in {{.NameNative}}) {
-        _ci ??= {{.TypeNative}}();
         _i += _ci.unmarshal(_data.sublist(_i));
       }
       _header = _data[_i];

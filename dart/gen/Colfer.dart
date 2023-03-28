@@ -14,29 +14,42 @@ const colferListMax = 64 * 1024;
 
 /// O contains all supported data types.
 class O {
+  // Constructor
   O({
-    this.b = false,
-    this.u32 = 0,
-    this.u64 = 0,
-    this.i32 = 0,
-    this.i64 = 0,
-    this.f32 = 0.0,
-    this.f64 = 0.0,
-    this.t,
-    this.s = '',
+    bool? b,
+    int? u32,
+    int? u64,
+    int? i32,
+    int? i64,
+    double? f32,
+    double? f64,
+    DateTime? t,
+    String? s,
     Uint8List? a,
-    this.o,
+    O? o,
     List<O>? os,
     List<String>? ss,
     List<Uint8List>? as_0,
-    this.u8 = 0,
-    this.u16 = 0,
+    int? u8,
+    int? u16,
     Float32List? f32s,
     Float64List? f64s,
-  })  : a = a ?? Uint8List(0),
+  })  : b = b ?? false,
+        u32 = u32 ?? 0,
+        u64 = u64 ?? 0,
+        i32 = i32 ?? 0,
+        i64 = i64 ?? 0,
+        f32 = f32 ?? 0.0,
+        f64 = f64 ?? 0.0,
+        t = t ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        s = s ?? '',
+        a = a ?? Uint8List(0),
+        o = o,
         os = os ?? [],
         ss = ss ?? [],
         as_0 = as_0 ?? [],
+        u8 = u8 ?? 0,
+        u16 = u16 ?? 0,
         f32s = f32s ?? Float32List(0),
         f64s = f64s ?? Float64List(0);
 
@@ -62,7 +75,7 @@ class O {
   double f64;
 
   /// T tests timestamps.
-  DateTime? t;
+  DateTime t;
 
   /// S tests text.
   String s;
@@ -74,7 +87,7 @@ class O {
   O? o;
 
   /// Os tests data structure lists.
-  List<O?> os;
+  List<O> os;
 
   /// Ss tests text lists.
   List<String> ss;
@@ -164,9 +177,8 @@ class O {
       }
     }
     {
-      DateTime? _v = t;
-      if (_v != null) {
-        int _us = _v.microsecondsSinceEpoch;
+      int _us = t.microsecondsSinceEpoch;
+      if (_us != 0) {
         int _s = _us ~/ 1E6;
         if (_s >= 1 << 33 || _us < 0) {
           _l += 13;
@@ -207,10 +219,6 @@ class O {
           _x >>= 7;
         }
         for (final _v in os) {
-          if (_v == null) {
-            _l++;
-            continue;
-          }
           _l += _v.marshalLen();
         }
       }
@@ -439,8 +447,8 @@ class O {
       }
     }
     {
-      if (t != null) {
-        int _us = t!.microsecondsSinceEpoch;
+      int _us = t.microsecondsSinceEpoch;
+      if (_us != 0) {
         int _res = _us % 1000000;
         _us -= _res;
         int _s = _us ~/ 1E6;
@@ -516,7 +524,6 @@ class O {
         _buf[_i] = _x;
         _i++;
         for (var _vi in os) {
-          _vi ??= O();
           _i += _vi.marshalTo(Uint8List.view(_buf.buffer, _buf.offsetInBytes + _i));
         }
       }
@@ -926,7 +933,6 @@ class O {
         os = List<O>.filled(_c, O());
       }
       for (var _ci in os) {
-        _ci ??= O();
         _i += _ci.unmarshal(_data.sublist(_i));
       }
       _header = _data[_i];
@@ -1195,7 +1201,7 @@ class O {
       ', o: ${o.toString()}'
       ', os: List<O>${os.toString()}'
       ', ss: [${ss.isNotEmpty ? "\"ss.join('\", \"')}" : ""}]'
-      ', as_0: List<Uint8List>${as_0.toString()}'
+      ', as_0: List<List<Uint8List>>${as_0.toString()}'
       ', u8: ${u8.toString()}'
       ', u16: ${u16.toString()}'
       ', f32s: List<Float32List>${f32s.toString()}'
@@ -1205,9 +1211,10 @@ class O {
 
 /// DromedaryCase oposes name casings.
 class DromedaryCase {
+  // Constructor
   DromedaryCase({
-    this.pascalCase = '',
-  });
+    String? pascalCase,
+  }) : pascalCase = pascalCase ?? '';
 
   String pascalCase;
 
@@ -1336,9 +1343,10 @@ class DromedaryCase {
 /// EmbedO has an inner object only.
 /// Covers regression of issue #66.
 class EmbedO {
+  // Constructor
   EmbedO({
-    this.inner,
-  });
+    O? inner,
+  }) : inner = inner;
 
   O? inner;
 

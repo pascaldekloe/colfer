@@ -20,46 +20,43 @@ const colferListMax = {{.ListMax}};
 {{range .Structs}}
 {{.DocText "/// "}}
 class {{.NameNative}} {
+
+  // Constructor
   {{.NameNative}}({
 {{- range .Fields}}
-{{- if and .TypeList (or (eq .Type "text") (eq .Type "binary") (eq .Type "bool") (eq .Type "timestamp") .TypeRef)}}List<{{.TypeNative }}>? {{.NameNative}}
-{{- else if or .TypeList (and (not .TypeList) (eq .Type "binary"))}}{{.TypeNative}}? {{.NameNative}}
-{{- else if eq .Type "bool"}}this.{{.NameNative}} = false
-{{- else if eq .Type "text"}}this.{{.NameNative}} = ''
-{{- else if eq .TypeNative "int"}}this.{{.NameNative}} = 0
-{{- else if eq .TypeNative "double"}}this.{{.NameNative}} = 0.0
-{{- else if or .TypeRef (eq .Type "timestamp")}}this.{{.NameNative}}
-{{- end}},
+{{- if and .TypeRef .TypeList}}List<{{.TypeNative}}>
+{{- else}}{{.TypeNative}}
+{{- end}}? {{.NameNative}},
 {{- end}}
 })
-{{- if or .HasList .HasBinary}}:
-{{- $first := true}}
-{{- range .Fields}}
-{{- if .TypeList}}
-{{- if $first}}{{$first = false}}
-{{- else}},
+
+{{- range $index, $field := .Fields}}
+{{if eq $index 0}}:
+{{else}},
+{{end}}
+{{.NameNative}} = {{.NameNative}}
+{{- if .TypeRef}}{{if .TypeList}} ?? []{{- end}}
+{{- else if .TypeList}}
+{{- if eq .Type "text" "binary"}} ?? []
+{{- else}} ?? {{.TypeNative}}(0)
 {{- end}}
-{{.NameNative}} = {{.NameNative}} ??
-{{- if or .TypeRef (eq .Type "text") (eq .Type "binary")}}[]
-{{- else}}{{.TypeNative}}(0)
-{{- end}}
-{{- else if eq .Type "binary"}}
-{{- if $first}}{{$first = false}}
-{{- else}},
-{{- end}}
-{{.NameNative}} = {{.NameNative}} ?? {{.TypeNative}}(0)
-{{- end}}
+{{- else if eq .Type "bool"}} ?? false
+{{- else if eq .Type "text"}} ?? ''
+{{- else if eq .TypeNative "int"}} ?? 0
+{{- else if eq .TypeNative "double"}} ?? 0.0
+{{- else if eq .Type "timestamp"}} ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
+{{- else if eq .Type "binary"}} ?? Uint8List(0)
 {{- end}}
 {{- end}};
 
+
 {{- range .Fields}}
 {{.DocText "  /// "}}
-{{if and .TypeList (eq .Type "text" "binary")}}  List<{{.TypeNative}}>
-{{- else if and .TypeList .TypeRef}}  List<{{.TypeNative}}?>
-{{- else}}  {{.TypeNative}}
-{{- if .TypeRef }}?
+{{if and .TypeRef .TypeList}}List<{{.TypeNative}}>
+{{- else}}{{.TypeNative}}
 {{- end}}
-{{- end}} {{.NameNative}};{{end}}
+{{- if .TypeRef}}{{if not .TypeList}}?{{end}}{{end}} {{.NameNative}};
+{{end}}
 
   /// Returns an over estimatation of marshal length.
   ///
