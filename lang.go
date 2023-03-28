@@ -198,9 +198,6 @@ func GenerateDart(basedir string, packages Packages) error {
 		if err = t.Execute(f, p); err != nil {
 			return err
 		}
-		if err = f.Sync(); err != nil {
-			return err
-		}
 	}
 
 	res, err := exec.Command("dart", "format", basedir, "--fix", "-l", "100").Output()
