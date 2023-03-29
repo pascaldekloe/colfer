@@ -1,9 +1,4 @@
-GOPATH?=$(HOME)/go
-COLF?=$(GOPATH)/bin/colf
+GO ?= go
+COLF = $(GO) run github.com/pascaldekloe/colfer/cmd/colf
 
-.PHONY: run
-run: clean test
-
-.PHONY: install
-install:
-	go install github.com/pascaldekloe/colfer/cmd/...
+MAKE ?= make

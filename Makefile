@@ -1,33 +1,27 @@
 include common.mk
 
-.PHONY: dist
-dist: clean test build
-	go fmt ./...
-	go vet ./...
-
 .PHONY: test
-test: install
-	make -C c
-	make -C ecma
-	make -C go
-	make -C java
-	make -C rpc
-	mvn -f java/maven integration-test
+test:
+	$(GO) test -v
 
-.PHONY: bench
-bench: install
-	make -C c/bench
-	make -C go/bench
-	make -C java/bench
-
-build:
-	GOARCH=amd64 GOOS=linux go build -o build/colf-linux ./cmd/colf
-	GOARCH=amd64 GOOS=darwin go build -o build/colf-darwin ./cmd/colf
-	GOARCH=amd64 GOOS=openbsd go build -o build/colf-openbsd ./cmd/colf
-	GOARCH=amd64 GOOS=windows go build -o build/colf.exe ./cmd/colf
+	$(MAKE) -C c test
+	$(MAKE) -C ecma test
+	$(MAKE) -C go test
+	$(MAKE) -C java test
+	$(MAKE) -C java/maven target
+	$(MAKE) -C rpc test
 
 .PHONY: clean
 clean:
-	go clean -i ./cmd/...
-	rm -fr build
-	mvn -f java/maven clean
+	$(GO) clean -r ./cmd/...
+	$(MAKE) -C c clean
+	$(MAKE) -C c/bench clean
+	$(MAKE) -C c/fuzz clean
+	$(MAKE) -C ecma clean
+	$(MAKE) -C ecma/bench clean
+	$(MAKE) -C go clean
+	$(MAKE) -C go/bench clean
+	$(MAKE) -C java clean
+	$(MAKE) -C java/bench clean
+	$(MAKE) -C java/maven clean
+	$(MAKE) -C rpc clean

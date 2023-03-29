@@ -1,21 +1,32 @@
 include ../common.mk
 
+JAVA ?= java
+JAVAC ?= javac
+JAVADOC ?= javadoc
+
 .PHONY: test
-test: build
-	java -cp build/classes test
+test: test.class breaktest
+	$(JAVA) test
 
-gen: install
-	$(COLF) Java ../testdata/test.colf
+breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
+	$(COLF) -b $@ -x java/util/ArrayList Java ../testdata/break*.colf
+	$(JAVAC) $@/*/*.java
+	$(JAVADOC) -d $@ $@/*/*.java
+	touch $@
 
-build: gen install
-	$(COLF) -b build/java -p break Java ../testdata/break*.colf
+gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../template/*.txt ../cmd/colf/*.go
+	$(COLF) -t ../testdata/test-java.tags Java ../testdata/test.colf
+	$(JAVAC) $@/*.java
+	touch $@
 
-	mkdir -p build/classes
-	javac -d build/classes test.java gen/*.java
-	javac -d build/classes build/java/break_/*/*.java
-
-	javadoc -d build/javadoc -sourcepath .:build/java -subpackages gen:break_ > /dev/null
+test.class: gen
+	$(JAVAC) test.java
 
 .PHONY: clean
 clean:
-	rm -fr gen build
+	rm -f *.class gen/*.class
+	rm -fr breaktest
+
+.PHONY: clean-all
+clean-all: clean
+	rm -fr gen

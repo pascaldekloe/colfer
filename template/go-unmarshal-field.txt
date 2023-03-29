@@ -1,0 +1,558 @@
+{{if eq .Type "bool"}}
+	if header == {{.Index}} {
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = true
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "uint8"}}
+	if header == {{.Index}} {
+		start := i
+		i++
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = data[start]
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "uint16"}}
+	if header == {{.Index}} {
+		start := i
+		i += 2
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = intconv.Uint16(data[start:])
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		start := i
+		i++
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = uint16(data[start])
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "uint32"}}
+	if header == {{.Index}} {
+		start := i
+		i++
+		if i >= len(data) {
+			goto eof
+		}
+		x := uint32(data[start])
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = x
+
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		start := i
+		i += 4
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = intconv.Uint32(data[start:])
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "uint64"}}
+	if header == {{.Index}} {
+		start := i
+		i++
+		if i >= len(data) {
+			goto eof
+		}
+		x := uint64(data[start])
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = x
+
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		start := i
+		i += 8
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = intconv.Uint64(data[start:])
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "int32"}}
+{{- if .TypeList}}
+	if header == {{.Index}} {
+	{{template "unmarshal-varint" .}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+		a := make([]int32, l)
+		for ai := range a {
+			if i+1 >= len(data) {
+				i++
+				goto eof
+			}
+
+			x := uint(data[i])
+			i++
+
+			if x >= 0x80 {
+				x &= 0x7f
+				for shift := uint(7); ; shift += 7 {
+					b := uint(data[i])
+					i++
+					if i >= len(data) {
+						goto eof
+					}
+
+					if b < 0x80 {
+						x |= b << shift
+						break
+					}
+					x |= (b & 0x7f) << shift
+				}
+			}
+
+			a[ai] = int32((x >> 1) ^ (-(x & 1)))
+		}
+		o.{{.NameNative}} = a
+
+		header = data[i]
+		i++
+	}
+{{- else}}
+	if header == {{.Index}} {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = int32(x)
+
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint32(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint32(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = int32(^x + 1)
+
+		header = data[i]
+		i++
+	}
+{{end}}
+{{else if eq .Type "int64"}}
+{{- if .TypeList}}
+	if header == {{.Index}} {
+	{{template "unmarshal-varint" .}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+
+		a := make([]int64, l)
+		for ai := range a {
+			if i+1 >= len(data) {
+				i++
+				goto eof
+			}
+			x := uint64(data[i])
+			i++
+
+			if x >= 0x80 {
+				x &= 0x7f
+				for shift := uint(7); ; shift += 7 {
+					b := uint64(data[i])
+					i++
+					if i >= len(data) {
+						goto eof
+					}
+
+					if b < 0x80 || shift == 56 {
+						x |= b << shift
+						break
+					}
+					x |= (b & 0x7f) << shift
+				}
+			}
+
+			a[ai] = int64((x >> 1) ^ (-(x & 1)))
+		}
+		o.{{.NameNative}} = a
+
+		header = data[i]
+		i++
+	}
+{{- else}}
+	if header == {{.Index}} {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = int64(x)
+
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		if i+1 >= len(data) {
+			i++
+			goto eof
+		}
+		x := uint64(data[i])
+		i++
+
+		if x >= 0x80 {
+			x &= 0x7f
+			for shift := uint(7); ; shift += 7 {
+				b := uint64(data[i])
+				i++
+				if i >= len(data) {
+					goto eof
+				}
+
+				if b < 0x80 || shift == 56 {
+					x |= b << shift
+					break
+				}
+				x |= (b & 0x7f) << shift
+			}
+		}
+		o.{{.NameNative}} = int64(^x + 1)
+
+		header = data[i]
+		i++
+	}
+{{end}}
+{{else if eq .Type "float32"}}
+ {{- if .TypeList}}
+	if header == {{.Index}} {
+{{template "unmarshal-varint" .}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+
+		if end := i + l*4; end >= len(data) {
+			i = end
+			goto eof
+		}
+		a := make([]float32, l)
+		for ai := range a {
+			a[ai] = math.Float32frombits(intconv.Uint32(data[i:]))
+			i += 4
+		}
+		o.{{.NameNative}} = a
+
+		header = data[i]
+		i++
+	}
+ {{- else}}
+	if header == {{.Index}} {
+		start := i
+		i += 4
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = math.Float32frombits(intconv.Uint32(data[start:]))
+		header = data[i]
+		i++
+	}
+ {{- end}}
+{{else if eq .Type "float64"}}
+ {{- if .TypeList}}
+	if header == {{.Index}} {
+{{template "unmarshal-varint" .}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+		l := int(x)
+
+		if end := i + l*8; end >= len(data) {
+			i = end
+			goto eof
+		}
+		a := make([]float64, l)
+		for ai := range a {
+			a[ai] = math.Float64frombits(intconv.Uint64(data[i:]))
+			i += 8
+		}
+		o.{{.NameNative}} = a
+
+		header = data[i]
+		i++
+	}
+ {{- else}}
+	if header == {{.Index}} {
+		start := i
+		i += 8
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = math.Float64frombits(intconv.Uint64(data[start:]))
+		header = data[i]
+		i++
+	}
+ {{- end}}
+{{else if eq .Type "timestamp"}}
+	if header == {{.Index}} {
+		start := i
+		i += 8
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = time.Unix(int64(intconv.Uint32(data[start:])), int64(intconv.Uint32(data[start+4:]))).In(time.UTC)
+		header = data[i]
+		i++
+	} else if header == {{.Index}}|0x80 {
+		start := i
+		i += 12
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = time.Unix(int64(intconv.Uint64(data[start:])), int64(intconv.Uint32(data[start+8:]))).In(time.UTC)
+		header = data[i]
+		i++
+	}
+{{else if eq .Type "text"}}
+	if header == {{.Index}} {
+{{template "unmarshal-varint" .}}
+ {{- if .TypeList}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+		a := make([]string, int(x))
+		o.{{.NameNative}} = a
+
+		for ai := range a {
+{{template "unmarshal-varint" .}}
+			if x > uint(ColferSizeMax) {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} element %d size %d exceeds %d bytes", ai, x, ColferSizeMax))
+			}
+
+			start := i
+			i += int(x)
+			if i >= len(data) {
+				goto eof
+			}
+			a[ai] = string(data[start:i])
+		}
+
+		if i >= len(data) {
+			goto eof
+		}
+		header = data[i]
+		i++
+	}
+ {{- else}}
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} size %d exceeds %d bytes", x, ColferSizeMax))
+		}
+
+		start := i
+		i += int(x)
+		if i >= len(data) {
+			goto eof
+		}
+		o.{{.NameNative}} = string(data[start:i])
+
+		header = data[i]
+		i++
+	}
+ {{- end}}
+{{else if eq .Type "binary"}}
+	if header == {{.Index}} {
+{{template "unmarshal-varint" .}}
+ {{- if not .TypeList}}
+		if x > uint(ColferSizeMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} size %d exceeds %d bytes", x, ColferSizeMax))
+		}
+		v := make([]byte, int(x))
+
+		start := i
+		i += len(v)
+		if i >= len(data) {
+			goto eof
+		}
+		copy(v, data[start:i])
+		o.{{.NameNative}} = v
+
+		header = data[i]
+		i++
+ {{- else}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+		a := make([][]byte, int(x))
+		o.{{.NameNative}} = a
+		for ai := range a {
+{{template "unmarshal-varint" .}}
+			if x > uint(ColferSizeMax) {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} element %d size %d exceeds %d bytes", ai, x, ColferSizeMax))
+			}
+			v := make([]byte, int(x))
+
+			start := i
+			i += len(v)
+			if i >= len(data) {
+				goto eof
+			}
+
+			copy(v, data[start:i])
+			a[ai] = v
+		}
+
+		if i >= len(data) {
+			goto eof
+		}
+		header = data[i]
+		i++
+ {{- end}}
+	}
+{{else if .TypeList}}
+	if header == {{.Index}} {
+{{template "unmarshal-varint" .}}
+		if x > uint(ColferListMax) {
+			return 0, ColferMax(fmt.Sprintf("colfer: {{.String}} length %d exceeds %d elements", x, ColferListMax))
+		}
+
+		l := int(x)
+		a := make([]*{{.TypeNative}}, l)
+		malloc := make([]{{.TypeNative}}, l)
+		for ai := range a {
+			v := &malloc[ai]
+			a[ai] = v
+
+			n, err := v.Unmarshal(data[i:])
+			if err != nil {
+				if err == io.EOF && len(data) >= ColferSizeMax {
+					return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+				}
+				return 0, err
+			}
+			i += n
+		}
+		o.{{.NameNative}} = a
+
+		if i >= len(data) {
+			goto eof
+		}
+		header = data[i]
+		i++
+	}
+{{else}}
+	if header == {{.Index}} {
+		o.{{.NameNative}} = new({{.TypeNative}})
+		n, err := o.{{.NameNative}}.Unmarshal(data[i:])
+		if err != nil {
+			if err == io.EOF && len(data) >= ColferSizeMax {
+				return 0, ColferMax(fmt.Sprintf("colfer: {{.Struct.String}} size exceeds %d bytes", ColferSizeMax))
+			}
+			return 0, err
+		}
+		i += n
+
+		if i >= len(data) {
+			goto eof
+		}
+		header = data[i]
+		i++
+	}
+{{end}}

@@ -1,30 +1,27 @@
 include ../common.mk
 
 .PHONY: test
-test: gen build
-	go test -v -coverprofile build/coverage -coverpkg github.com/pascaldekloe/colfer/go/gen
-	go build ./build/break/...
+test: Colfer.go gen_test.go breaktest
+	$(GO) test -v
 
-gen: install
-	$(COLF) Go ../testdata/test.colf
+Colfer.go: ../testdata/test.colf ../testdata/test-go.tags ../*.go ../template/*.txt ../cmd/colf/*.go
+	$(COLF) -t ../testdata/test-go.tags Go ../testdata/test.colf
+	mv gen/Colfer.go .
+	rmdir gen
 
-build: install
-	mkdir -p build
-	$(COLF) -b ../../../.. -p github.com/pascaldekloe/colfer/go/build/break go ../testdata/break*.colf
-
-fuzz.zip: gen
-	go get github.com/dvyukov/go-fuzz/go-fuzz-build
-	$(GOPATH)/bin/go-fuzz-build -o fuzz.zip github.com/pascaldekloe/colfer/go
+breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
+	$(COLF) -p github.com/pascaldekloe/colfer/go/$@ go ../testdata/break*.colf
+	$(GO) build ./$@/...
+	touch $@
 
 .PHONY: fuzz
-fuzz: fuzz.zip
-	rm ../testdata/corpus/seed*
-	go test -run FuzzSeed
-
-	go get github.com/dvyukov/go-fuzz/go-fuzz
-	$(GOPATH)/bin/go-fuzz -bin fuzz.zip -workdir ../testdata
+fuzz: test
+	$(GO) test -fuzz O
 
 .PHONY: clean
 clean:
-	go clean .
-	rm -fr gen build fuzz.zip
+	rm -fr breaktest
+
+.PHONY: clean-all
+clean-all: clean
+	rm -f Colfer.go

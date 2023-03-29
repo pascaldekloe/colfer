@@ -8,6 +8,16 @@ package com.example;
 public abstract class BeanParent implements Colferable {
 
 	@Override
+	public boolean equals(Object o) {
+		return o instanceof BeanParent;
+	}
+
+	@Override
+	public int hashCode() {
+		return 42;
+	}
+
+	@Override
 	public String toString() {
 		return "domain bean: " + getClass().getSimpleName();
 	}

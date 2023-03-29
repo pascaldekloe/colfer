@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"github.com/pascaldekloe/colfer/rpc/build/gen"
+	"github.com/pascaldekloe/colfer/rpc/gen"
 )
 
 type mockConn struct {

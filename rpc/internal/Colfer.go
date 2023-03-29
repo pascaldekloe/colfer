@@ -121,7 +121,7 @@ func (o *Header) MarshalTo(buf []byte) int {
 }
 
 // MarshalLen returns the Colfer serial byte size.
-// The error return option is internal.ColferMax.
+// The error return option is ColferMax.
 func (o *Header) MarshalLen() (int, error) {
 	l := 1
 
@@ -166,7 +166,7 @@ func (o *Header) MarshalLen() (int, error) {
 }
 
 // MarshalBinary encodes o as Colfer conform encoding.BinaryMarshaler.
-// The error return option is internal.ColferMax.
+// The error return option is ColferMax.
 func (o *Header) MarshalBinary() (data []byte, err error) {
 	l, err := o.MarshalLen()
 	if err != nil {
@@ -178,7 +178,7 @@ func (o *Header) MarshalBinary() (data []byte, err error) {
 }
 
 // Unmarshal decodes data as Colfer and returns the number of bytes read.
-// The error return options are io.EOF, internal.ColferError and internal.ColferMax.
+// The error return options are io.EOF, ColferError and ColferMax.
 func (o *Header) Unmarshal(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, io.EOF
@@ -356,7 +356,7 @@ eof:
 }
 
 // UnmarshalBinary decodes data as Colfer conform encoding.BinaryUnmarshaler.
-// The error return options are io.EOF, internal.ColferError, internal.ColferTail and internal.ColferMax.
+// The error return options are io.EOF, ColferError, ColferTail and ColferMax.
 func (o *Header) UnmarshalBinary(data []byte) error {
 	i, err := o.Unmarshal(data)
 	if i < len(data) && err == nil {

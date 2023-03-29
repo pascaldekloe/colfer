@@ -1,9 +1,8 @@
-#include "build/gen/Colfer.h"
-#include "build/gen/scheme.pb.h"
-#include "build/gen/scheme_generated.h"
+#include "Colfer.h"
+#include "scheme.pb.h" // ProtoBuf
+#include "scheme_generated.h" // FlatBuffers
 
-// https://github.com/google/benchmark
-#include <benchmark/benchmark.h>
+#include <benchmark/benchmark.h> // https://github.com/google/benchmark
 
 #include <iostream>
 

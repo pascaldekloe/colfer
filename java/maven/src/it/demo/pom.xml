@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+		http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
 <modelVersion>4.0.0</modelVersion>
 
 <groupId>net.quies.colfer</groupId>
@@ -17,9 +19,19 @@
 
 <dependencies>
 <dependency>
+	<groupId>javax.validation</groupId>
+	<artifactId>validation-api</artifactId>
+	<version>2.0.1.Final</version>
+</dependency>
+<dependency>
+	<groupId>jakarta.xml.bind</groupId>
+	<artifactId>jakarta.xml.bind-api</artifactId>
+	<version>2.3.3</version>
+</dependency>
+<dependency>
 	<groupId>junit</groupId>
 	<artifactId>junit</artifactId>
-	<version>4.12</version>
+	<version>4.13.1</version>
 	<scope>test</scope>
 </dependency>
 </dependencies>
@@ -27,6 +39,15 @@
 <build>
 
 <plugins>
+<plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<version>3.8.1</version>
+        <configuration>
+		<source>1.8</source>
+		<target>1.8</target>
+        </configuration>
+</plugin>
 <plugin>
 	<groupId>@project.groupId@</groupId>
 	<artifactId>@project.artifactId@</artifactId>
@@ -42,7 +63,10 @@
 		<goals><goal>compile</goal></goals>
 		<configuration>
 			<packagePrefix>com/example</packagePrefix>
+			<tagFiles>src/main/colfer/demo-java.tags</tagFiles>
 			<superClass>com/example/BeanParent</superClass>
+			<interfaces>javax.xml.bind.Element</interfaces>
+			<snippetFile>src/main/colfer/java.snippet</snippetFile>
 		</configuration>
 	</execution>
 	<execution>

@@ -1,3 +1,5 @@
+var gen = require('./Colfer.js').gen;
+
 QUnit.test('constructor', function(assert) {
 	assert.deepEqual(new gen.O(), new gen.O({}), 'absent and empty init');
 

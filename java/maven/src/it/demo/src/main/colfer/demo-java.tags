@@ -1,0 +1,11 @@
+demo.course		@javax.xml.bind.annotation.XmlRootElement(
+demo.course			name="golf-course",
+demo.course			namespace="https://github.com/pascaldekloe/colfer/java/maven/src/it/demo#ns"
+demo.course		)
+demo.course.ID		@javax.validation.constraints.Min(1)
+demo.course.ID		@javax.validation.constraints.Max(0xffffffffL)
+demo.course.name	@javax.validation.constraints.NotNull
+demo.course.name	@javax.validation.constraints.Size(min=1, max=130)
+demo.course.holes	@javax.validation.constraints.NotNull
+demo.course.image	@javax.validation.constraints.NotNull
+demo.course.tags	@javax.validation.constraints.NotNull

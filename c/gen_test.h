@@ -1,4 +1,4 @@
-#include "gen/Colfer.h"
+#include "Colfer.h"
 
 #include <math.h>
 #include <stdint.h>

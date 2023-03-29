@@ -22,37 +22,68 @@ import java.util.Set;
 
 
 /**
- * Generates source code for a language. The options are: C, Go,
- * Java and JavaScript.
+ * Compile Colfer schemas.
  * @author Pascal S. de Kloe
  */
 @Mojo(name="compile", defaultPhase=LifecyclePhase.GENERATE_SOURCES)
 public class CompileMojo extends AbstractMojo {
 
 /**
- * The target language.
+ * The output is source code for either C, Go, Java or JavaScript.
  */
 @Parameter(defaultValue="Java", required=true)
 String lang;
 
 /**
- * The source files. Directories are scanned for
- * files with the colf extension.
+ * For each operand that names a file of a type other than
+ * directory, colf reads the content as schema input. For each
+ * named directory, colf reads all files with a .colf extension
+ * within that directory.
  */
 @Parameter(defaultValue="src/main/colfer", required=true)
 File[] schemas;
 
 /**
- * Normalizes schemas on the fly.
+ * Normalize the format of all schema input on the fly.
  */
 @Parameter
 boolean formatSchemas;
 
 /**
- * Adds a package prefix. Use slash as a separator when nesting.
+ * Use a specific base directory for the generated code.
+ */
+@Parameter(defaultValue="${project.build.directory}/generated-sources/colfer", required=true)
+File sourceTarget;
+
+/**
+ * Compile to a package prefix.
  */
 @Parameter
 String packagePrefix;
+
+/**
+ * Supply custom tags. See the TAGS section in the manual for details.
+ */
+@Parameter
+File[] tagFiles;
+
+/**
+ * Make all generated classes extend a super class. Java only.
+ */
+@Parameter
+String superClass;
+
+/**
+ * Make all generated classes implement interfaces. Java only.
+ */
+@Parameter
+String[] interfaces;
+
+/**
+ * Insert a code snippet from a file. Java only.
+ */
+@Parameter
+File snippetFile;
 
 /**
  * Sets the default upper limit for serial byte sizes. The
@@ -70,19 +101,6 @@ String sizeMax;
 @Parameter
 String listMax;
 
-/**
- * Makes all generated classes extend a super class. Use slash as
- * a package separator. Java only.
- */
-@Parameter
-String superClass;
-
-/**
- * Use a specific destination base directory.
- */
-@Parameter(defaultValue="${project.build.directory}/generated-sources/colfer", required=true)
-File sourceTarget;
-
 @Component
 MavenProject project;
 
@@ -96,7 +114,7 @@ throws MojoExecutionException, MojoFailureException {
 		Process proc = launch(colf);
 
 		Scanner stderr = new Scanner(proc.getErrorStream());
-		while (stderr.hasNext()) getLog().error(stderr.nextLine());
+		while (stderr.hasNext()) getLog().info(stderr.nextLine());
 
 		int exit = proc.waitFor();
 		if (exit != 0) throw new MojoFailureException("colf: exit " + exit);
@@ -111,17 +129,29 @@ Process launch(Path colf)
 throws IOException {
 	List<String> args = new ArrayList<>();
 	args.add(colf.toString());
+	if (getLog().isDebugEnabled())
+		args.add("-v");
+	if (formatSchemas)
+		args.add("-f");
 	args.add("-b=" + sourceTarget);
 	if (packagePrefix != null)
 		args.add("-p=" + packagePrefix);
+	if (tagFiles != null) {
+		String[] paths = new String[tagFiles.length];
+		for (int i = 0; i < paths.length; i++)
+			paths[i] = tagFiles[i].getPath();
+		args.add("-t=" + String.join(",", paths));
+	}
+	if (superClass != null)
+		args.add("-x=" + superClass);
+	if (interfaces != null)
+		args.add("-i=" + String.join(",", interfaces));
+	if (snippetFile != null)
+		args.add("-c=" + snippetFile.getPath());
 	if (sizeMax != null)
 		args.add("-s=" + sizeMax);
 	if (listMax != null)
 		args.add("-l=" + listMax);
-	if (superClass != null)
-		args.add("-x=" + superClass);
-	if (formatSchemas)
-		args.add("-f");
 	args.add(lang);
 	for (File s : schemas) args.add(s.toString());
 

@@ -2,10 +2,14 @@
 package colfer
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // datatypes holds all supported names.
@@ -60,6 +64,12 @@ type Package struct {
 	SuperClass string
 	// SuperClassNative is the language specific SuperClass.
 	SuperClassNative string
+	// Interfaces are the fully qualified paths.
+	Interfaces []string
+	// InterfaceNatives are the language specific Interfaces.
+	InterfaceNatives []string
+	// CodeSnippet is helpful in book-keeping functionality.
+	CodeSnippet string
 }
 
 // DocText returns the documentation lines prefixed with ident.
@@ -82,8 +92,8 @@ func (p *Package) SchemaFileList() string {
 // Refs returns all direct references sorted by name.
 func (p *Package) Refs() Packages {
 	found := make(map[*Package]struct{})
-	for _, s := range p.Structs {
-		for _, f := range s.Fields {
+	for _, t := range p.Structs {
+		for _, f := range t.Fields {
 			if f.TypeRef != nil && f.TypeRef.Pkg != p {
 				found[f.TypeRef.Pkg] = struct{}{}
 			}
@@ -100,8 +110,8 @@ func (p *Package) Refs() Packages {
 
 // HasFloat returns whether p has one or more floating point fields.
 func (p *Package) HasFloat() bool {
-	for _, s := range p.Structs {
-		if s.HasFloat() {
+	for _, t := range p.Structs {
+		if t.HasFloat() {
 			return true
 		}
 	}
@@ -110,8 +120,8 @@ func (p *Package) HasFloat() bool {
 
 // HasTimestamp returns whether p has one or more timestamp fields.
 func (p *Package) HasTimestamp() bool {
-	for _, s := range p.Structs {
-		if s.HasTimestamp() {
+	for _, t := range p.Structs {
+		if t.HasTimestamp() {
 			return true
 		}
 	}
@@ -120,8 +130,8 @@ func (p *Package) HasTimestamp() bool {
 
 // HasList returns whether p has one or more list fields.
 func (p *Package) HasList() bool {
-	for _, s := range p.Structs {
-		if s.HasList() {
+	for _, t := range p.Structs {
+		if t.HasList() {
 			return true
 		}
 	}
@@ -141,26 +151,23 @@ type Struct struct {
 	Fields []*Field
 	// SchemaFile is the source filename.
 	SchemaFile string
-}
-
-// NameTitle returns the identification token in title case.
-func (s *Struct) NameTitle() string {
-	return strings.Title(s.Name)
+	// TagAdd has optional source code additions.
+	TagAdd []string
 }
 
 // DocText returns the documentation lines prefixed with ident.
-func (s *Struct) DocText(indent string) string {
-	return docText(s.Docs, indent)
+func (t *Struct) DocText(indent string) string {
+	return docText(t.Docs, indent)
 }
 
 // String returns the qualified name.
-func (s *Struct) String() string {
-	return fmt.Sprintf("%s.%s", s.Pkg.Name, s.Name)
+func (t *Struct) String() string {
+	return fmt.Sprintf("%s.%s", t.Pkg.Name, t.Name)
 }
 
 // HasFloat returns whether s has one or more floating point fields.
-func (s *Struct) HasFloat() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasFloat() bool {
+	for _, f := range t.Fields {
 		if f.Type == "float32" || f.Type == "float64" {
 			return true
 		}
@@ -169,8 +176,8 @@ func (s *Struct) HasFloat() bool {
 }
 
 // HasText returns whether s has one or more text fields.
-func (s *Struct) HasText() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasText() bool {
+	for _, f := range t.Fields {
 		if f.Type == "text" {
 			return true
 		}
@@ -179,8 +186,8 @@ func (s *Struct) HasText() bool {
 }
 
 // HasBinary returns whether s has one or more binary fields.
-func (s *Struct) HasBinary() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasBinary() bool {
+	for _, f := range t.Fields {
 		if f.Type == "binary" {
 			return true
 		}
@@ -189,8 +196,8 @@ func (s *Struct) HasBinary() bool {
 }
 
 // HasBinaryList returns whether s has one or more binary list fields.
-func (s *Struct) HasBinaryList() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasBinaryList() bool {
+	for _, f := range t.Fields {
 		if f.Type == "binary" && f.TypeList {
 			return true
 		}
@@ -199,8 +206,8 @@ func (s *Struct) HasBinaryList() bool {
 }
 
 // HasTimestamp returns whether s has one or more timestamp fields.
-func (s *Struct) HasTimestamp() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasTimestamp() bool {
+	for _, f := range t.Fields {
 		if f.Type == "timestamp" {
 			return true
 		}
@@ -209,8 +216,8 @@ func (s *Struct) HasTimestamp() bool {
 }
 
 // HasList returns whether s has one or more list fields.
-func (s *Struct) HasList() bool {
-	for _, f := range s.Fields {
+func (t *Struct) HasList() bool {
+	for _, f := range t.Fields {
 		if f.TypeList {
 			return true
 		}
@@ -238,11 +245,8 @@ type Field struct {
 	TypeRef *Struct
 	// TypeList flags whether the datatype is a list.
 	TypeList bool
-}
-
-// NameTitle returns the identification token in title case.
-func (f *Field) NameTitle() string {
-	return strings.Title(f.Name)
+	// TagAdd has optional source code additions.
+	TagAdd []string
 }
 
 // DocText returns the documentation lines prefixed with ident.
@@ -274,4 +278,167 @@ func docText(docs []string, indent string) string {
 	}
 
 	return buf.String()
+}
+
+// StructsByQName maps each Struct to its respective qualified name
+// (as in <package>.<type>).
+func (p Packages) StructsByQName() map[string]*Struct {
+	var n int
+	for _, pkg := range p {
+		n += len(pkg.Structs)
+	}
+	m := make(map[string]*Struct, n)
+
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			qName := t.String()
+			if _, ok := m[qName]; ok {
+				panic(qName + " dupe")
+			}
+			m[qName] = t
+		}
+	}
+	return m
+}
+
+// FieldsByQName maps each Field to its respective qualified name
+// (as in <package>.<type>.<field>).
+func (p Packages) FieldsByQName() map[string]*Field {
+	var n int
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			n += len(t.Fields)
+		}
+	}
+	m := make(map[string]*Field, n)
+
+	for _, pkg := range p {
+		for _, t := range pkg.Structs {
+			for _, f := range t.Fields {
+				qName := f.String()
+				if _, ok := m[qName]; ok {
+					panic(qName + " dupe")
+				}
+				m[qName] = f
+			}
+		}
+	}
+	return m
+}
+
+// TagAllow defines tag options.
+type TagAllow int
+
+const (
+	TagNone   TagAllow = iota // not allowed
+	TagSingle                 // zero or one
+	TagMulti                  // any number
+)
+
+type TagOptions struct {
+	StructAllow TagAllow
+	FieldAllow  TagAllow
+}
+
+func (p Packages) ApplyTagFile(path string, options TagOptions) error {
+	fields := p.FieldsByQName()
+	structs := p.StructsByQName()
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	r := bufio.NewReader(file)
+
+	for lineNo := 1; ; lineNo++ {
+		line, isPrefix, err := r.ReadLine()
+		switch err {
+		case nil:
+			break
+		case io.EOF:
+			return nil
+		default:
+			return err
+		}
+		if isPrefix {
+			return fmt.Errorf("parse %s:%d: line exceeds %d bytes", path, lineNo, r.Size())
+		}
+
+		// parse line
+		line = bytes.TrimLeftFunc(line, unicode.IsSpace)
+		if len(line) == 0 || line[0] == '#' {
+			continue // empty or comment
+		}
+		i := bytes.IndexFunc(line, unicode.IsSpace)
+		if i < 0 {
+			i = len(line)
+		}
+		qName := line[:i]
+		tag := string(bytes.TrimSpace(line[i:]))
+		if tag == "" {
+			return fmt.Errorf("parse %s:%d: incomplete declaration %q", path, lineNo, line)
+		}
+
+		// match qualifier
+		if t := structs[string(qName)]; t != nil {
+			switch options.StructAllow {
+			case TagNone:
+				return fmt.Errorf("apply %s:%d: struct tag (on %s) not supported by target language", path, lineNo, qName)
+			case TagSingle:
+				if len(t.TagAdd) != 0 {
+					return fmt.Errorf("apply %s:%d: %s already tagged [duplicate]", path, lineNo, qName)
+				}
+			}
+			t.TagAdd = append(t.TagAdd, tag)
+		} else if f := fields[string(qName)]; f != nil {
+			switch options.FieldAllow {
+			case TagNone:
+				return fmt.Errorf("apply %s:%d: field tag (on %s) not supported by target language", path, lineNo, qName)
+			case TagSingle:
+				if len(f.TagAdd) != 0 {
+					return fmt.Errorf("apply %s:%d: %s already tagged [duplicate]", path, lineNo, qName)
+				}
+			}
+			f.TagAdd = append(f.TagAdd, tag)
+		} else {
+			return p.qNameNotFound(string(qName), path, lineNo)
+		}
+	}
+}
+
+// QNameNotFound narrows the mismatch down with user-friendly errors.
+func (p Packages) qNameNotFound(qName string, path string, lineNo int) error {
+	segs := strings.SplitN(qName, ".", 4)
+	if len(segs) < 2 || len(segs) > 3 {
+		return fmt.Errorf("parse %s:%d: invalid qualifier %q; use <package>'.'<type>('.'<field>)", path, lineNo, qName)
+	}
+
+	for _, pkg := range p {
+		if !strings.EqualFold(pkg.Name, segs[0]) {
+			continue
+		}
+		if pkg.Name != segs[0] {
+			return fmt.Errorf("map %s:%d: package not found; case mismatch with %s?", path, lineNo, pkg.Name)
+		}
+
+		for _, t := range pkg.Structs {
+			if !strings.EqualFold(t.Name, segs[1]) {
+				continue
+			}
+			if t.Name != segs[1] {
+				return fmt.Errorf("map %s:%d: type not found; case mismatch with %s?", path, lineNo, t)
+			}
+
+			for _, f := range t.Fields {
+				if strings.EqualFold(f.Name, segs[2]) {
+					return fmt.Errorf("map %s:%d: field not found; case mismatch with %s?", path, lineNo, f)
+				}
+			}
+
+			return fmt.Errorf("map %s:%d: field %q not in schema", path, lineNo, segs[0]+"."+segs[1]+"."+segs[2])
+		}
+		return fmt.Errorf("map %s:%d: type %q not in schema", path, lineNo, segs[0]+"."+segs[1])
+	}
+	return fmt.Errorf("map %s:%d: package %q not in schema", path, lineNo, segs[0])
 }

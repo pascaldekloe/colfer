@@ -1,4 +1,4 @@
-# Colfer [![Build Status](https://travis-ci.org/pascaldekloe/colfer.svg?branch=master)](https://travis-ci.org/pascaldekloe/colfer)
+# Colfer
 
 Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec)
 optimized for speed and size.
@@ -10,13 +10,18 @@ This is free and unencumbered software released into the
 [public domain](http://creativecommons.org/publicdomain/zero/1.0).
 The format is inspired by Proto**col** Buf**fer**s.
 
+[![CI](https://github.com/pascaldekloe/colfer/actions/workflows/ci.yml/badge.svg)](https://github.com/pascaldekloe/colfer/actions/workflows/ci.yml)
+
 
 #### Language Support
 
-* C, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
-* Go, a.k.a. golang
-* Java, Android compatible
-* JavaScript, a.k.a. ECMAScript, NodeJS compatible
+* **C**, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
+* **Go**, a.k.a. golang
+* **Java**, Android compatible
+* **JavaScript**, a.k.a. ECMAScript, NodeJS compatible
+* 🚧 Gergely Bódi realised a functional **Dart** [port](https://github.com/vendelin8/colfer).
+* 🚧 Karthik Kumar Viswanathan has a **Python** [alternative](https://github.com/guilt/colfer-python) under construction.
+
 
 #### Features
 
@@ -30,65 +35,99 @@ The format is inspired by Proto**col** Buf**fer**s.
 
 #### TODO's
 
-* Rust and Python
-* List support for integers and timestamps
-
+* Rust and Python support
+* Protocol [revision](https://github.com/pascaldekloe/colfer/commits/v2)
 
 
 ## Use
 
 Download a [prebuilt compiler](https://github.com/pascaldekloe/colfer/releases)
 or run `go get -u github.com/pascaldekloe/colfer/cmd/colf` to make one yourself.
-Without arguments the command prints its manual.
+Homebrew users can also `brew install colfer`.
+
+The command prints its own manual when invoked without arguments.
 
 ```
 NAME
 	colf — compile Colfer schemas
 
 SYNOPSIS
-	colf [ options ] language [ file ... ]
+	colf [-h]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] C [file ...]
+	colf [-vf] [-b directory] [-p package] [-t files] \
+		[-s expression] [-l expression] Go [file ...]
+	colf [-vf] [-b directory] [-p package] [-t files] \
+		[-x class] [-i interfaces] [-c file] \
+		[-s expression] [-l expression] Java [file ...]
+	colf [-vf] [-b directory] [-p package] \
+		[-s expression] [-l expression] JavaScript [file ...]
 
 DESCRIPTION
-	Generates source code for a language. The options are: C, Go,
-	Java and JavaScript.
-	The file operands specify schema input. Directories are scanned
-	for files with the colf extension. When no files are given, then
-	the current working directory is used.
+	The output is source code for either C, Go, Java or JavaScript.
+
+	For each operand that names a file of a type other than
+	directory, colf reads the content as schema input. For each
+	named directory, colf reads all files with a .colf extension
+	within that directory. If no operands are given, the contents of
+	the current directory are used.
+
 	A package definition may be spread over several schema files.
-	The directory hierarchy of the input is not relevant for the
+	The directory hierarchy of the input is not relevant to the
 	generated code.
 
 OPTIONS
   -b directory
-    	Use a specific destination base directory. (default ".")
-  -f	Normalizes the format of all input schemas on the fly.
+    	Use a base directory for the generated code. (default ".")
+  -c file
+    	Insert a code snippet from a file.
+  -f	Normalize the format of all schema input on the fly.
+  -h	Prints the manual to standard error.
+  -i interfaces
+    	Make all generated classes implement one or more interfaces.
+    	Use commas as a list separator.
   -l expression
-    	Sets the default upper limit for the number of elements in a
+    	Set the default upper limit for the number of elements in a
     	list. The expression is applied to the target language under
     	the name ColferListMax. (default "64 * 1024")
-  -p prefix
-    	Adds a package prefix. Use slash as a separator when nesting.
+  -p package
+    	Compile to a package prefix.
   -s expression
-    	Sets the default upper limit for serial byte sizes. The
+    	Set the default upper limit for serial byte sizes. The
     	expression is applied to the target language under the name
     	ColferSizeMax. (default "16 * 1024 * 1024")
-  -v	Enables verbose reporting to standard error.
+  -t files
+    	Supply custom tags with one or more files. Use commas as a list
+    	separator. See the TAGS section for details.
+  -v	Enable verbose reporting to standard error.
   -x class
-    	Makes all generated classes extend a super class. Use slash as
-    	a package separator. Java only.
+    	Make all generated classes extend a super class.
+
+TAGS
+	Tags, a.k.a. annotations, are source code additions for structs
+	and/or fields. Input for the compiler can be specified with the
+	-t option. The data format is line-oriented.
+
+		<line> :≡ <qual> <space> <code> ;
+		<qual> :≡ <package> '.' <dest> ;
+		<dest> :≡ <struct> | <struct> '.' <field> ;
+
+	Lines starting with a '#' are ignored (as comments). Java output
+	can take multiple tag lines for the same struct or field. Each
+	code line is applied in order of appearance.
 
 EXIT STATUS
-	The command exits 0 on succes, 1 on compilation failure and 2
-	when invoked without arguments.
+	The command exits 0 on success, 1 on error and 2 when invoked
+	without arguments.
 
 EXAMPLES
 	Compile ./io.colf with compact limits as C:
 
 		colf -b src -s 2048 -l 96 C io.colf
 
-	Compile ./api/*.colf in package com.example as Java:
+	Compile ./*.colf with a common parent as Java:
 
-		colf -p com/example -x com/example/Parent Java api
+		colf -p com.example.model -x com.example.io.IOBean Java
 
 BUGS
 	Report bugs at <https://github.com/pascaldekloe/colfer/issues>.
@@ -159,7 +198,6 @@ See what the generated code looks like in
 [JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
 The following table shows how Colfer data types are applied per language.
-Arrays (denoted by `*`) may contain any type.
 
 | Colfer	| C			| Go		| Java		| JavaScript	|
 |:--------------|:----------------------|:--------------|:--------------|:--------------|
@@ -169,14 +207,26 @@ Arrays (denoted by `*`) may contain any type.
 | float32	| float			| float32	| float		| Number	|
 | float64	| double		| float64	| double	| Number	|
 | text		| const char* + size_t	| string	| String	| String	|
-| T *		| *T + size_t		| []T		| T[]		| Array		|
+| []T		| *T + size_t		| []T		| T[]		| Array		|
 | opaque8	| uint8_t		| byte		| byte †	| Number	|
 | opaque16	| uint16_t		| uint16	| short	†	| Number	|
 | opaque32	| uint32_t		| uint32	| int †		| Number	|
 | opaque64	| uint64_t		| uint64	| long †	| Uint8Array	|
 
+
 * † signed representation of unsigned data, i.e. may overflow to negative.
 * ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
+
+
+## Security
+
+Colfer is suited for untrusted data sources such as network I/O or bulk streams.
+Marshalling and unmarshalling comes with built-in size protection to ensure
+predictable memory consumption. The format prevents memory bombs by design.
+
+The marshaller may not produce malformed output, regardless of the data input.
+In no event may the unmarshaller read outside the boundaries of a serial. Fuzz
+testing did not reveal any volnurabilities yet. Computing power is welcome.
 
 
 ## Security
