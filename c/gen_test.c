@@ -140,7 +140,7 @@ void gen_o_dump(const gen_o o) {
 	free(buf);
 }
 
-int main() {
+int main(void) {
 	const int n = sizeof(golden_cases) / sizeof(golden);
 	printf("got %d golden cases\n", n);
 
