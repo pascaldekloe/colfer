@@ -2,23 +2,13 @@ package poc
 
 import (
 	"encoding/binary"
-	"errors"
-	"io"
 	"math"
 	"math/bits"
+	"unsafe"
 )
 
-// ColferMax is the upper limit for serial byte sizes.
-const ColferMax = 127
-
-// ErrColferMax signals a ColferMax breach.
-var ErrColferMax = errors.New("colfer: serial size exceeds maximum of 127 bytes")
-
-// ErrColfer signals data corruption or schema mismatch.
-var ErrColfer = errors.New("colfer: incompatible data")
-
-// ErrColferOverflow signals the write buffer is too small for the serial.
-var ErrColferOverflow = errors.New("colfer: buffer overflow")
+// ColferMax limits serial sizes to 16 MiB.
+const ColferMax = 16 * 1024 * 1024
 
 var masks = [...]uint64{
 	0,
@@ -42,83 +32,78 @@ type Record struct {
 	Route bool
 }
 
-// MarshalTo encodes o as Colfer into buf. It returns either the number of bytes
-// successfully written (0 < n ≤ len(buf)) or any error encountered that caused
-// the encoding to stop early. In no case will n exceed ColferMax.
-// ErrColferOverflow may safely be used to resize buf due to ErrColferMax.
-func (o *Record) MarshalTo(buf *[ColferMax]byte) (n int, err error) {
-	if o == nil {
-		buf[0], buf[1] = 0, 0
-		return 2, nil
-	}
+// MarshalTo encodes o as Colfer into buf. The return is zero when ColferMax was
+// reached. Otherwise, the return contains the byte size of the serial written,
+// as in serial := buf[:o.MarshalTo(buf)].
+func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
+	var word0 uint64 = 22 - 1
+	var word1 uint64
+	var word2 uint64
+	var word3 uint64
 
-	var word0 uint64 = 22
-
-	// buf index to variable part
-	i := 25
+	i := uint64(25) // variable part
 
 	var v uint64
 
-	// field #1
+	// Key int64
 	v = uint64(o.Key>>63) ^ uint64(o.Key<<1)
 	if v < 128 {
 		v = v<<1 | 1
 	} else {
-		bitCount := bits.Len64(v)
-		e := (((bitCount - 1) >> 3) + bitCount) >> 3
-		binary.LittleEndian.PutUint64(buf[i:], v)
-		i += e
-		v >>= uint(e)<<3 - 1
-		v = (v | 1) << uint(e)
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7] = byte(v), byte(v>>8), byte(v>>16), byte(v>>24), byte(v>>32), byte(v>>40), byte(v>>48), byte(v>>56)
+		bitCount := uint64(bits.Len64(v))
+		extraN := (((bitCount - 1) >> 3) + bitCount) >> 3
+		i += extraN
+		v >>= uint(extraN)<<3 - 1
+		v = (v | 1) << extraN
 	}
-	word0 |= (v & 0xff) << 24
+	word0 |= v << 24
 
-	// field #2
+	// Host text
 	v = uint64(len(o.Host))
 	if v < 128 {
 		v = v<<1 | 1
 	} else {
-		bitCount := bits.Len64(v)
-		e := (((bitCount - 1) >> 3) + bitCount) >> 3
-		binary.LittleEndian.PutUint64(buf[i:], v)
-		i += e
-		v >>= uint(e)<<3 - 1
-		v = (v | 1) << uint(e)
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7] = byte(v), byte(v>>8), byte(v>>16), byte(v>>24), byte(v>>32), byte(v>>40), byte(v>>48), byte(v>>56)
+		bitCount := uint64(bits.Len64(v))
+		extraN := (((bitCount - 1) >> 3) + bitCount) >> 3
+		i += extraN
+		v >>= uint(extraN)<<3 - 1
+		v = (v | 1) << extraN
 	}
-	word0 |= (v & 0xff) << 32
+	word0 |= v << 32
 
-	// field #3
+	// Port uint16
 	word0 |= uint64(o.Port) << 40
 
-	// field #4
+	// Size int64
 	v = uint64(o.Size>>63) ^ uint64(o.Size<<1)
 	if v < 128 {
 		v = v<<1 | 1
 	} else {
-		bitCount := bits.Len64(v)
-		e := (((bitCount - 1) >> 3) + bitCount) >> 3
-		binary.LittleEndian.PutUint64(buf[i:], v)
-		i += e
-		v >>= uint(e)<<3 - 1
-		v = (v | 1) << uint(e)
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7] = byte(v), byte(v>>8), byte(v>>16), byte(v>>24), byte(v>>32), byte(v>>40), byte(v>>48), byte(v>>56)
+		bitCount := uint64(bits.Len64(v))
+		extraN := (((bitCount - 1) >> 3) + bitCount) >> 3
+		i += extraN
+		v >>= uint(extraN)<<3 - 1
+		v = (v | 1) << extraN
 	}
-	word0 |= (v & 0xff) << 56
+	word0 |= v << 56
 
-	var word1 uint64
-
-	// field #5
+	// Hash opaque64
 	word1 = o.Hash
 
 	binary.LittleEndian.PutUint64(buf[8:], word1)
-	var word2 uint64
 
-	// field #6
+	// Ratio float64
 	word2 = math.Float64bits(o.Ratio)
 
 	binary.LittleEndian.PutUint64(buf[16:], word2)
-	var word3 uint64
 
-	// field #7
+	// Route bool
 	if o.Route {
 		word3 |= 1 << 0
 	}
@@ -126,150 +111,127 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) (n int, err error) {
 	// write header tail
 	buf[24] = byte(word3)
 
-	// determine serial size
-	n = i
-	n += len(o.Host)
-	if uint(n) > ColferMax {
-		return i, ErrColferMax
+	// append payloads
+	for i <= uint64(len(buf)) {
+		p := buf[i:]
+		if len(p) < len(o.Host) {
+			break
+		}
+		copy(p, o.Host)
+		i += uint64(len(o.Host))
+
+		// finish header
+		word0 |= uint64(i)<<17 | 1<<16
+		binary.LittleEndian.PutUint64(buf[:], word0)
+		return int(i)
 	}
 
-	// finish header
-	word0 |= uint64(n-25)<<17 | 1<<16
-	binary.LittleEndian.PutUint64(buf[:], word0)
-
-	// write variable part
-	if n > len(buf) {
-		return i, ErrColferOverflow
-	}
-	i += copy(buf[i:], o.Host)
-
-	return n, nil
+	return 0
 }
 
-// Unmarshal decodes buf as Colfer. BufLen limits the number of bytes.
-// The return error is io.EOF for no data, io.ErrUnexpectedEOF for incomplete
-// data, ErrColferMax for size protection and ErrColfer for corrupted data.
-func (o *Record) Unmarshal(buf *[ColferMax]byte, bufLen int) (n int, err error) {
-	word0 := binary.LittleEndian.Uint64(buf[:8])
+// Unmarshal decodes buf as Colfer into o. It returns either the number of bytes
+// read, or zero when an error occurred.
+func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
+	word0 := binary.LittleEndian.Uint64(buf[:])
+	word1 := binary.LittleEndian.Uint64(buf[8:])
+	word2 := binary.LittleEndian.Uint64(buf[16:])
+	word3 := binary.LittleEndian.Uint64(buf[24:])
 
-	fixedSize := uint16(word0)
-	n = int(fixedSize) + 3
-	i := n // buf index at variable component
+	// read cursor at variable section
+	i := word0&0xffff + 4
 
-	// variable size
+	// read variable size
 	v := word0 >> 17 & 0x7f
 	if word0&(1<<16) == 0 {
-		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
 		v = v << uint(tz<<3-tz) &^ masks[tz]
-		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		v |= masks[tz] & (uint64(p[0]) | uint64(p[1])<<8 | uint64(p[2])<<16 | uint64(p[3])<<24 | uint64(p[4])<<32 | uint64(p[5])<<40 | uint64(p[6])<<48 | uint64(p[7])<<56)
 		i += tz
 	}
-	n += int(v)
+	size := v
 
-	// check boundaries
-	switch {
-	case v > ColferMax, n > ColferMax:
-		if i <= bufLen {
-			return i, ErrColferMax
-		}
-		fallthrough
-	case n > bufLen, n > len(buf):
-		if bufLen <= 0 {
-			return 0, io.EOF
-		}
-		return 0, io.ErrUnexpectedEOF
-	}
-
-	// field #1
+	// read Key int64
 	v = word0 >> 25 & 0x7f
 	if word0&(1<<24) == 0 {
-		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
 		v = v << uint(tz<<3-tz) &^ masks[tz]
-		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		v |= masks[tz] & (uint64(p[0]) | uint64(p[1])<<8 | uint64(p[2])<<16 | uint64(p[3])<<24 | uint64(p[4])<<32 | uint64(p[5])<<40 | uint64(p[6])<<48 | uint64(p[7])<<56)
 		i += tz
 	}
 	o.Key = int64(v>>1) ^ -int64(v&1)
 
-	// field #2
+	// read Host text size
 	v = word0 >> 33 & 0x7f
 	if word0&(1<<32) == 0 {
-		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
 		v = v << uint(tz<<3-tz) &^ masks[tz]
-		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		v |= masks[tz] & (uint64(p[0]) | uint64(p[1])<<8 | uint64(p[2])<<16 | uint64(p[3])<<24 | uint64(p[4])<<32 | uint64(p[5])<<40 | uint64(p[6])<<48 | uint64(p[7])<<56)
 		i += tz
-
-		if v > ColferMax {
-			return i, ErrColfer
-		}
 	}
-	len_host := int(v)
+	size_host := v
 
-	// field #3
+	// read Port uint16
 	o.Port = uint16(word0 >> 40)
 
-	// field #4
+	// read Size int64
 	v = word0 >> 57 & 0x7f
 	if word0&(1<<56) == 0 {
-		tz := bits.TrailingZeros64(v|0x80)&7 + 1
+		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
 		v = v << uint(tz<<3-tz) &^ masks[tz]
-		v |= binary.LittleEndian.Uint64(buf[i:]) & masks[tz]
+		p := (*[8]byte)(unsafe.Add(unsafe.Pointer(buf), i))
+		v |= masks[tz] & (uint64(p[0]) | uint64(p[1])<<8 | uint64(p[2])<<16 | uint64(p[3])<<24 | uint64(p[4])<<32 | uint64(p[5])<<40 | uint64(p[6])<<48 | uint64(p[7])<<56)
 		i += tz
 	}
 	o.Size = int64(v>>1) ^ -int64(v&1)
 
-	// next word
-	word1 := binary.LittleEndian.Uint64(buf[8:])
-
-	// field #5
+	// read Hash opaque64
 	o.Hash = word1
 
-	// next word
-	word2 := binary.LittleEndian.Uint64(buf[16:])
-
-	// field #6
+	// read Ration float64
 	o.Ratio = math.Float64frombits(word2)
 
-	// next word
-	word3 := binary.LittleEndian.Uint64(buf[24:])
-
-	// field #7
+	// read Route bool
 	o.Route = word3&1 != 0
 
-	if fixedSize < 22 {
-		// clear/undo fields
-		switch fixedSize {
+	if l := word0 & 0xffff; l < 22-1 {
+		// clear/undo absent fields
+		switch l {
 		default:
-			return 0, ErrColfer
-		case 0:
-			o.Key = 0
+			return 0
+		case 1 - 1:
+			size_host = 0
 			fallthrough
-		case 1:
-			len_host = 0
-			fallthrough
-		case 2:
+		case 2 - 1:
 			o.Port = 0
 			fallthrough
-		case 4:
+		case 4 - 1:
 			o.Size = 0
 			fallthrough
-		case 5:
+		case 5 - 1:
 			o.Hash = 0
 			fallthrough
-		case 13:
+		case 13 - 1:
 			o.Ratio = 0
 			fallthrough
-		case 21:
+		case 21 - 1:
 			o.Route = false
 		}
-		i = int(fixedSize) + 2
 	}
 
-	// variable part
-	offset_host := n - len_host
-	if offset_host < i {
-		return 0, ErrColfer
+	// define serial end
+	if size > uint64(len(buf)) {
+		return 0
 	}
-	o.Host = string(buf[offset_host:n])
+	serial := buf[:size]
 
-	return n, nil
+	offset := size - size_host
+	if offset > uint64(len(serial)) {
+		return 0
+	}
+	o.Host = string(serial[offset:])
+
+	return int(size)
 }
