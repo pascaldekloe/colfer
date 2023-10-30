@@ -25,13 +25,13 @@ scheme_generated.h: ../../testdata/bench/scheme.fbs
 	$(FLATC) --cpp -o . ../../testdata/bench/scheme.fbs
 
 Colfer.o: Colfer.h Colfer.c
-	$(CC) $(CFLAGS) -o $@ -c -std=c14 Colfer.c
+	$(CC) $(CFLAGS) -o $@ -c -std=c17 Colfer.c
 
 scheme.pb.o: scheme.pb.cc
-	$(CXX) $(CXXFLAGS) -o $@ -c -std=c++14 scheme.pb.cc
+	$(CXX) $(CXXFLAGS) -o $@ -c -std=c++17 scheme.pb.cc
 
 bench: bench.cpp Colfer.o scheme.pb.o scheme_generated.h
-	$(CXX) $(CXXFLAGS) -o $@ -lstdc++ -lprotobuf -lbenchmark -std=c++14 bench.cpp Colfer.o scheme.pb.o
+	$(CXX) $(CXXFLAGS) -o $@ -lprotobuf -lbenchmark -labsl_log_internal_message -labsl_log_internal_check_op -std=c++17 bench.cpp Colfer.o scheme.pb.o
 
 .PHONY: clean
 clean:
