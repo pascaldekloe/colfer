@@ -24,8 +24,8 @@ scheme.pb.cc: ../../testdata/bench/scheme.proto
 scheme_generated.h: ../../testdata/bench/scheme.fbs
 	$(FLATC) --cpp -o . ../../testdata/bench/scheme.fbs
 
-Colfer.o: Colfer.h Colfer.c
-	$(CC) $(CFLAGS) -o $@ -c -std=c17 Colfer.c
+Colfer.o: poc.h poc.c
+	$(CC) $(CFLAGS) -o $@ -c -std=c17 poc.c
 
 scheme.pb.o: scheme.pb.cc
 	$(CXX) $(CXXFLAGS) -o $@ -c -std=c++17 scheme.pb.cc
