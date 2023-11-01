@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #ifndef COLFER_ENDIAN_CHECK
 #if (defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)) ||                \
     (defined(_LITTLE_ENDIAN) && !defined(_BIG_ENDIAN)) ||                      \
@@ -18,7 +17,6 @@
 #error Colfer implementation requires byte order in little endian
 #endif
 #endif
-
 
 const uint_fast64_t COLFER_MASKS[9] = {
     0,
@@ -32,21 +30,20 @@ const uint_fast64_t COLFER_MASKS[9] = {
     0xffffffffffffffff,
 };
 
-
 size_t colfer_marshal(const colfer *o, void *start) {
-  // header words
+  // words of fixed section
   uint_fast64_t word0 = 22 - 1;
   uint_fast64_t word1 = 0;
   uint_fast64_t word2 = 0;
   uint_fast64_t word3 = 0;
 
-  // variable part
+  // write cursor at variable section
   uint8_t *p = start + 25;
 
   // computation register
   uint_fast64_t v;
 
-  // Key int64 (with zig-zag encoding)
+  // pack Key int64 (with zig-zag encoding)
   v = (o->key >> 63) ^ (o->key << 1);
   if (v < 128) {
     v = v << 1 | 1;
@@ -68,7 +65,7 @@ size_t colfer_marshal(const colfer *o, void *start) {
   }
   word0 |= v << 24;
 
-  // Host text
+  // pack Host text size
   v = o->host.len;
   if (v < 128) {
     v = v << 1 | 1;
@@ -90,10 +87,10 @@ size_t colfer_marshal(const colfer *o, void *start) {
   }
   word0 |= v << 32;
 
-  // Port uint16
+  // pack Port uint16
   word0 |= (uint_fast64_t)(o->port) << 40;
 
-  // Size int64 (with zig-zag encoding)
+  // pack Size int64 (with zig-zag encoding)
   v = (o->size >> 63) ^ (o->size << 1);
   if (v < 128) {
     v = v << 1 | 1;
@@ -115,14 +112,16 @@ size_t colfer_marshal(const colfer *o, void *start) {
   }
   word0 |= v << 56;
 
-  // Hash opaque64
+  // pack Hash opaque64
   word1 = o->hash;
 
-  // Ratio float64
+  // pack Ratio float64
   memcpy(&word2, &o->ratio, 8);
 
+  // pack booleans
   word3 = (uint_fast64_t)(o->bools & 0xff) << 0;
 
+  // copy payloads
   if (o->host.len > COLFER_MAX - ((void *)p - start))
     return 0;
   memcpy(p, o->host.utf8, o->host.len);
@@ -141,7 +140,7 @@ size_t colfer_marshal(const colfer *o, void *start) {
 }
 
 size_t colfer_unmarshal(colfer *o, const void *start) {
-  // header words
+  // words of fixed section
   uint_fast64_t word0;
   uint_fast64_t word1;
   uint_fast64_t word2;
@@ -154,7 +153,7 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
   // read cursor at variable section
   uint8_t *p = (uint8_t *)start + (word0 & 0xffff) + 4;
 
-  // read variable size
+  // unpack variable size
   uint_fast64_t v = word0 >> 17 & 0x7f;
   if ((word0 & (uint_fast64_t)1 << 16) == 0) {
     uint_fast64_t tz = __builtin_ctz(v | 0x80) + 1;
@@ -169,7 +168,7 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
     return 0;
   size_t size = v;
 
-  // read Key int64
+  // unpack Key int64
   v = word0 >> 25 & 0x7f;
   if ((word0 & (uint_fast64_t)1 << 24) == 0) {
     uint_fast64_t tz = __builtin_ctz(v | 0x80) + 1;
@@ -182,7 +181,7 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
   }
   o->key = (int64_t)(v >> 1) ^ -(int64_t)(v & 1);
 
-  // read Host text size
+  // unpack Host text size
   v = word0 >> 33 & 0x7f;
   if ((word0 & (uint_fast64_t)1 << 32) == 0) {
     uint_fast64_t tz = __builtin_ctz(v | 0x80) + 1;
@@ -195,10 +194,10 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
   }
   o->host.len = v;
 
-  // read Port uint16
+  // unpack Port uint16
   o->port = word0 >> 40;
 
-  // read Size int64
+  // unpack Size int64
   v = word0 >> 57 & 0x7f;
   if ((word0 & (uint_fast64_t)1 << 56) == 0) {
     uint_fast64_t tz = __builtin_ctz(v | 0x80) + 1;
@@ -211,12 +210,13 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
   }
   o->size = (int64_t)(v >> 1) ^ -(int64_t)(v & 1);
 
-  // read Hash opaque64
+  // unpack Hash opaque64
   o->hash = word1;
 
-  // read Ratio float64
+  // unpack Ratio float64
   memcpy(&o->ratio, &word2, 8);
 
+  // unpack booleans
   o->bools = (word3 & 0xff) << 0;
 
   // clear/undo absent fields
@@ -239,7 +239,7 @@ size_t colfer_unmarshal(colfer *o, const void *start) {
     }
   };
 
-  // read payloads
+  // copy payloads
   uint8_t *offset = (uint8_t *)start + size - o->host.len;
   if (offset < p)
     return 0;

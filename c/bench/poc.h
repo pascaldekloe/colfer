@@ -4,11 +4,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 // Data Types
 typedef struct colfer colfer;
@@ -48,7 +46,6 @@ size_t colfer_marshal(const colfer *o, void *start);
 // least 3, and at most COLFER_MAX. A zero return signals malformed data. String
 // fields are allocated including null terminator. Caller owns the memory.
 size_t colfer_unmarshal(colfer *o, const void *start);
-
 
 #ifdef __cplusplus
 } // extern "C"

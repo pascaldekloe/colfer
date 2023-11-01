@@ -36,17 +36,17 @@ type Record struct {
 // reached. Otherwise, the return contains the byte size of the serial written,
 // as in serial := buf[:o.MarshalTo(buf)].
 func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
+	// words of fixed section
 	var word0 uint64 = 22 - 1
 	var word1 uint64
 	var word2 uint64
 	var word3 uint64
 
-	i := uint64(25) // variable part
+	// write cursor at variable section
+	i := uint64(25)
 
-	var v uint64
-
-	// Key int64
-	v = uint64(o.Key>>63) ^ uint64(o.Key<<1)
+	// pack Key int64
+	v := uint64(o.Key>>63) ^ uint64(o.Key<<1)
 	if v < 128 {
 		v = v<<1 | 1
 	} else {
@@ -60,7 +60,7 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
 	}
 	word0 |= v << 24
 
-	// Host text
+	// pack Host text size
 	v = uint64(len(o.Host))
 	if v < 128 {
 		v = v<<1 | 1
@@ -75,10 +75,10 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
 	}
 	word0 |= v << 32
 
-	// Port uint16
+	// pack Port uint16
 	word0 |= uint64(o.Port) << 40
 
-	// Size int64
+	// pack Size int64
 	v = uint64(o.Size>>63) ^ uint64(o.Size<<1)
 	if v < 128 {
 		v = v<<1 | 1
@@ -93,17 +93,17 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
 	}
 	word0 |= v << 56
 
-	// Hash opaque64
+	// pack Hash opaque64
 	word1 = o.Hash
 
 	binary.LittleEndian.PutUint64(buf[8:], word1)
 
-	// Ratio float64
+	// pack Ratio float64
 	word2 = math.Float64bits(o.Ratio)
 
 	binary.LittleEndian.PutUint64(buf[16:], word2)
 
-	// Route bool
+	// pack Route bool
 	if o.Route {
 		word3 |= 1 << 0
 	}
@@ -111,7 +111,7 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
 	// write header tail
 	buf[24] = byte(word3)
 
-	// append payloads
+	// copy payloads
 	for i <= uint64(len(buf)) {
 		p := buf[i:]
 		if len(p) < len(o.Host) {
@@ -132,6 +132,7 @@ func (o *Record) MarshalTo(buf *[ColferMax]byte) int {
 // Unmarshal decodes buf as Colfer into o. It returns either the number of bytes
 // read, or zero when an error occurred.
 func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
+	// words of fixed section
 	word0 := binary.LittleEndian.Uint64(buf[:])
 	word1 := binary.LittleEndian.Uint64(buf[8:])
 	word2 := binary.LittleEndian.Uint64(buf[16:])
@@ -140,7 +141,7 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	// read cursor at variable section
 	i := word0&0xffff + 4
 
-	// read variable size
+	// unpack variable size
 	v := word0 >> 17 & 0x7f
 	if word0&(1<<16) == 0 {
 		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
@@ -151,7 +152,7 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	}
 	size := v
 
-	// read Key int64
+	// unpack Key int64
 	v = word0 >> 25 & 0x7f
 	if word0&(1<<24) == 0 {
 		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
@@ -162,7 +163,7 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	}
 	o.Key = int64(v>>1) ^ -int64(v&1)
 
-	// read Host text size
+	// unpack Host text size
 	v = word0 >> 33 & 0x7f
 	if word0&(1<<32) == 0 {
 		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
@@ -173,11 +174,11 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	}
 	size_host := v
 
-	// read Port uint16
+	// unpack Port uint16
 	o.Port = uint16(word0 >> 40)
 
-	// read Size int64
-	v = word0 >> 57 & 0x7f
+	// unpack Size int64
+	v = word0 >> 57
 	if word0&(1<<56) == 0 {
 		tz := uint64(bits.TrailingZeros64(v|0x80)&7) + 1
 		v = v << uint(tz<<3-tz) &^ masks[tz]
@@ -187,13 +188,13 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	}
 	o.Size = int64(v>>1) ^ -int64(v&1)
 
-	// read Hash opaque64
+	// unpack Hash opaque64
 	o.Hash = word1
 
-	// read Ration float64
+	// unpack Ratio float64
 	o.Ratio = math.Float64frombits(word2)
 
-	// read Route bool
+	// unpack Route bool
 	o.Route = word3&1 != 0
 
 	if l := word0 & 0xffff; l < 22-1 {
@@ -227,6 +228,7 @@ func (o *Record) Unmarshal(buf *[ColferMax]byte) int {
 	}
 	serial := buf[:size]
 
+	// copy payloads
 	offset := size - size_host
 	if offset > uint64(len(serial)) {
 		return 0
