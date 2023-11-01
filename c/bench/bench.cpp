@@ -5,6 +5,7 @@
 #include <benchmark/benchmark.h> // https://github.com/google/benchmark
 
 #include <iostream>
+#include <cstdlib>
 
 
 const colfer test_data[] = {
@@ -48,6 +49,7 @@ static void BM_unmarshal_colfer(benchmark::State& state) {
 		benchmark::DoNotOptimize(n);
 		benchmark::DoNotOptimize(o);
 		benchmark::ClobberMemory();
+		std::free((void*)o.host.utf8);
 	}
 }
 
@@ -147,10 +149,12 @@ static void BM_unmarshal_flatbuffers(benchmark::State& state) {
 		auto serial = serials[i % test_data_len];
 
 		auto view = bench::GetFlatBuffers(serial);
+		// call each lazy-getter
 		o.key = view->key();
-		auto s = view->host()->str();
-		o.host.utf8 = &s[0];
-		o.host.len = s.size();
+		// allocate a copy:
+		std::string* s = new std::string(view->host()->str());
+		o.host.utf8 = s->c_str();
+		o.host.len = s->size();
 		o.port = view->port();
 		o.size = view->size();
 		o.hash = view->hash();
@@ -159,8 +163,8 @@ static void BM_unmarshal_flatbuffers(benchmark::State& state) {
 
 		benchmark::DoNotOptimize(o);
 		benchmark::ClobberMemory();
-
 		fbb.Clear();
+		delete s;
 	}
 }
 
