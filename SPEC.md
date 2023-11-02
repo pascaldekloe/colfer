@@ -114,7 +114,7 @@ with more fields for which the data type is unkown.
 
 Opaque data with a variable size is copied as is into a `payload` section with
 the octet count encoded as an integer (in `fixed` and `overflow`). Text encodes
-similar, with `payload` as UTF-8[^1].
+similar, with `payload` as UTF-8[^3].
 
 ```
 payload   :≡ opaque payload | text payload | list payload ;
@@ -156,7 +156,7 @@ structure-list :≡ serial structure-list | ε ;
 
 ## References
 
-[^1]: [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
+[^1]: [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
 [^2]: [IEEE Standard for Floating-Point Arithmetic](https://ieeexplore.ieee.org/document/4610935/)
-[^3]: [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
+[^3]: [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
 [^4]: [Fixed-Length Integer Trim (FLIT)](https://github.com/pascaldekloe/flit)
