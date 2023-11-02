@@ -1,33 +1,32 @@
-# Colfer Version 2 Specification
-
+# Colfer Version 2 — Format Specification
 
 ## Abstract
 
-Colfer is an octet oriented data format.
-
-```bnf
-octet :≡ 0–255 ; 8-bit byte
-```
-
-Version 2 trades simplicity for extreme performance.
+Version 2 trades simplicity for peak performance.
 
 * backward and forward compatibility
-* optimal buffer sizes due to fixed worst cases
-* maximise branch prediction
+* fixed data positions maximised
+* fewer bound-checks required
 * parallel/vector processing options
-* single field extraction options
 
 
-## Integers
-
-All integers are 64-bit wide. Signed integers use *ZigZag encoding*.
-
-Leading zeros are ommitted with the following algorithm. TODO(pascaldekloe)
+Colfer is an octet oriented data format with built-in integer compression.
 
 ```bnf
-integer      :≡ integer-head | integer-head integer-tail ;
+octet :≡ 0–255 ; 8 bits
+```
+
+
+## Integer Encoding
+
+Integer values encode one header octet each. Up to eight more octets may follow
+in the tail. Encoders should select the smallest tail which is can still carry
+all input data.
+
+```bnf
 integer-head :≡ octet ;
-integer-tail :≡ octet |
+integer-tail :≡ ε |
+                octet |
                 octet octet |
                 octet octet octet |
                 octet octet octet octet |
@@ -37,115 +36,127 @@ integer-tail :≡ octet |
                 octet octet octet octet octet octet octet octet ;
 ```
 
+The header octet counts the number of octets in the tail with its trailing-zero
+count, range 0–8. The least-significant bits of the integer value reside in the
+tail, in little-endian order. Any remaining bits (which are the most significant
+ones) follow the size flag in the header, denoted by `x` in the following table.
 
-## Record Encoding
+| Tail Size | Header Bits  | Range                               |
+|:----------|:-------------|:------------------------------------|
+| 0 octet   | `xxxx xxx1`  | 7-bit (128)                         |
+| 1 octets  | `xxxx xx10`  | 14-bit (16'384)                     |
+| 2 octets  | `xxxx x100`  | 21-bit (2'097'152)                  |
+| 3 octets  | `xxxx 1000`  | 28-bit (268'435'456)                |
+| 4 octets  | `xxx1 0000`  | 35-bit (34'359'738'368)             |
+| 5 octets  | `xx10 0000`  | 42-bit (4'398'046'511'104)          |
+| 6 octets  | `x100 0000`  | 49-bit (562'949'953'421'312)        |
+| 7 octets  | `1000 0000`  | 56-bit (72'057'594'037'927'936)     |
+| 8 octets  | `0000 0000`  | 64-bit (18'446'744'073'709'551'616) |
 
-Data with a fixed length encoding is placed at the start of a serial to maximise
-the number of stationary positions. Variable-length data is split in two parts.
-The minimum [size] goes into `fixed` and the remainder, if any, overflows into
-`variable`.
+Signed integers pack their bits conform the ZigZag[^1] algorithm first.
+
+
+## Data Structure Encoding
+
+Data is split in two sections, namely `fixed` and `variable`. Data types with a
+fixed-length encoding append to `fixed` only. Data types with a variable-length
+encoding append their minimum size to `fixed`, and any remainder overflows to
+`variable`. For example, integer encoding as described in the previous section
+has its `integer-head` octet (at a known location) in `fixed`. When the head
+value calls for more data, then its `integer-tail` appends to `variable`.
 
 ```bnf
-serial        :≡ fixed-size variable-size fixed variable ; record
+serial        :≡ fixed variable ; packs one data structure
+
+fixed         :≡ fixed-size variable-size field-fixes
 fixed-size    :≡ octet octet ; 16-bit address space, little-endian order
-variable-size :≡ integer-head ; 64-bit address space
+variable-size :≡ integer-head ; 64-bit address space, integer-tail in overflow
+field-fixes   :≡ fix field-fixes | fix ;
+
+variable      :≡ overflow payloads ;
+overflow      :≡ integer-tail overflow | integer-tail ;
+payloads      :≡ payload payloads | ε ;
 ```
 
-The `variable-size` may have an `integer-tail` in the beginning of `variable`,
-which starts at the 4th octet + the numeric value of `fixed-size`.
+As such, fields start at octet count 4 (in the `fixed` section). The `variable`
+section starts at octet count of `fixed-size` plus (the minimum of) 5. Note how
+the `variable` section starts with the `integer-tail` of `variable-size`.
 
-Fields appear in sequential order in `fixed`. However, booleans group by 8 in
-the form of little-endian *bit fields*. Thus the first 8 boolean fields reside
-at the position of the first field, the next 8 at the position of the ninth, and
-so forth.
+Fields append in sequential order to `fixed`. However, booleans group by 8 in
+the form of little-endian *bit fields*. Thus, the first 8 boolean fields reside
+at the position of the first field, and the next 8 booleans at the position of
+the ninth field, and so forth.
+
+Single and double-precision floating-points[^2] encode without compression, in
+big-endian byte-order. Nested data structures encode their fields inline, as if
+they were part of the hosting data structure.
+
+Arrays with a fixed size encode their elements just as separate fields would do.
+Nested data structures also encode their fields inline, all as if they were part
+of the hosting data structure.
 
 ```bnf
-fixed     :≡ ε | fixed fix ;
-fix       :≡ integer-head | bit-field | float32 | float64 |
-             opaque8   | opaque16  | opaque24  | opaque32  |
-             opaque40  | opaque48  | opaque56  | opaque64  |
-             opaque72  | opaque80  | opaque88  | opaque96  |
-             opaque104 | opaque112 | opaque120 | opaque128 |
-             opaque136 | opaque144 | opaque152 | opaque160 |
-             opaque168 | opaque176 | opaque184 | opaque192 |
-             opaque200 | opaque208 | opaque216 | opaque224 |
-             opaque232 | opaque240 | opaque248 | opaque256 ;
-bit-field :≡ octet ; little-endian bit order
-float32   :≡ octet octet octet octet ; big-endian order
-float64   :≡ octet octet octet octet octet octet octet octet ; big-endian order
+fix       :≡ integer-head | bit-field | float32 | float64 | nested |
+             opaque8  | opaque16 | opaque24 | … | opaque524288 ;
+bit-field :≡ octet ; little-endian bit-order, zero padded
+float32   :≡ octet octet octet octet ; IEEE floating-point
+float64   :≡ octet octet octet octet
+             octet octet octet octet ; IEEE floating-point
 opaque8   :≡ octet ;
 opaque16  :≡ octet octet ;
 opaque24  :≡ octet octet octet ;
 …
-opaque256 :≡ octet octet octet octet octet octet octet octet
-             octet octet octet octet octet octet octet octet
-             octet octet octet octet octet octet octet octet
-             octet octet octet octet octet octet octet octet ;
 ```
 
-Remainders of `fixed` appear in `overflow` in sequential order. The `embedded`
-parts append in reverse field order, this to support unknow/newer field gaps.
+Remainders of `fixed` appear in `overflow` in corresponding order. The `payload`
+components append in reverse field order to support unknown gaps from encodings
+with more fields for which the data type is unkown.
+
+Opaque data with a variable size is copied as is into a `payload` section with
+the octet count encoded as an integer (in `fixed` and `overflow`). Text encodes
+similar, with `payload` as UTF-8[^1].
+
+```
+payload   :≡ opaque payload | text payload | list payload ;
+opaque    :≡ octet opaque | ε ;
+text      :≡ utf-8 text | ε ;
+utf-8     :≡ utf-seq-1 | utf-seq-2 | utf-seq-3 | utf-seq-4 ;
+utf-seq-1 :≡ 0x00–0x7F ;
+utf-seq-2 :≡ 0xC2–0xDF utf-tail ;
+utf-seq-3 :≡ 0xE0 0xA0–0xBF utf-tail |
+             0xE1–0xEC utf-tail utf-tail |
+             0xED 0x80–0x9F utf-tail |
+             0xEE–0xEF utf-tail utf-tail ;
+utf-seq-4 :≡ 0xF0 0x90–0xBF utf-tail utf-tail |
+             0xF1–0xF3 utf-tail utf-tail utf-tail |
+             0xF4 0x80–0x8F utf-tail utf-tail ;
+utf-tail  :≡ 0x80–0xBF ;
+```
+
+Lists encode their element count as an integer (in `fixed` and `overflow`). The
+`payload` for integers is a FLIT64[^4] sequence in ascending order. Booleans do
+little-endian bit-order. Strings encode their element's octet count as a FLIT64
+sequence folowed by each value as UTF-8.
 
 ```bnf
-variable :≡ overflow embedded ;
-overflow :≡ ε | overflow integer-tail ;
-embedded :≡ ε | embedded text | embedded array ;
-```
-
-Text fields encode the octet size as an integer (in `fixed` and `overflow`) and
-the actual *UTF-8* payload goes into `embedded`.
-
-```
-text      :≡ text char | char ;
-char      :≡ char8 | char16 | char24 | char32 ;
-char8     :≡ 0x00–0x7F ;
-char16    :≡ 0xC2–0xDF char-tail ;
-char24    :≡ 0xE0 0xA0–0xBF char-tail |
-             0xE1–0xEC char-tail char-tail |
-             0xED 0x80–0x9F char-tail |
-             0xEE–0xEF char-tail char-tail ;
-char32    :≡ 0xF0 0x90–0xBF char-tail char-tail |
-             0xF1–0xF3 char-tail char-tail char-tail |
-             0xF4 0x80–0x8F char-tail char-tail ;
-char-tail :≡ 0x80–0xBF ;
-```
-
-Array fields encode the element count as an integer (in `fixed` and `overflow`).
-Text arrays contain an integer array with the octet sizes of each corresponding
-element.
-
-```bnf
-array :≡ integer-array   | boolean-array   | float32-array   | float64-array   |
-         opaque8-array   | opaque16-array  | opaque24-array  | opaque32-array  |
-         opaque40-array  | opaque48-array  | opaque56-array  | opaque64-array  |
-         opaque72-array  | opaque80-array  | opaque88-array  | opaque96-array  |
-         opaque104-array | opaque112-array | opaque120-array | opaque128-array |
-         opaque136-array | opaque144-array | opaque152-array | opaque160-array |
-         opaque168-array | opaque176-array | opaque184-array | opaque192-array |
-         opaque200-array | opaque208-array | opaque216-array | opaque224-array |
-         opaque232-array | opaque240-array | opaque248-array | opaque256-array |
-         text-array      | record-array    ;
-
-integer-array      :≡ integer-head-array integer-tail-array ;
-integer-head-array :≡ integer-head-array integer-head | integer-head ;
-integer-tail-array :≡ integer-tail-array integer-tail | integer-tail ;
-
-boolean-array   :≡ boolean-array bit-field | bit-field ;
-float32-array   :≡ float32-array float32 | float32 ;
-float64-array   :≡ float64-array float64 | float64 ;
-opaque8-array   :≡ opaque8-array opaque8 | opaque8 ;
-opaque16-array  :≡ opaque16-array opaque16 | opaque16 ;
-opaque24-array  :≡ opaque24-array opaque24 | opaque24 ;
+list           :≡ boolean-list | float32-list | float64-list | integer-list |
+                  text-list | opaque8-list | … | structure-list ;
+boolean-list   :≡ bit-field boolean-list | ε ;
+float32-list   :≡ float32 float32-list | ε ;
+float64-list   :≡ float64 float64-list | ε ;
+integer-list   :≡ flit64 integer-list | ε ;
+text-list      :≡ integer-list | text ;
+opaque8-list   :≡ opaque8 opaque8-list | ε ;
+opaque16-list  :≡ opaque16 opaque8-list | ε ;
+opaque24-list  :≡ opaque24 opaque8-list | ε ;
 …
-opaque256-array :≡ opaque256-array opaque256 | opaque256 ;
-
-text-array    :≡ integer-array text ;
-record-array  :≡ record-array record | record ;
+structure-list :≡ serial structure-list | ε ;
 ```
 
 
 ## References
 
-* [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
-* [IEEE Standard for Floating-Point Arithmetic](https://ieeexplore.ieee.org/document/4610935/)
-* [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
+[^1] [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
+[^2] [IEEE Standard for Floating-Point Arithmetic](https://ieeexplore.ieee.org/document/4610935/)
+[^3] [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
+[^4] [Fixed-Length Integer Trim (FLIT)](https://github.com/pascaldekloe/flit)

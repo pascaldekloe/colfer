@@ -1,6 +1,6 @@
 # Colfer
 
-Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/wiki/Spec)
+Colfer is a binary serialization [format](https://github.com/pascaldekloe/colfer/blob/v2/SPEC.md)
 optimized for speed and size.
 
 The project's compiler `colf(1)` generates source code from schema definitions
@@ -36,7 +36,6 @@ The format is inspired by Proto**col** Buf**fer**s.
 #### TODO's
 
 * Rust and Python support
-* Protocol [revision](https://github.com/pascaldekloe/colfer/commits/v2)
 
 
 ## Use
