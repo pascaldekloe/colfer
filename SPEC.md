@@ -156,7 +156,7 @@ structure-list :≡ serial structure-list | ε ;
 
 ## References
 
-[^1] [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
-[^2] [IEEE Standard for Floating-Point Arithmetic](https://ieeexplore.ieee.org/document/4610935/)
-[^3] [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
-[^4] [Fixed-Length Integer Trim (FLIT)](https://github.com/pascaldekloe/flit)
+[^1]: [UTF-8, a transformation format of ISO 10646](https://tools.ietf.org/rfc/rfc3629.txt)
+[^2]: [IEEE Standard for Floating-Point Arithmetic](https://ieeexplore.ieee.org/document/4610935/)
+[^3]: [(Protocol Buffers) ZigZag encoding](https://developers.google.com/protocol-buffers/docs/encoding#signed-integers)
+[^4]: [Fixed-Length Integer Trim (FLIT)](https://github.com/pascaldekloe/flit)
