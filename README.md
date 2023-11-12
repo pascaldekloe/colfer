@@ -162,17 +162,17 @@ installations. Alternatively, you may use the
 
 Data structures are defined in `.colf` files. The format is quite self-explanatory.
 
-```
+```go
 // Package demo offers a demonstration.
-// These comment lines will end up in the generated code.
+// These comment lines end up in the generated code.
 package demo
 
 // Course is the grounds where the game of golf is played.
 type course struct {
 	ID    uint64
 	name  text
-	holes []hole
-	image binary
+	holes [18]hole
+	image opaque
 	tags  []text
 }
 
@@ -181,7 +181,7 @@ type hole struct {
 	lat float64
 	// Lon is the longitude of the cup.
 	lon float64
-	// Par is the difficulty index.
+	// Par is the stroke indicator.
 	par uint8
 	// Water marks the presence of water.
 	water bool
@@ -196,25 +196,33 @@ See what the generated code looks like in
 [Java](https://gist.github.com/pascaldekloe/b54326e6b7c5e9f036911a8cbea6ccbf) or
 [JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
-The following table shows how Colfer data types are applied per language.
+The following table shows hows the default data-types per programming language.
 
-| Colfer	| C			| Go		| Java		| JavaScript	|
-|:--------------|:----------------------|:--------------|:--------------|:--------------|
-| bool		| uint + mask		| bool		| boolean	| Boolean	|
-| uint		| uint64_t		| uint64	| long †	| Number ‡	|
-| int		| uint64_t		| int64		| long		| Number ‡	|
-| float32	| float			| float32	| float		| Number	|
-| float64	| double		| float64	| double	| Number	|
-| text		| const char* + size_t	| string	| String	| String	|
-| []T		| *T + size_t		| []T		| T[]		| Array		|
-| opaque8	| uint8_t		| byte		| byte †	| Number	|
-| opaque16	| uint16_t		| uint16	| short	†	| Number	|
-| opaque32	| uint32_t		| uint32	| int †		| Number	|
-| opaque64	| uint64_t		| uint64	| long †	| Uint8Array	|
+| Colfer	| C		| Go		| Java		| Rust		|
+|:--------------|:--------------|:--------------|:--------------|:--------------|
+| bool		| int + mask	| bool		| boolean	| bool		|
+| int8		| int8_t	| int8		| byte		| i16		|
+| uint8		| uint8_t	| uint8		| byte [^1]	| u16		|
+| opaque8	| uint8_t	| uint8		| byte [^1]	| u16		|
+| int16		| int16_t	| int16		| short		| i16		|
+| uint16	| uint16_t	| uint16	| short [^1]	| u16		|
+| opaque16	| uint16_t	| uint16	| short [^1]	| u16		|
+| int32		| int32_t	| int32		| int		| i32		|
+| uint32	| uint32_t	| uint32	| int [^1]	| u32		|
+| opaque32	| uint32_t	| uint32	| int [^1]	| u32		|
+| int64		| int64_t	| int64		| long		| i64		|
+| uint64	| uint64_t	| uint64	| long [^1]	| u64		|
+| opaque64	| uint64_t	| uint64	| long [^1]	| u64		|
+| float32	| float		| float32	| float		| f32		|
+| float64	| double	| float64	| double	| f64		|
+| timestamp	| timespec	| Time [^2]	| Instant	| DateTime<Utc>	|
+| opaque	| void*		| []byte	| byte[] [^1]	| [u8; usize]	|
+| text		| const char*	| string	| String	| String	|
+| []T		| T*		| []T		| T[]		| [T]		|
+| [n]T		| T[n]		| [n]T		| final T[]	| [T; n]	|
 
-
-* † signed representation of unsigned data, i.e. may overflow to negative.
-* ‡ range limited to [1 - 2⁵³, 2⁵³ - 1]
+[^1]: may overflow to negative values
+[^2]: timezone not preserved
 
 
 ## Security

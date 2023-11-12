@@ -1,10 +1,10 @@
-// Package void tries to break the generated code.
-// Note that void is a reserved keyword in all supported languages except for Go.
+// Package void tries to break the generated code. Names overlap with the
+// keywords from programming languages on purpose.
 package void
 
 // Class has local and cross-package refereces.
 type class struct {
-	extends int
+	extends int32
 	public  []static.int
 }
 

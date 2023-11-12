@@ -3,9 +3,9 @@ package bench
 type Colfer struct {
 	key   int64
 	host  text
-	port  uint16
+	port  opaque16
 	size  int64
-	hash  uint64
+	hash  opaque64
 	ratio float64
 	route bool
 }

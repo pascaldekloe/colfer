@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -14,18 +15,30 @@ import (
 
 // datatypes holds all supported names.
 var datatypes = map[string]struct{}{
-	"bool":      {},
-	"uint8":     {},
-	"uint16":    {},
-	"uint32":    {},
-	"uint64":    {},
-	"int32":     {},
-	"int64":     {},
+	"bool": {},
+
+	"int8":    {},
+	"uint8":   {},
+	"opaque8": {},
+
+	"int16":    {},
+	"uint16":   {},
+	"opaque16": {},
+
+	"uint32":   {},
+	"int32":    {},
+	"opaque32": {},
+
+	"int64":    {},
+	"uint64":   {},
+	"opaque64": {},
+
 	"float32":   {},
 	"float64":   {},
 	"timestamp": {},
-	"text":      {},
-	"binary":    {},
+
+	"text":   {},
+	"opaque": {},
 }
 
 type Packages []*Package
@@ -108,7 +121,7 @@ func (p *Package) Refs() Packages {
 	return refs
 }
 
-// HasFloat returns whether p has one or more floating point fields.
+// HasFloat returns whether p has one or more floating-point fields.
 func (p *Package) HasFloat() bool {
 	for _, t := range p.Structs {
 		if t.HasFloat() {
@@ -153,6 +166,67 @@ type Struct struct {
 	SchemaFile string
 	// TagAdd has optional source code additions.
 	TagAdd []string
+
+	// FixedSize counts the number of fixed bytes in the serial.
+	FixedSize int
+}
+
+// FieldsReversed returns .Fields in reversed order.
+func (t *Struct) FieldsReversed() []*Field {
+	fields := append(([]*Field)(nil), t.Fields...)
+	slices.Reverse(fields)
+	return fields
+}
+
+func (t *Struct) SetFixedPositions() {
+	boolCount := 0
+	fixedIndex := 3 // start position
+	for _, f := range t.Fields {
+		f.FixedIndex = fixedIndex
+
+		if f.TypeList {
+			fixedIndex++
+			continue
+		}
+
+		switch f.Type {
+		default:
+			fixedIndex += max(1, f.ElementCount)
+
+		case "bool":
+			f.BoolIndex = boolCount
+			boolCount++
+			if f.FirstInBitField() {
+				fixedIndex++
+			} else {
+				f.FixedIndex = -1
+			}
+		case "opaque16":
+			fixedIndex += max(2, 2 * f.ElementCount)
+		case "float32", "opaque32":
+			fixedIndex += max(4, 4 * f.ElementCount)
+		case "float64", "timestamp", "opaque64":
+			fixedIndex += max(8, 8 * f.ElementCount)
+		}
+	}
+
+	t.FixedSize = fixedIndex
+}
+
+func (t *Struct) FixedWordIndices() []int {
+	indices := make([]int, t.FixedSize/8)
+	for i := range indices {
+		indices[i] = i
+	}
+	return indices
+}
+
+func (t *Struct) FixedTailWordIndex() int {
+	return t.FixedSize / 8
+}
+
+func (t *Struct) FixedTailOctetCount() int {
+	return t.FixedSize % 8
 }
 
 // DocText returns the documentation lines prefixed with ident.
@@ -165,7 +239,17 @@ func (t *Struct) String() string {
 	return fmt.Sprintf("%s.%s", t.Pkg.Name, t.Name)
 }
 
-// HasFloat returns whether s has one or more floating point fields.
+// HasBool returns whether t has one or more boolean fields.
+func (t *Struct) HasBool() bool {
+	for _, f := range t.Fields {
+		if f.Type == "bool" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasFloat returns whether t has one or more floating-point fields.
 func (t *Struct) HasFloat() bool {
 	for _, f := range t.Fields {
 		if f.Type == "float32" || f.Type == "float64" {
@@ -175,7 +259,7 @@ func (t *Struct) HasFloat() bool {
 	return false
 }
 
-// HasText returns whether s has one or more text fields.
+// HasText returns whether t has one or more text fields.
 func (t *Struct) HasText() bool {
 	for _, f := range t.Fields {
 		if f.Type == "text" {
@@ -185,20 +269,20 @@ func (t *Struct) HasText() bool {
 	return false
 }
 
-// HasBinary returns whether s has one or more binary fields.
-func (t *Struct) HasBinary() bool {
+// HasOpaque returns whether t has one or more opaque fields.
+func (t *Struct) HasOpaque() bool {
 	for _, f := range t.Fields {
-		if f.Type == "binary" {
+		if f.Type == "opaque" {
 			return true
 		}
 	}
 	return false
 }
 
-// HasBinaryList returns whether s has one or more binary list fields.
-func (t *Struct) HasBinaryList() bool {
+// HasOpaqueList returns whether t has one or more opaque list fields.
+func (t *Struct) HasOpaqueList() bool {
 	for _, f := range t.Fields {
-		if f.Type == "binary" && f.TypeList {
+		if f.Type == "opaque" && f.TypeList {
 			return true
 		}
 	}
@@ -243,10 +327,40 @@ type Field struct {
 	TypeNative string
 	// TypeRef is the Colfer data structure reference.
 	TypeRef *Struct
+
+	// ElementCount is the fixed-array size.
+	ElementCount int
 	// TypeList flags whether the datatype is a list.
 	TypeList bool
+
 	// TagAdd has optional source code additions.
 	TagAdd []string
+
+	// FixedIndex is the position of the first byte in the serial.
+	FixedIndex int
+	// BoolIndex is the position in the bit field.
+	BoolIndex int
+}
+
+// WordIndex locates fixed-data in the 64-bit words.
+func (f *Field) WordIndex() int {
+	return f.FixedIndex / 8
+}
+
+// NextWordIndex is relevent when the data overlaps two words.
+func (f *Field) NextWordIndex() int {
+	return f.WordIndex() + 1
+}
+
+// WordShift is the bit position of fixed-data at WordIndex.
+func (f *Field) WordShift() int {
+	return (f.FixedIndex & 7) * 8
+}
+
+// FirstInBitField returns whether this boolean is the first (of up to 8 in
+// total) in the byte encoding.
+func (f *Field) FirstInBitField() bool {
+	return f.Type == "bool" && f.BoolIndex%8 == 0
 }
 
 // DocText returns the documentation lines prefixed with ident.

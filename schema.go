@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path"
+	"strconv"
 )
 
 // FormatFile normalizes the structure.
@@ -76,40 +77,33 @@ func ParseFiles(paths ...string) (Packages, error) {
 		}
 	}
 
-	names := make(map[string]*Struct)
+	structPerName := make(map[string]*Struct)
 	for _, pkg := range packages {
 		for _, t := range pkg.Structs {
 			qname := t.String()
-			if dupe, ok := names[qname]; ok {
+			if dupe, ok := structPerName[qname]; ok {
 				return nil, fmt.Errorf("colfer: duplicate struct definition %q in file %s and %s", qname, dupe.SchemaFile, t.SchemaFile)
 			}
-			names[qname] = t
+			structPerName[qname] = t
 		}
 	}
 
+	// type checks
 	for _, pkg := range packages {
 		for _, t := range pkg.Structs {
 			for _, f := range t.Fields {
-				_, ok := datatypes[f.Type]
-				if ok {
-					if f.TypeList {
-						switch f.Type {
-						case "int32", "int64":
-							fmt.Println("colfer: WARNING: integer lists are Go only at the moment")
-						case "float32", "float64", "text", "binary":
-						default:
-							return nil, fmt.Errorf("colfer: unsupported lists type %q for field %s", t, f)
-						}
-					}
-					continue
+				if _, ok := datatypes[f.Type]; ok {
+					continue // pass
 				}
-				if f.TypeRef, ok = names[f.Type]; ok {
-					continue
+
+				ref, ok := structPerName[f.Type]
+				if !ok {
+					ref, ok = structPerName[pkg.Name+"."+f.Type]
 				}
-				if f.TypeRef, ok = names[pkg.Name+"."+f.Type]; ok {
-					continue
+				if !ok {
+					return nil, fmt.Errorf("colfer: unknown datatype %q on field %s", f.Type, f)
 				}
-				return nil, fmt.Errorf("colfer: unknown datatype %q for field %s", f.Type, f)
+				f.TypeRef = ref
 			}
 		}
 	}
@@ -169,7 +163,19 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 			switch t := expr.(type) {
 			case *ast.ArrayType:
 				expr = t.Elt
-				field.TypeList = true
+				if t.Len != nil {
+					l, ok := t.Len.(*ast.BasicLit)
+					if !ok {
+						return fmt.Errorf("colfer: unknown array size for field %s", field)
+					}
+					n, err := strconv.Atoi(l.Value)
+					if err != nil {
+						return fmt.Errorf("colfer: illegal array size for field %s: %w", field, err)
+					}
+					field.ElementCount = n
+				} else {
+					field.TypeList = true
+				}
 				continue
 			case *ast.Ident:
 				field.Type = t.Name
@@ -186,6 +192,8 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 			break
 		}
 	}
+
+	dst.SetFixedPositions()
 
 	return nil
 }

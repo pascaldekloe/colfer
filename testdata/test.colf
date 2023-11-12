@@ -1,53 +1,78 @@
-// Package gen tests all field mapping options.
+// Package gen tests all supported data types.
 package gen
 
-// O contains all supported data types.
-type o struct {
-	// B tests booleans.
+// BaseTypes contains common data-types.
+type BaseTypes struct {
+	// B tests binary values.
 	b bool
-	// U32 tests unsigned 32-bit integers.
-	u32 uint32
-	// U64 tests unsigned 64-bit integers.
-	u64 uint64
-	// I32 tests signed 32-bit integers.
-	i32 int32
-	// I64 tests signed 64-bit integers.
-	i64 int64
-	// F32 tests 32-bit floating points.
-	f32 float32
-	// F64 tests 64-bit floating points.
-	f64 float64
-	// T tests timestamps.
-	t timestamp
-	// S tests text.
-	s text
-	// A tests binaries.
-	a binary
-	// O tests nested data structures.
-	o o
-	// Os tests data structure lists.
-	os []o
-	// Ss tests text lists.
-	ss []text
-	// As tests binary lists.
-	as []binary
-	// U8 tests unsigned 8-bit integers.
+
+	// I8 tests signed integer values.
+	i8 int8
+	// U8 tests unsigned integer values.
 	u8 uint8
-	// U16 tests unsigned 16-bit integers.
+	// I16 tests signed integer values.
+	i16 int16
+	// U16 tests unsigned integer values.
 	u16 uint16
-	// F32s tests 32-bit floating point lists.
-	f32s []float32
-	// F64s tests 64-bit floating point lists.
-	f64s []float64
+	// I32 tests signed integer values.
+	i32 int32
+	// U32 tests unsigned integer values.
+	u32 uint32
+	// I64 tests signed integer values.
+	i64 int64
+	// U64 tests unsigned integer values.
+	u64 uint64
+
+	// F32 tests floating-point values.
+	f32 float32
+	// F64 tests floating-point values.
+	f64 float64
+
+	// T tests timestamps (with nanosecond precision).
+	t timestamp
+	// C tests Unicode strings of variable size.
+	s text
 }
 
-// DromedaryCase oposes name casings.
+// ListTypes contains each BaseType supported in list form.
+type ListTypes struct {
+	// F32s tests a variable-size listing.
+	f32s []float32
+	// F64s tests a variable-size listing.
+	f64s []float64
+	// Ss tests Unicode strings of variable size.
+	ss []text
+}
+
+// ArrayTypes contains each BaseType supported in array form.
+type ArrayTypes struct {
+	f32a2 [2]float32
+	f64a3 [3]float64
+	// TODO: …
+}
+
+// OpaqueTypes mixes fixed and variable-byte values.
+type OpaqueTypes struct {
+	// A tests variable size.
+	a opaque
+
+	// A8 tests 8-bit values.
+	a8 opaque8
+	// A16 tests 16-bit values.
+	a16 opaque16
+	// A32 tests 32-bit values.
+	a32 opaque32
+	// A64 tests 64-bit values.
+	a64 opaque64
+
+	// As tests opaque data of variable size.
+	as []opaque
+
+	// TODO: list forms
+}
+
+// DromedaryCase mixes name conventions.
 type dromedaryCase struct {
 	PascalCase text
-}
-
-// EmbedO has an inner object only.
-// Covers regression of issue #66.
-type EmbedO struct {
-	inner o
+	with_snake opaque8
 }

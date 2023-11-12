@@ -1,6 +1,6 @@
 module github.com/pascaldekloe/colfer
 
-go 1.18
+go 1.21
 
 require (
 	github.com/gogo/protobuf v1.3.2
