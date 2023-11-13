@@ -47,6 +47,16 @@ func (p Packages) Len() int           { return len(p) }
 func (p Packages) Less(i, j int) bool { return p[i].Name < p[j].Name }
 func (p Packages) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+// HasFloat returns whether any of the packages has one or more floating-point fields.
+func (p Packages) HasFloat() bool {
+	for _, o := range p {
+		if o.HasFloat() {
+			return true
+		}
+	}
+	return false
+}
+
 // HasTimestamp returns whether any of the packages has one or more timestamp fields.
 func (p Packages) HasTimestamp() bool {
 	for _, o := range p {
@@ -202,11 +212,11 @@ func (t *Struct) SetFixedPositions() {
 				f.FixedIndex = -1
 			}
 		case "opaque16":
-			fixedIndex += max(2, 2 * f.ElementCount)
+			fixedIndex += max(2, 2*f.ElementCount)
 		case "float32", "opaque32":
-			fixedIndex += max(4, 4 * f.ElementCount)
+			fixedIndex += max(4, 4*f.ElementCount)
 		case "float64", "timestamp", "opaque64":
-			fixedIndex += max(8, 8 * f.ElementCount)
+			fixedIndex += max(8, 8*f.ElementCount)
 		}
 	}
 

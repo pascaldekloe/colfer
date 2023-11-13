@@ -2,1384 +2,980 @@
 // The compiler used schema file test.colf for package gen.
 
 #include "Colfer.h"
-#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
-
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
-    defined(__BIG_ENDIAN__) || \
-    defined(__ARMEB__) || \
-    defined(__AARCH64EB__) || \
-    defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__) || \
-    defined(__SYSC_ZARCH__)
-#define COLFER_ENDIAN
-#endif
-
-
-size_t colfer_size_max = 16 * 1024 * 1024;
-size_t colfer_list_max = 64 * 1024;
-
-
-size_t gen_o_marshal_len(const gen_o* o) {
-	size_t l = 1;
-
-	if (o->b) l++;
-
-	{
-		uint_fast32_t x = o->u32;
-		if (x) {
-			if (x >= (uint_fast32_t) 1 << 21) l += 5;
-			else for (l += 2; x > 127; x >>= 7, ++l);
-		}
-	}
-
-	{
-		uint_fast64_t x = o->u64;
-		if (x) {
-			if (x >= (uint_fast64_t) 1 << 49) l += 9;
-			else for (l += 2; x > 127; x >>= 7, ++l);
-		}
-	}
-
-	{
-		uint_fast32_t x = o->i32;
-		if (x) {
-			if (x & (uint_fast32_t) 1 << 31) {
-				x = ~x;
-				++x;
-			}
-			for (l += 2; x > 127; x >>= 7, ++l);
-		}
-	}
-
-	{
-		uint_fast64_t x = o->i64;
-		if (x) {
-			if (x & (uint_fast64_t) 1 << 63) {
-				x = ~x;
-				++x;
-			}
-			size_t max = l + 10;
-			for (l += 2; x > 127 && l < max; x >>= 7, ++l);
-		}
-	}
-
-	if (o->f32 != 0.0f) l += 5;
-
-	if (o->f64 != 0.0) l += 9;
-
-	{
-		time_t s = o->t.tv_sec;
-		long ns = o->t.tv_nsec;
-		if (s || ns) {
-			s += ns / 1000000000;
-			l += s >= (time_t) 1 << 32 || s < 0 ? 13 : 9;
-		}
-	}
-
-	{
-		size_t n = o->s.len;
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
-	}
-
-	{
-		size_t n = o->a.len;
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
-	}
-
-	{
-		if (o->o) l += 1 + gen_o_marshal_len(o->o);
-	}
-
-	{
-		size_t n = o->os.len;
-		if (n) {
-			if (n > colfer_list_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			gen_o* a = o->os.list;
-			for (size_t i = 0; i < n; ++i) l += gen_o_marshal_len(&a[i]);
-			for (l += 2; n > 127; n >>= 7, ++l);
-			if (l > colfer_size_max) {
-				errno = EFBIG;
-				return 0;
-			}
-		}
-	}
-
-	{
-		size_t n = o->ss.len;
-		if (n) {
-			if (n > colfer_list_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			colfer_text* a = o->ss.list;
-			for (size_t i = 0; i < n; ++i) {
-				size_t len = a[i].len;
-				if (len > colfer_size_max) {
-					errno = EFBIG;
-					return 0;
-				}
-				for (l += len + 1; len > 127; len >>= 7, ++l);
-			}
-			for (l += 2; n > 127; n >>= 7, ++l);
-			if (l > colfer_size_max) {
-				errno = EFBIG;
-				return 0;
-			}
-		}
-	}
-
-	{
-		size_t n = o->as.len;
-		if (n) {
-			if (n > colfer_list_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			colfer_binary* a = o->as.list;
-			for (size_t i = 0; i < n; ++i) {
-				size_t len = a[i].len;
-				if (len > colfer_size_max) {
-					errno = EFBIG;
-					return 0;
-				}
-				for (l += len + 1; len > 127; len >>= 7, ++l);
-			}
-			for (l += 2; n > 127; n >>= 7, ++l);
-			if (l > colfer_size_max) {
-				errno = EFBIG;
-				return 0;
-			}
-		}
-	}
-
-	if (o->u8) l += 2;
-
-	{
-		uint_fast16_t x = o->u16;
-		if (x) l += x < 256 ? 2 : 3;
-	}
-
-	{
-		size_t n = o->f32s.len;
-		if (n) {
-			if (n > colfer_list_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			for (l += n * 4 + 2; n > 127; n >>= 7, ++l);
-		}
-	}
-
-	{
-		size_t n = o->f64s.len;
-		if (n) {
-			if (n > colfer_list_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			for (l += n * 8 + 2; n > 127; n >>= 7, ++l);
-		}
-	}
-
-	if (l > colfer_size_max) {
-		errno = EFBIG;
-		return 0;
-	}
-	return l;
-}
-
-size_t gen_o_marshal(const gen_o* o, void* buf) {
-	// octet pointer navigation
-	uint8_t* p = buf;
-
-	if (o->b) *p++ = 0;
-
-	{
-		uint_fast32_t x = o->u32;
-		if (x) {
-			if (x < (uint_fast32_t) 1 << 21) {
-				*p++ = 1;
-				for (; x >= 128; x >>= 7) *p++ = x | 128;
-				*p++ = x;
-			} else {
-				*p++ = 1 | 128;
-#ifdef COLFER_ENDIAN
-				memcpy(p, &o->u32, 4);
-				p += 4;
-#else
-				*p++ = x >> 24;
-				*p++ = x >> 16;
-				*p++ = x >> 8;
-				*p++ = x;
-#endif
-			}
-		}
-	}
-
-	{
-		uint_fast64_t x = o->u64;
-		if (x) {
-			if (x < (uint_fast64_t) 1 << 49) {
-				*p++ = 2;
-				for (; x >= 128; x >>= 7) *p++ = x | 128;
-				*p++ = x;
-			} else {
-				*p++ = 2 | 128;
-#ifdef COLFER_ENDIAN
-				memcpy(p, &o->u64, 8);
-				p += 8;
-#else
-				*p++ = x >> 56;
-				*p++ = x >> 48;
-				*p++ = x >> 40;
-				*p++ = x >> 32;
-				*p++ = x >> 24;
-				*p++ = x >> 16;
-				*p++ = x >> 8;
-				*p++ = x;
-#endif
-			}
-		}
-	}
-
-	{
-		uint_fast32_t x = o->i32;
-		if (x) {
-			if (x & (uint_fast32_t) 1 << 31) {
-				*p++ = 3 | 128;
-				x = ~x + 1;
-			} else	*p++ = 3;
-
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-		}
-	}
-
-	{
-		uint_fast64_t x = o->i64;
-		if (x) {
-			if (x & (uint_fast64_t) 1 << 63) {
-				*p++ = 4 | 128;
-				x = ~x + 1;
-			} else	*p++ = 4;
-
-			uint8_t* max = p + 8;
-			for (; x >= 128 && p < max; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-		}
-	}
-
-	if (o->f32 != 0.0f) {
-		*p++ = 5;
-
-#ifdef COLFER_ENDIAN
-		memcpy(p, &o->f32, 4);
-		p += 4;
-#else
-		uint_fast32_t x;
-		memcpy(&x, &o->f32, 4);
-		*p++ = x >> 24;
-		*p++ = x >> 16;
-		*p++ = x >> 8;
-		*p++ = x;
-#endif
-	}
-
-	if (o->f64 != 0.0) {
-		*p++ = 6;
-
-#ifdef COLFER_ENDIAN
-		memcpy(p, &o->f64, 8);
-		p += 8;
-#else
-		uint_fast64_t x;
-		memcpy(&x, &o->f64, 8);
-		*p++ = x >> 56;
-		*p++ = x >> 48;
-		*p++ = x >> 40;
-		*p++ = x >> 32;
-		*p++ = x >> 24;
-		*p++ = x >> 16;
-		*p++ = x >> 8;
-		*p++ = x;
-#endif
-	}
-
-	{
-		time_t s = o->t.tv_sec;
-		long ns = o->t.tv_nsec;
-		if (s || ns) {
-			static const int_fast64_t nano = 1000000000;
-			s += ns / nano;
-			ns %= nano;
-			if (ns < 0) {
-				--s;
-				ns += nano;
-			}
-
-			uint_fast64_t x = s;
-			if (x < (uint_fast64_t) 1 << 32)
-				*p++ = 7;
-			else {
-				*p++ = 7 | 128;
-
-				*p++ = x >> 56;
-				*p++ = x >> 48;
-				*p++ = x >> 40;
-				*p++ = x >> 32;
-			}
-			*p++ = x >> 24;
-			*p++ = x >> 16;
-			*p++ = x >> 8;
-			*p++ = x;
-
-			x = ns;
-			*p++ = x >> 24;
-			*p++ = x >> 16;
-			*p++ = x >> 8;
-			*p++ = x;
-		}
-	}
-
-	{
-		size_t n = o->s.len;
-		if (n) {
-			*p++ = 8;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			memcpy(p, o->s.utf8, n);
-			p += n;
-		}
-	}
-
-	{
-		size_t n = o->a.len;
-		if (n) {
-			*p++ = 9;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			memcpy(p, o->a.octets, n);
-			p += n;
-		}
-	}
-
-	{
-		if (o->o) {
-			*p++ = 10;
-
-			p += gen_o_marshal(o->o, p);
-		}
-	}
-
-	{
-		size_t n = o->os.len;
-		if (n) {
-			*p++ = 11;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			gen_o* a = o->os.list;
-			for (size_t i = 0; i < n; ++i) p += gen_o_marshal(&a[i], p);
-		}
-	}
-
-	{
-		size_t count = o->ss.len;
-		if (count) {
-			*p++ = 12;
-
-			uint_fast32_t x = count;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			colfer_text* text = o->ss.list;
-			do {
-				size_t n = text->len;
-				for (x = n; x >= 128; x >>= 7) *p++ = x | 128;
-				*p++ = x;
-
-				memcpy(p, text->utf8, n);
-				p += n;
-
-				++text;
-			} while (--count != 0);
-		}
-	}
-
-	{
-		size_t count = o->as.len;
-		if (count) {
-			*p++ = 13;
-
-			uint_fast32_t x = count;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			colfer_binary* binary = o->as.list;
-			do {
-				size_t n = binary->len;
-				for (x = n; x >= 128; x >>= 7) *p++ = x | 128;
-				*p++ = x;
-
-				memcpy(p, binary->octets, n);
-				p += n;
-
-				++binary;
-			} while (--count != 0);
-		}
-	}
-
-	if (o->u8) {
-		*p++ = 14;
-
-		*p++ = o->u8;
-	}
-
-	{
-		uint_fast16_t x = o->u16;
-		if (x) {
-			if (x < 256)  {
-				*p++ = 15 | 0x80;
-
-				*p++ = x;
-			} else {
-				*p++ = 15;
-
-				*p++ = x >> 8;
-				*p++ = x;
-			}
-		}
-	}
-
-	{
-		size_t n = o->f32s.len;
-		if (n) {
-			*p++ = 16;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-#ifdef COLFER_ENDIAN
-			memcpy(p, o->f32s.list, n * 4);
-			p += n * 4;
-#else
-			uint32_t* fp = (uint32_t*) o->f32s.list;
-			for (;;) {
-				memcpy(&x, fp, 4);
-				*p++ = x >> 24;
-				*p++ = x >> 16;
-				*p++ = x >> 8;
-				*p++ = x;
-				if (--n == 0) break;
-				++fp;
-			}
-#endif
-		}
-	}
-
-	{
-		size_t n = o->f64s.len;
-		if (n) {
-			*p++ = 17;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-#ifdef COLFER_ENDIAN
-			memcpy(p, o->f64s.list, n * 8);
-			p += n * 8;
-#else
-			uint64_t* fp = (uint64_t*) o->f64s.list;
-			for (;;) {
-				uint_fast64_t x;
-				memcpy(&x, fp, 8);
-				*p++ = x >> 56;
-				*p++ = x >> 48;
-				*p++ = x >> 40;
-				*p++ = x >> 32;
-				*p++ = x >> 24;
-				*p++ = x >> 16;
-				*p++ = x >> 8;
-				*p++ = x;
-				if (--n == 0) break;
-				++fp;
-			}
-#endif
-		}
-	}
-
-	*p++ = 127;
-
-	return p - (uint8_t*) buf;
-}
-
-size_t gen_o_unmarshal(gen_o* o, const void* data, size_t datalen) {
-	// octet pointer navigation
-	const uint8_t* p = data;
-	const uint8_t* end;
-	int enderr;
-	if (datalen < colfer_size_max) {
-		end = p + datalen;
-		enderr = EWOULDBLOCK;
+// floating-point byte mapping
+union f32m {
+       float f;
+       uint32_t u;
+};
+
+union f64m {
+       double f;
+       uint64_t u;
+};
+
+const uint64_t COLFER_MASKS[9] = {
+    0,
+    0xff,
+    0xffff,
+    0xffffff,
+    0xffffffff,
+    0xffffffffff,
+    0xffffffffffff,
+    0xffffffffffffff,
+    0xffffffffffffffff,
+};
+
+size_t
+gen_base_types_marshal(const struct gen_base_types* o, void* start) {
+	// fixed section as 64-bit words
+	uint64_t word0 = 34 - 4; // 16-bit size declaration
+
+	// write cursor at variable section
+	uint8_t *p = (uint8_t*)start + 34;
+
+	// pack .b bool
+	word0 |= (uint64_t)o->bools<<(24-0) & (uint64_t)0xff<<24;
+
+	// pack .i8 int8
+	word0 |= (uint64_t)(uint8_t)o->i8 << 32;
+
+	// pack .u8 uint8
+	word0 |= (uint64_t)o->u8 << 40;
+
+	// pack .i16 int16
+	uint64_t v3 = (uint16_t)(o->i16 >> 15) ^ (uint16_t)(o->i16 << 1);
+	if (v3 < 128) {
+		v3 = v3 << 1 | 1;
 	} else {
-		end = p + colfer_size_max;
-		enderr = EFBIG;
+		p[0] = v3;
+		p[1] = v3 >> 8;
+		p[2] = v3 >> 16;
+		p[3] = v3 >> 24;
+		p[4] = v3 >> 32;
+		p[5] = v3 >> 40;
+		p[6] = v3 >> 48;
+		p[7] = v3 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v3);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v3 >>= (extraN << 3) - 1;
+		v3 = (v3 | 1) << extraN;
 	}
+	word0 |= v3 << 48;
 
-	if (p >= end) {
-		errno = enderr;
-		return 0;
-	}
-	uint_fast8_t header = *p++;
-
-	if (header == 0) {
-		o->b = 1;
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		header = *p++;
-	}
-
-	if (header == 1) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast32_t x = *p++;
-		if (x > 127) {
-			x &= 127;
-			for (int shift = 7; ; shift += 7) {
-				uint_fast32_t b = *p++;
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				if (b <= 127) {
-					x |= b << shift;
-					break;
-				}
-				x |= (b & 127) << shift;
-			}
-		}
-		o->u32 = x;
-		header = *p++;
-	} else if (header == (1 | 128)) {
-		if (p+4 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast32_t x = *p++;
-		x <<= 24;
-		x |= (uint_fast32_t) *p++ << 16;
-		x |= (uint_fast32_t) *p++ << 8;
-		x |= (uint_fast32_t) *p++;
-		o->u32 = x;
-		header = *p++;
-	}
-
-	if (header == 2) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast64_t x = *p++;
-		if (x > 127) {
-			x &= 127;
-			for (int shift = 7; ; shift += 7) {
-				uint_fast64_t b = *p++;
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				if (b <= 127) {
-					x |= b << shift;
-					break;
-				}
-				x |= (b & 127) << shift;
-			}
-		}
-		o->u64 = x;
-		header = *p++;
-	} else if (header == (2 | 128)) {
-		if (p+8 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast64_t x = *p++;
-		x <<= 56;
-		x |= (uint_fast64_t) *p++ << 48;
-		x |= (uint_fast64_t) *p++ << 40;
-		x |= (uint_fast64_t) *p++ << 32;
-		x |= (uint_fast64_t) *p++ << 24;
-		x |= (uint_fast64_t) *p++ << 16;
-		x |= (uint_fast64_t) *p++ << 8;
-		x |= (uint_fast64_t) *p++;
-		o->u64 = x;
-		header = *p++;
-	}
-
-	if ((header & 127) == 3) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast32_t x = *p++;
-		if (x > 127) {
-			x &= 127;
-			for (int shift = 7; shift < 35; shift += 7) {
-				uint_fast32_t b = *p++;
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				if (b <= 127) {
-					x |= b << shift;
-					break;
-				}
-				x |= (b & 127) << shift;
-			}
-		}
-		if (header & 128) x = ~x + 1;
-		o->i32 = x;
-		header = *p++;
-	}
-
-	if ((header & 127) == 4) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast64_t x = *p++;
-		if (x > 127) {
-			x &= 127;
-			for (int shift = 7; ; shift += 7) {
-				uint_fast64_t b = *p++;
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				if (b <= 127 || shift == 56) {
-					x |= b << shift;
-					break;
-				}
-				x |= (b & 127) << shift;
-			}
-		}
-		if (header & 128) x = ~x + 1;
-		o->i64 = x;
-		header = *p++;
-	}
-
-	if (header == 5) {
-		if (p+4 >= end) {
-			errno = enderr;
-			return 0;
-		}
-#ifdef COLFER_ENDIAN
-		memcpy(&o->f32, p, 4);
-		p += 4;
-#else
-		uint_fast32_t x = *p++;
-		x <<= 24;
-		x |= (uint_fast32_t) *p++ << 16;
-		x |= (uint_fast32_t) *p++ << 8;
-		x |= (uint_fast32_t) *p++;
-		memcpy(&o->f32, &x, 4);
-#endif
-		header = *p++;
-	}
-
-	if (header == 6) {
-		if (p+8 >= end) {
-			errno = enderr;
-			return 0;
-		}
-#ifdef COLFER_ENDIAN
-		memcpy(&o->f64, p, 8);
-		p += 8;
-#else
-		uint_fast64_t x = *p++;
-		x <<= 56;
-		x |= (uint_fast64_t) *p++ << 48;
-		x |= (uint_fast64_t) *p++ << 40;
-		x |= (uint_fast64_t) *p++ << 32;
-		x |= (uint_fast64_t) *p++ << 24;
-		x |= (uint_fast64_t) *p++ << 16;
-		x |= (uint_fast64_t) *p++ << 8;
-		x |= (uint_fast64_t) *p++;
-		memcpy(&o->f64, &x, 8);
-#endif
-		header = *p++;
-	}
-
-	if ((header & 127) == 7) {
-		if (header & 128) {
-			if (p+12 >= end) {
-				errno = enderr;
-				return 0;
-			}
-			uint64_t x = *p++;
-			x <<= 56;
-			x |= (uint64_t) *p++ << 48;
-			x |= (uint64_t) *p++ << 40;
-			x |= (uint64_t) *p++ << 32;
-			x |= (uint64_t) *p++ << 24;
-			x |= (uint64_t) *p++ << 16;
-			x |= (uint64_t) *p++ << 8;
-			x |= (uint64_t) *p++;
-			o->t.tv_sec = (time_t)(int64_t) x;
-		} else {
-			if (p+8 >= end) {
-				errno = enderr;
-				return 0;
-			}
-			uint_fast32_t x = *p++;
-			x <<= 24;
-			x |= (uint_fast32_t) *p++ << 16;
-			x |= (uint_fast32_t) *p++ << 8;
-			x |= (uint_fast32_t) *p++;
-			o->t.tv_sec = (time_t) x;
-		}
-		uint_fast32_t x = *p++;
-		x <<= 24;
-		x |= (uint_fast32_t) *p++ << 16;
-		x |= (uint_fast32_t) *p++ << 8;
-		x |= (uint_fast32_t) *p++;
-		o->t.tv_nsec = (long) x;
-		header = *p++;
-	}
-
-	if (header == 8) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; shift < sizeof(size_t) * CHAR_BIT; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (p+n >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->s.len = n;
-
-		void* a = malloc(n);
-		o->s.utf8 = (char*) a;
-		if (n) {
-			memcpy(a, p, n);
-			p += n;
-		}
-		header = *p++;
-	}
-
-	if (header == 9) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (p+n >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->a.len = n;
-
-		void* a = malloc(n);
-		o->a.octets = (uint8_t*) a;
-		if (n) {
-			memcpy(a, p, n);
-			p += n;
-		}
-		header = *p++;
-	}
-
-	if (header == 10) {
-		o->o = calloc(1, sizeof(gen_o));
-		size_t read = gen_o_unmarshal(o->o, p, (size_t) (end - p));
-		if (!read) {
-			if (errno == EWOULDBLOCK) errno = enderr;
-			return read;
-		}
-		p += read;
-
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		header = *p++;
-	}
-
-	if (header == 11) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_list_max) {
-			errno = EFBIG;
-			return 0;
-		}
-
-		gen_o* a = calloc(n, sizeof(gen_o));
-		for (size_t i = 0; i < n; ++i) {
-			size_t read = gen_o_unmarshal(&a[i], p, (size_t) (end - p));
-			if (!read) {
-				if (errno == EWOULDBLOCK) errno = enderr;
-				return read;
-			}
-			p += read;
-		}
-		o->os.len = n;
-		o->os.list = a;
-
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		header = *p++;
-	}
-
-	if (header == 12) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_list_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		o->ss.len = n;
-
-		colfer_text* text = malloc(n * sizeof(colfer_text));
-		o->ss.list = text;
-		for (; n; --n, ++text) {
-			if (p >= end) {
-				errno = enderr;
-				return 0;
-			}
-			size_t len = *p++;
-			if (len > 127) {
-				len &= 127;
-				for (int shift = 7; ; shift += 7) {
-					if (p >= end) {
-						errno = enderr;
-						return 0;
-					}
-					size_t c = *p++;
-					if (c <= 127) {
-						len |= c << shift;
-						break;
-					}
-					len |= (c & 127) << shift;
-				}
-			}
-			if (len > colfer_size_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			if (p+len >= end) {
-				errno = enderr;
-				return 0;
-			}
-			text->len = len;
-
-			char* a = malloc(len);
-			text->utf8 = a;
-			if (len) {
-				memcpy(a, p, len);
-				p += len;
-			}
-		}
-
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		header = *p++;
-	}
-
-	if (header == 13) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_list_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		o->as.len = n;
-
-		colfer_binary* binary = malloc(n * sizeof(colfer_binary));
-		o->as.list = binary;
-		for (; n; --n, ++binary) {
-			if (p >= end) {
-				errno = enderr;
-				return 0;
-			}
-			size_t len = *p++;
-			if (len > 127) {
-				len &= 127;
-				for (int shift = 7; ; shift += 7) {
-					if (p >= end) {
-						errno = enderr;
-						return 0;
-					}
-					size_t c = *p++;
-					if (c <= 127) {
-						len |= c << shift;
-						break;
-					}
-					len |= (c & 127) << shift;
-				}
-			}
-			if (len > colfer_size_max) {
-				errno = EFBIG;
-				return 0;
-			}
-			if (p+len >= end) {
-				errno = enderr;
-				return 0;
-			}
-			binary->len = len;
-
-			uint8_t* a = malloc(len);
-			binary->octets = a;
-			if (len) {
-				memcpy(a, p, len);
-				p += len;
-			}
-		}
-
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		header = *p++;
-	}
-
-	if (header == 14) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->u8 = *p++;
-		header = *p++;
-	}
-
-	if (header == 15) {
-		if (p+2 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		uint_fast16_t x = *p++;
-		x <<= 8;
-		o->u16 = x | *p++;
-		header = *p++;
-	} else if (header == (15 | 128)) {
-		if (p+1 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->u16 = *p++;
-		header = *p++;
-	}
-
-	if (header == 16) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_list_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (p+n*4 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->f32s.len = n;
-
-		float* fp = malloc(n * 4);
-		o->f32s.list = fp;
-#ifdef COLFER_ENDIAN
-		memcpy(fp, p, n * 4);
-		p += n * 4;
-#else
-		for (; n; --n, ++fp) {
-			uint_fast32_t x = *p++;
-			x <<= 24;
-			x |= (uint_fast32_t) *p++ << 16;
-			x |= (uint_fast32_t) *p++ << 8;
-			x |= (uint_fast32_t) *p++;
-			memcpy(fp, &x, 4);
-		}
-#endif
-		header = *p++;
-	}
-
-	if (header == 17) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; ; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_list_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (p+n*8 >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->f64s.len = n;
-
-		double* fp = malloc(n * 8);
-		o->f64s.list = fp;
-#ifdef COLFER_ENDIAN
-		memcpy(fp, p, n * 8);
-		p += n * 8;
-#else
-		for (; n; --n, ++fp) {
-			uint_fast64_t x = *p++;
-			x <<= 56;
-			x |= (uint_fast64_t) *p++ << 48;
-			x |= (uint_fast64_t) *p++ << 40;
-			x |= (uint_fast64_t) *p++ << 32;
-			x |= (uint_fast64_t) *p++ << 24;
-			x |= (uint_fast64_t) *p++ << 16;
-			x |= (uint_fast64_t) *p++ << 8;
-			x |= (uint_fast64_t) *p++;
-			memcpy(fp, &x, 8);
-		}
-#endif
-		header = *p++;
-	}
-
-	if (header != 127) {
-		errno = EILSEQ;
-		return 0;
-	}
-
-	return (size_t) (p - (const uint8_t*) data);
-}
-
-size_t gen_dromedary_case_marshal_len(const gen_dromedary_case* o) {
-	size_t l = 1;
-
-	{
-		size_t n = o->pascal_case.len;
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (n) for (l += 2 + n; n > 127; n >>= 7, ++l);
-	}
-
-	if (l > colfer_size_max) {
-		errno = EFBIG;
-		return 0;
-	}
-	return l;
-}
-
-size_t gen_dromedary_case_marshal(const gen_dromedary_case* o, void* buf) {
-	// octet pointer navigation
-	uint8_t* p = buf;
-
-	{
-		size_t n = o->pascal_case.len;
-		if (n) {
-			*p++ = 0;
-
-			uint_fast32_t x = n;
-			for (; x >= 128; x >>= 7) *p++ = x | 128;
-			*p++ = x;
-
-			memcpy(p, o->pascal_case.utf8, n);
-			p += n;
-		}
-	}
-
-	*p++ = 127;
-
-	return p - (uint8_t*) buf;
-}
-
-size_t gen_dromedary_case_unmarshal(gen_dromedary_case* o, const void* data, size_t datalen) {
-	// octet pointer navigation
-	const uint8_t* p = data;
-	const uint8_t* end;
-	int enderr;
-	if (datalen < colfer_size_max) {
-		end = p + datalen;
-		enderr = EWOULDBLOCK;
+	// pack .u16 uint16
+	uint64_t v4 = o->u16;
+	if (v4 < 128) {
+		v4 = v4 << 1 | 1;
 	} else {
-		end = p + colfer_size_max;
-		enderr = EFBIG;
+		p[0] = v4;
+		p[1] = v4 >> 8;
+		p[2] = v4 >> 16;
+		p[3] = v4 >> 24;
+		p[4] = v4 >> 32;
+		p[5] = v4 >> 40;
+		p[6] = v4 >> 48;
+		p[7] = v4 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v4);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v4 >>= (extraN << 3) - 1;
+		v4 = (v4 | 1) << extraN;
 	}
+	word0 |= v4 << 56;
 
-	if (p >= end) {
-		errno = enderr;
-		return 0;
-	}
-	uint_fast8_t header = *p++;
-
-	if (header == 0) {
-		if (p >= end) {
-			errno = enderr;
-			return 0;
-		}
-		size_t n = *p++;
-		if (n > 127) {
-			n &= 127;
-			for (int shift = 7; shift < sizeof(size_t) * CHAR_BIT; shift += 7) {
-				if (p >= end) {
-					errno = enderr;
-					return 0;
-				}
-				size_t c = *p++;
-				if (c <= 127) {
-					n |= c << shift;
-					break;
-				}
-				n |= (c & 127) << shift;
-			}
-		}
-		if (n > colfer_size_max) {
-			errno = EFBIG;
-			return 0;
-		}
-		if (p+n >= end) {
-			errno = enderr;
-			return 0;
-		}
-		o->pascal_case.len = n;
-
-		void* a = malloc(n);
-		o->pascal_case.utf8 = (char*) a;
-		if (n) {
-			memcpy(a, p, n);
-			p += n;
-		}
-		header = *p++;
-	}
-
-	if (header != 127) {
-		errno = EILSEQ;
-		return 0;
-	}
-
-	return (size_t) (p - (const uint8_t*) data);
-}
-
-size_t gen_embed_o_marshal_len(const gen_embed_o* o) {
-	size_t l = 1;
-
-	{
-		if (o->inner) l += 1 + gen_o_marshal_len(o->inner);
-	}
-
-	if (l > colfer_size_max) {
-		errno = EFBIG;
-		return 0;
-	}
-	return l;
-}
-
-size_t gen_embed_o_marshal(const gen_embed_o* o, void* buf) {
-	// octet pointer navigation
-	uint8_t* p = buf;
-
-	{
-		if (o->inner) {
-			*p++ = 0;
-
-			p += gen_o_marshal(o->inner, p);
-		}
-	}
-
-	*p++ = 127;
-
-	return p - (uint8_t*) buf;
-}
-
-size_t gen_embed_o_unmarshal(gen_embed_o* o, const void* data, size_t datalen) {
-	// octet pointer navigation
-	const uint8_t* p = data;
-	const uint8_t* end;
-	int enderr;
-	if (datalen < colfer_size_max) {
-		end = p + datalen;
-		enderr = EWOULDBLOCK;
+	// pack .i32 int32
+	uint64_t v5 = (uint32_t)(o->i32 >> 31) ^ (uint32_t)(o->i32 << 1);
+	if (v5 < 128) {
+		v5 = v5 << 1 | 1;
 	} else {
-		end = p + colfer_size_max;
-		enderr = EFBIG;
-	}
+		p[0] = v5;
+		p[1] = v5 >> 8;
+		p[2] = v5 >> 16;
+		p[3] = v5 >> 24;
+		p[4] = v5 >> 32;
+		p[5] = v5 >> 40;
+		p[6] = v5 >> 48;
+		p[7] = v5 >> 56;
 
-	if (p >= end) {
-		errno = enderr;
+		size_t bit_count = __builtin_ffsll(v5);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v5 >>= (extraN << 3) - 1;
+		v5 = (v5 | 1) << extraN;
+	}
+	uint64_t word1 = v5;
+
+	// pack .u32 uint32
+	uint64_t v6 = o->u32;
+	if (v6 < 128) {
+		v6 = v6 << 1 | 1;
+	} else {
+		p[0] = v6;
+		p[1] = v6 >> 8;
+		p[2] = v6 >> 16;
+		p[3] = v6 >> 24;
+		p[4] = v6 >> 32;
+		p[5] = v6 >> 40;
+		p[6] = v6 >> 48;
+		p[7] = v6 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v6);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v6 >>= (extraN << 3) - 1;
+		v6 = (v6 | 1) << extraN;
+	}
+	word1 |= v6 << 8;
+
+	// pack .i64 int64
+	uint64_t v7 = (o->i64 >> 63) ^ (o->i64 << 1);
+	if (v7 < 128) {
+		v7 = v7 << 1 | 1;
+	} else {
+		p[0] = v7;
+		p[1] = v7 >> 8;
+		p[2] = v7 >> 16;
+		p[3] = v7 >> 24;
+		p[4] = v7 >> 32;
+		p[5] = v7 >> 40;
+		p[6] = v7 >> 48;
+		p[7] = v7 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v7);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v7 >>= (extraN << 3) - 1;
+		v7 = (v7 | 1) << extraN;
+	}
+	word1 |= v7 << 16;
+
+	// pack .u64 uint64
+	uint64_t v8 = o->u64;
+	if (v8 < 128) {
+		v8 = v8 << 1 | 1;
+	} else {
+		p[0] = v8;
+		p[1] = v8 >> 8;
+		p[2] = v8 >> 16;
+		p[3] = v8 >> 24;
+		p[4] = v8 >> 32;
+		p[5] = v8 >> 40;
+		p[6] = v8 >> 48;
+		p[7] = v8 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v8);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v8 >>= (extraN << 3) - 1;
+		v8 = (v8 | 1) << extraN;
+	}
+	word1 |= v8 << 24;
+
+	// pack .f32 float32
+	union f32m m9;
+	m9.f = o->f32;
+	uint64_t v9 = m9.u;
+	word1 |= v9 << 32;
+
+	// pack .f64 float64
+	union f64m m10;
+	m10.f = o->f64;
+	uint64_t v10 = m10.u;
+	uint64_t word2 = v10;
+
+	// pack .t timestamp
+	uint64_t v11 = o->t.tv_sec;
+	v11 <<= 30;
+	v11 |= o->t.tv_nsec;
+	uint64_t word3 = v11;
+
+	// pack .a opaque
+	uint64_t v12 = o->a.len;
+	if (v12 < 128) {
+		v12 = v12 << 1 | 1;
+	} else {
+		p[0] = v12;
+		p[1] = v12 >> 8;
+		p[2] = v12 >> 16;
+		p[3] = v12 >> 24;
+		p[4] = v12 >> 32;
+		p[5] = v12 >> 40;
+		p[6] = v12 >> 48;
+		p[7] = v12 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v12);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v12 >>= (extraN << 3) - 1;
+		v12 = (v12 | 1) << extraN;
+	}
+	uint64_t word4 = v12;
+
+	// pack .s text
+	uint64_t v13 = o->s.len;
+	if (v13 < 128) {
+		v13 = v13 << 1 | 1;
+	} else {
+		p[0] = v13;
+		p[1] = v13 >> 8;
+		p[2] = v13 >> 16;
+		p[3] = v13 >> 24;
+		p[4] = v13 >> 32;
+		p[5] = v13 >> 40;
+		p[6] = v13 >> 48;
+		p[7] = v13 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v13);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v13 >>= (extraN << 3) - 1;
+		v13 = (v13 | 1) << extraN;
+	}
+	word4 |= v13 << 8;
+
+	// copy payloads
+	if (o->s.len > COLFER_MAX - (p - (uint8_t*)start))
 		return 0;
+	memcpy(p, o->s.utf8, o->s.len);
+	p += o->s.len;
+	if (o->a.len > COLFER_MAX - (p - (uint8_t*)start))
+		return 0;
+	memcpy(p, o->a.octets, o->a.len);
+	p += o->a.len;
+
+	size_t size = p - (uint8_t*)start;
+
+	// finish header
+	word0 |= (uint64_t)(size - 34) << 17 | (1 << 16);
+	memcpy((uint8_t*)start + (0 * 8), &word0, 8);
+	memcpy((uint8_t*)start + (1 * 8), &word1, 8);
+	memcpy((uint8_t*)start + (2 * 8), &word2, 8);
+	memcpy((uint8_t*)start + (3 * 8), &word3, 8);
+	memcpy((uint8_t*)start + (4 * 8), &word4, 2);
+
+	return size;
+}
+
+size_t
+gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
+	// words of fixed section
+	uint64_t word0;
+	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
+	uint64_t word1;
+	memcpy(&word1, (uint8_t *)start + (1 * 8), 8);
+	uint64_t word2;
+	memcpy(&word2, (uint8_t *)start + (2 * 8), 8);
+	uint64_t word3;
+	memcpy(&word3, (uint8_t *)start + (3 * 8), 8);
+	uint64_t word4;
+	memcpy(&word4, (uint8_t *)start + (4 * 8), 2);
+
+	// read cursor at variable section
+	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+
+	uint64_t v = word0 >> 17 & 0x7f;
+	if (((uint64_t)1 << 16 & word0) == 0) {
+		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
+		v <<= (tz << 3) - tz;
+		v &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v |= tail & COLFER_MASKS[tz];
+		p += tz;
 	}
-	uint_fast8_t header = *p++;
+	if (v > COLFER_MAX) return 0;
+	size_t size = v + (word0 & 0xffff) + 4;
 
-	if (header == 0) {
-		o->inner = calloc(1, sizeof(gen_o));
-		size_t read = gen_o_unmarshal(o->inner, p, (size_t) (end - p));
-		if (!read) {
-			if (errno == EWOULDBLOCK) errno = enderr;
-			return read;
-		}
-		p += read;
+	// unpack .b bool
+	o->bools = word0 >> 24 & 0xff;
 
-		if (p >= end) {
-			errno = enderr;
+	// unpack .i8 int8
+	o->i8 = word0 >> 32;
+
+	// unpack .u8 uint8
+	o->u8 = word0 >> 40;
+
+	// unpack .i16 int16
+	uint64_t v3 = word0 >> (48 + 1) & 0x7f;
+	if (((uint64_t)1 << 48 & word0) == 0) {
+		size_t tz = __builtin_ctz(v3 | 0x80) + 1;
+		v3 <<= (tz << 3) - tz;
+		v3 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v3 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->i16 = (int16_t)(v3 >> 1) ^ -(int16_t)(v3 & 1);
+
+	// unpack .u16 uint16
+	uint64_t v4 = word0 >> (56 + 1) & 0x7f;
+	if (((uint64_t)1 << 56 & word0) == 0) {
+		size_t tz = __builtin_ctz(v4 | 0x80) + 1;
+		v4 <<= (tz << 3) - tz;
+		v4 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v4 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->u16 = v4;
+
+	// unpack .i32 int32
+	uint64_t v5 = word1 >> (0 + 1) & 0x7f;
+	if (((uint64_t)1 << 0 & word1) == 0) {
+		size_t tz = __builtin_ctz(v5 | 0x80) + 1;
+		v5 <<= (tz << 3) - tz;
+		v5 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v5 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->i32 = (int32_t)(v5 >> 1) ^ -(int32_t)(v5 & 1);
+
+	// unpack .u32 uint32
+	uint64_t v6 = word1 >> (8 + 1) & 0x7f;
+	if (((uint64_t)1 << 8 & word1) == 0) {
+		size_t tz = __builtin_ctz(v6 | 0x80) + 1;
+		v6 <<= (tz << 3) - tz;
+		v6 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v6 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->u32 = v6;
+
+	// unpack .i64 int64
+	uint64_t v7 = word1 >> (16 + 1) & 0x7f;
+	if (((uint64_t)1 << 16 & word1) == 0) {
+		size_t tz = __builtin_ctz(v7 | 0x80) + 1;
+		v7 <<= (tz << 3) - tz;
+		v7 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v7 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->i64 = (int64_t)(v7 >> 1) ^ -(int64_t)(v7 & 1);
+
+	// unpack .u64 uint64
+	uint64_t v8 = word1 >> (24 + 1) & 0x7f;
+	if (((uint64_t)1 << 24 & word1) == 0) {
+		size_t tz = __builtin_ctz(v8 | 0x80) + 1;
+		v8 <<= (tz << 3) - tz;
+		v8 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v8 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->u64 = v8;
+
+	// unpack .f32 float32
+	uint64_t v9 = word1 >> 32;
+	union f32m m9;
+	m9.u = v9;
+	o->f32 = m9.f;
+
+	// unpack .f64 float64
+	uint64_t v10 = word2;
+	union f64m m10;
+	m10.u = v10;
+	o->f64 = m10.f;
+
+	// unpack .t timestamp
+	uint64_t v11 = word3;
+	o->t.tv_sec = v11 >> 30;
+	o->t.tv_nsec = (1<<30) - 1 & v11;
+
+	// unpack .a opaque
+	uint64_t v12 = word4 >> (0 + 1) & 0x7f;
+	if (((uint64_t)1 << 0 & word4) == 0) {
+		size_t tz = __builtin_ctz(v12 | 0x80) + 1;
+		v12 <<= (tz << 3) - tz;
+		v12 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v12 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->a.len = v12;
+
+	// unpack .s text
+	uint64_t v13 = word4 >> (8 + 1) & 0x7f;
+	if (((uint64_t)1 << 8 & word4) == 0) {
+		size_t tz = __builtin_ctz(v13 | 0x80) + 1;
+		v13 <<= (tz << 3) - tz;
+		v13 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v13 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->s.len = v13;
+
+	// clear/undo absent fields
+	if ((word0 & 0xffff) < 34 - 4) {
+		switch (word0 & 0xffff) {
+		default:
 			return 0;
+		case 4 - 4:
+			o->i8 = 0;
+		case 5 - 4:
+			o->u8 = 0;
+		case 6 - 4:
+			o->i16 = 0;
+		case 7 - 4:
+			o->u16 = 0;
+		case 8 - 4:
+			o->i32 = 0;
+		case 9 - 4:
+			o->u32 = 0;
+		case 10 - 4:
+			o->i64 = 0;
+		case 11 - 4:
+			o->u64 = 0;
+		case 12 - 4:
+			o->f32 = 0;
+		case 16 - 4:
+			o->f64 = 0;
+		case 24 - 4:
+			o->t.tv_sec = 0;
+			o->t.tv_nsec = 0;
+		case 32 - 4:
+			o->a.len = 0;
+		case 33 - 4:
+			o->s.len = 0;
 		}
-		header = *p++;
 	}
+	// copy payloads
+	uint8_t *end = (uint8_t *)start + size;
+	uint8_t *offset = end;
+	offset -= o->s.len;offset -= o->a.len;;
+	if (offset < p) return 0;
+  
+	{
+		char *s = malloc(o->s.len + 1);
+		memcpy(s, offset, o->s.len);
+		s[o->s.len] = 0; // null terminator
+		o->s.utf8 = s;
+		offset += o->s.len;
+	}
+  
+	if (o->a.len) {
+		o->a.octets = malloc(o->a.len);
+		memcpy(o->a.octets, offset, o->a.len);
+		offset += o->a.len;
+	} else o->a.octets = NULL;
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
-	if (header != 127) {
-		errno = EILSEQ;
+	return size;
+}
+
+size_t
+gen_list_types_marshal(const struct gen_list_types* o, void* start) {
+	// fixed section as 64-bit words
+	uint64_t word0 = 7 - 4; // 16-bit size declaration
+
+	// write cursor at variable section
+	uint8_t *p = (uint8_t*)start + 7;
+
+	// pack .f32s []float32
+	uint64_t v0 = o->f32s.len;
+	if (v0 < 128) {
+		v0 = v0 << 1 | 1;
+	} else {
+		p[0] = v0;
+		p[1] = v0 >> 8;
+		p[2] = v0 >> 16;
+		p[3] = v0 >> 24;
+		p[4] = v0 >> 32;
+		p[5] = v0 >> 40;
+		p[6] = v0 >> 48;
+		p[7] = v0 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v0);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v0 >>= (extraN << 3) - 1;
+		v0 = (v0 | 1) << extraN;
+	}
+	word0 |= v0 << 24;
+
+	// pack .f64s []float64
+	uint64_t v1 = o->f64s.len;
+	if (v1 < 128) {
+		v1 = v1 << 1 | 1;
+	} else {
+		p[0] = v1;
+		p[1] = v1 >> 8;
+		p[2] = v1 >> 16;
+		p[3] = v1 >> 24;
+		p[4] = v1 >> 32;
+		p[5] = v1 >> 40;
+		p[6] = v1 >> 48;
+		p[7] = v1 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v1);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v1 >>= (extraN << 3) - 1;
+		v1 = (v1 | 1) << extraN;
+	}
+	word0 |= v1 << 32;
+
+	// pack .as []opaque
+	uint64_t v2 = o->as.len;
+	if (v2 < 128) {
+		v2 = v2 << 1 | 1;
+	} else {
+		p[0] = v2;
+		p[1] = v2 >> 8;
+		p[2] = v2 >> 16;
+		p[3] = v2 >> 24;
+		p[4] = v2 >> 32;
+		p[5] = v2 >> 40;
+		p[6] = v2 >> 48;
+		p[7] = v2 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v2);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v2 >>= (extraN << 3) - 1;
+		v2 = (v2 | 1) << extraN;
+	}
+	word0 |= v2 << 40;
+
+	// pack .ss []text
+	uint64_t v3 = o->ss.len;
+	if (v3 < 128) {
+		v3 = v3 << 1 | 1;
+	} else {
+		p[0] = v3;
+		p[1] = v3 >> 8;
+		p[2] = v3 >> 16;
+		p[3] = v3 >> 24;
+		p[4] = v3 >> 32;
+		p[5] = v3 >> 40;
+		p[6] = v3 >> 48;
+		p[7] = v3 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v3);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v3 >>= (extraN << 3) - 1;
+		v3 = (v3 | 1) << extraN;
+	}
+	word0 |= v3 << 48;
+
+	// copy payloads
+
+	size_t size = p - (uint8_t*)start;
+
+	// finish header
+	word0 |= (uint64_t)(size - 7) << 17 | (1 << 16);
+	memcpy((uint8_t*)start + (0 * 8), &word0, 7);
+
+	return size;
+}
+
+size_t
+gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
+	// words of fixed section
+	uint64_t word0;
+	memcpy(&word0, (uint8_t *)start + (0 * 8), 7);
+
+	// read cursor at variable section
+	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+
+	uint64_t v = word0 >> 17 & 0x7f;
+	if (((uint64_t)1 << 16 & word0) == 0) {
+		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
+		v <<= (tz << 3) - tz;
+		v &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	if (v > COLFER_MAX) return 0;
+	size_t size = v + (word0 & 0xffff) + 4;
+
+	// unpack .f32s []float32
+	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
+	if (((uint64_t)1 << 24 & word0) == 0) {
+		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
+		v0 <<= (tz << 3) - tz;
+		v0 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v0 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->f32s.len = v0;
+
+	// unpack .f64s []float64
+	uint64_t v1 = word0 >> (32 + 1) & 0x7f;
+	if (((uint64_t)1 << 32 & word0) == 0) {
+		size_t tz = __builtin_ctz(v1 | 0x80) + 1;
+		v1 <<= (tz << 3) - tz;
+		v1 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v1 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->f64s.len = v1;
+
+	// unpack .as []opaque
+	uint64_t v2 = word0 >> (40 + 1) & 0x7f;
+	if (((uint64_t)1 << 40 & word0) == 0) {
+		size_t tz = __builtin_ctz(v2 | 0x80) + 1;
+		v2 <<= (tz << 3) - tz;
+		v2 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v2 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->as.len = v2;
+
+	// unpack .ss []text
+	uint64_t v3 = word0 >> (48 + 1) & 0x7f;
+	if (((uint64_t)1 << 48 & word0) == 0) {
+		size_t tz = __builtin_ctz(v3 | 0x80) + 1;
+		v3 <<= (tz << 3) - tz;
+		v3 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v3 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->ss.len = v3;
+
+	// clear/undo absent fields
+	if ((word0 & 0xffff) < 7 - 4) {
+		switch (word0 & 0xffff) {
+		default:
+			return 0;
+		case 4 - 4:
+			o->f64s.len = 0;
+		case 5 - 4:
+			o->as.len = 0;
+		case 6 - 4:
+			o->ss.len = 0;
+		}
+	}
+	// copy payloads
+	uint8_t *end = (uint8_t *)start + size;
+	uint8_t *offset = end;
+	offset -= o->ss.len;offset -= o->as.len;;
+	if (offset < p) return 0;
+  
+	if (o->ss.len != 0) {
+		o->ss.list = malloc(o->ss.len);
+
+		// TODO: parse text sizes
+
+		for (int i = 0; i < o->ss.len; i++) {
+			char *s = malloc(o->ss.list[i].len + 1);
+			memcpy(s, offset, o->ss.len);
+			s[o->ss.list[i].len] = 0; // null terminator
+			o->ss.list[i].utf8 = s;
+		}
+	}
+  
+	{
+		// TODO
+	}
+  
+  
+
+	return size;
+}
+
+size_t
+gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
+	// fixed section as 64-bit words
+	uint64_t word0 = 19 - 4; // 16-bit size declaration
+
+	// write cursor at variable section
+	uint8_t *p = (uint8_t*)start + 19;
+
+	// pack .a opaque
+	uint64_t v0 = o->a.len;
+	if (v0 < 128) {
+		v0 = v0 << 1 | 1;
+	} else {
+		p[0] = v0;
+		p[1] = v0 >> 8;
+		p[2] = v0 >> 16;
+		p[3] = v0 >> 24;
+		p[4] = v0 >> 32;
+		p[5] = v0 >> 40;
+		p[6] = v0 >> 48;
+		p[7] = v0 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v0);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v0 >>= (extraN << 3) - 1;
+		v0 = (v0 | 1) << extraN;
+	}
+	word0 |= v0 << 24;
+
+	// pack .a8 opaque8
+	word0 |= (uint64_t)o->a8 << 32;
+
+	// pack .a16 opaque16
+	uint64_t v2 = o->a16;
+	word0 |= v2 << 40;
+
+	// pack .a32 opaque32
+	uint64_t v3 = o->a32;
+	word0 |= v3 << 56;
+	uint64_t word1 = v3 >> (64-56);
+
+	// pack .a64 opaque64
+	uint64_t v4 = o->a64;
+	word1 |= v4 << 24;
+        uint64_t word2 = v4 >> (64-24);
+
+	// copy payloads
+	if (o->a.len > COLFER_MAX - (p - (uint8_t*)start))
 		return 0;
+	memcpy(p, o->a.octets, o->a.len);
+	p += o->a.len;
+
+	size_t size = p - (uint8_t*)start;
+
+	// finish header
+	word0 |= (uint64_t)(size - 19) << 17 | (1 << 16);
+	memcpy((uint8_t*)start + (0 * 8), &word0, 8);
+	memcpy((uint8_t*)start + (1 * 8), &word1, 8);
+	memcpy((uint8_t*)start + (2 * 8), &word2, 3);
+
+	return size;
+}
+
+size_t
+gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
+	// words of fixed section
+	uint64_t word0;
+	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
+	uint64_t word1;
+	memcpy(&word1, (uint8_t *)start + (1 * 8), 8);
+	uint64_t word2;
+	memcpy(&word2, (uint8_t *)start + (2 * 8), 3);
+
+	// read cursor at variable section
+	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+
+	uint64_t v = word0 >> 17 & 0x7f;
+	if (((uint64_t)1 << 16 & word0) == 0) {
+		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
+		v <<= (tz << 3) - tz;
+		v &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	if (v > COLFER_MAX) return 0;
+	size_t size = v + (word0 & 0xffff) + 4;
+
+	// unpack .a opaque
+	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
+	if (((uint64_t)1 << 24 & word0) == 0) {
+		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
+		v0 <<= (tz << 3) - tz;
+		v0 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v0 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->a.len = v0;
+
+	// unpack .a8 opaque8
+	o->a8 = word0 >> 32;
+
+	// unpack .a16 opaque16
+	uint64_t v2 = word0 >> 40;
+	o->a16 = v2;
+
+	// unpack .a32 opaque32
+	uint64_t v3 = word0>>56 | word1<<(64-56);
+	o->a32 = v3;
+
+	// unpack .a64 opaque64
+	uint64_t v4 = word1>>24 | word2<<(64-24);
+	o->a64 = v4;
+
+	// clear/undo absent fields
+	if ((word0 & 0xffff) < 19 - 4) {
+		switch (word0 & 0xffff) {
+		default:
+			return 0;
+		case 4 - 4:
+			o->a8 = 0;
+		case 5 - 4:
+			o->a16 = 0;
+		case 7 - 4:
+			o->a32 = 0;
+		case 11 - 4:
+			o->a64 = 0;
+		}
+	}
+	// copy payloads
+	uint8_t *end = (uint8_t *)start + size;
+	uint8_t *offset = end;
+	offset -= o->a.len;;
+	if (offset < p) return 0;
+  
+  
+  
+  
+  
+	if (o->a.len) {
+		o->a.octets = malloc(o->a.len);
+		memcpy(o->a.octets, offset, o->a.len);
+		offset += o->a.len;
+	} else o->a.octets = NULL;
+
+	return size;
+}
+
+size_t
+gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start) {
+	// fixed section as 64-bit words
+	uint64_t word0 = 5 - 4; // 16-bit size declaration
+
+	// write cursor at variable section
+	uint8_t *p = (uint8_t*)start + 5;
+
+	// pack .PascalCase text
+	uint64_t v0 = o->pascal_case.len;
+	if (v0 < 128) {
+		v0 = v0 << 1 | 1;
+	} else {
+		p[0] = v0;
+		p[1] = v0 >> 8;
+		p[2] = v0 >> 16;
+		p[3] = v0 >> 24;
+		p[4] = v0 >> 32;
+		p[5] = v0 >> 40;
+		p[6] = v0 >> 48;
+		p[7] = v0 >> 56;
+
+		size_t bit_count = __builtin_ffsll(v0);
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v0 >>= (extraN << 3) - 1;
+		v0 = (v0 | 1) << extraN;
+	}
+	word0 |= v0 << 24;
+
+	// pack .with_snake opaque8
+	word0 |= (uint64_t)o->with_snake << 32;
+
+	// copy payloads
+	if (o->pascal_case.len > COLFER_MAX - (p - (uint8_t*)start))
+		return 0;
+	memcpy(p, o->pascal_case.utf8, o->pascal_case.len);
+	p += o->pascal_case.len;
+
+	size_t size = p - (uint8_t*)start;
+
+	// finish header
+	word0 |= (uint64_t)(size - 5) << 17 | (1 << 16);
+	memcpy((uint8_t*)start + (0 * 8), &word0, 5);
+
+	return size;
+}
+
+size_t
+gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start) {
+	// words of fixed section
+	uint64_t word0;
+	memcpy(&word0, (uint8_t *)start + (0 * 8), 5);
+
+	// read cursor at variable section
+	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+
+	uint64_t v = word0 >> 17 & 0x7f;
+	if (((uint64_t)1 << 16 & word0) == 0) {
+		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
+		v <<= (tz << 3) - tz;
+		v &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	if (v > COLFER_MAX) return 0;
+	size_t size = v + (word0 & 0xffff) + 4;
+
+	// unpack .PascalCase text
+	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
+	if (((uint64_t)1 << 24 & word0) == 0) {
+		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
+		v0 <<= (tz << 3) - tz;
+		v0 &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v0 |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	o->pascal_case.len = v0;
+
+	// unpack .with_snake opaque8
+	o->with_snake = word0 >> 32;
+
+	// clear/undo absent fields
+	if ((word0 & 0xffff) < 5 - 4) {
+		switch (word0 & 0xffff) {
+		default:
+			return 0;
+		case 4 - 4:
+			o->with_snake = 0;
+		}
+	}
+	// copy payloads
+	uint8_t *end = (uint8_t *)start + size;
+	uint8_t *offset = end;
+	offset -= o->pascal_case.len;;
+	if (offset < p) return 0;
+  
+  
+	{
+		char *s = malloc(o->pascal_case.len + 1);
+		memcpy(s, offset, o->pascal_case.len);
+		s[o->pascal_case.len] = 0; // null terminator
+		o->pascal_case.utf8 = s;
+		offset += o->pascal_case.len;
 	}
 
-	return (size_t) (p - (const uint8_t*) data);
+	return size;
 }

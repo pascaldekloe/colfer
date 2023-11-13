@@ -8,17 +8,17 @@ test: gen_test breaktest
 
 breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
 	$(COLF) -b $@ C ../testdata/break*.colf
-	$(CC) $(CFLAGS) -c -std=c11 $@/Colfer.c
+	$(CC) $(CFLAGS) -c -std=c17 $@/Colfer.c
 	touch $@
 
 Colfer.h Colfer.c &: ../testdata/test.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(COLF) C ../testdata/test.colf
 
 Colfer.o: Colfer.h Colfer.c
-	$(CC) $(CFLAGS) -o $@ -c -std=c11 Colfer.c
+	$(CC) $(CFLAGS) -o $@ -c -std=c17 Colfer.c
 
 gen_test: gen_test.h gen_test.c Colfer.o
-	$(CC) $(CFLAGS) -o $@ -std=c11 gen_test.c Colfer.o
+	$(CC) $(CFLAGS) -o $@ -std=c17 gen_test.c Colfer.o
 
 .PHONY: clean
 clean:

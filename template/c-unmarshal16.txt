@@ -1,0 +1,5 @@
+	uint64_t v{{.Index}} =
+   {{- if eq .WordShift 0}} word{{.WordIndex}};
+   {{- else if lt .WordShift 56}} word{{.WordIndex}} >> {{.WordShift}};
+   {{- else}} word{{.WordIndex}}>>56 | word{{.NextWordIndex}}<<8;
+   {{- end -}}

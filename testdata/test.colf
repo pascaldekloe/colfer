@@ -30,6 +30,8 @@ type BaseTypes struct {
 
 	// T tests timestamps (with nanosecond precision).
 	t timestamp
+	// A tests binary data of variable size.
+	a opaque
 	// C tests Unicode strings of variable size.
 	s text
 }
@@ -40,16 +42,20 @@ type ListTypes struct {
 	f32s []float32
 	// F64s tests a variable-size listing.
 	f64s []float64
+	// As tests binary data of variable size.
+	as []opaque
 	// Ss tests Unicode strings of variable size.
 	ss []text
 }
 
 // ArrayTypes contains each BaseType supported in array form.
+/* TODO
 type ArrayTypes struct {
 	f32a2 [2]float32
 	f64a3 [3]float64
-	// TODO: …
+	…
 }
+*/
 
 // OpaqueTypes mixes fixed and variable-byte values.
 type OpaqueTypes struct {
@@ -64,9 +70,6 @@ type OpaqueTypes struct {
 	a32 opaque32
 	// A64 tests 64-bit values.
 	a64 opaque64
-
-	// As tests opaque data of variable size.
-	as []opaque
 
 	// TODO: list forms
 }

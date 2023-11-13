@@ -1,0 +1,11 @@
+	uint64_t v{{.Index}} = word{{.WordIndex}} >> ({{.WordShift}} + 1) & 0x7f;
+	if (((uint64_t)1 << {{.WordShift}} & word{{.WordIndex}}) == 0) {
+		size_t tz = __builtin_ctz(v{{.Index}} | 0x80) + 1;
+		v{{.Index}} <<= (tz << 3) - tz;
+		v{{.Index}} &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v{{.Index}} |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+{{- /* no tailing new-line */ -}}

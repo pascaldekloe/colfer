@@ -1,8 +1,8 @@
 package colfer
 
 import (
-	_ "embed"
 	"bytes"
+	_ "embed"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -35,24 +35,45 @@ func GenerateC(basedir string, packages Packages) error {
 			t.NameNative = strings.ToLower(name.SnakeCase(p.Name + "_" + t.Name))
 
 			for _, f := range t.Fields {
-				f.NameNative = strings.ToLower(name.SnakeCase(f.Name))
-				if _, ok := cKeywords[f.NameNative]; ok {
-					f.NameNative += "_"
+				if f.Type == "bool" {
+					fqn := name.SnakeCase(p.Name + "_" + t.Name + "_" + f.Name)
+					f.NameNative = strings.ToUpper(fqn) + "_FLAG"
+				} else {
+					f.NameNative = strings.ToLower(name.SnakeCase(f.Name))
+					if _, ok := cKeywords[f.NameNative]; ok {
+						f.NameNative += "_"
+					}
 				}
 
 				switch f.Type {
 				case "bool":
-					f.TypeNative = "char"
-				case "uint8", "uint16", "uint32", "uint64", "int32", "int64":
-					f.TypeNative = f.Type + "_t"
+					f.TypeNative = "int"
+				case "int8":
+					f.TypeNative = "int8_t"
+				case "uint8", "opaque8":
+					f.TypeNative = "uint8_t"
+				case "int16":
+					f.TypeNative = "int16_t"
+				case "uint16", "opaque16":
+					f.TypeNative = "uint16_t"
+				case "int32":
+					f.TypeNative = "int32_t"
+				case "uint32", "opaque32":
+					f.TypeNative = "uint32_t"
+				case "int64":
+					f.TypeNative = "int64_t"
+				case "uint64", "opaque64":
+					f.TypeNative = "uint64_t"
 				case "float32":
 					f.TypeNative = "float"
 				case "float64":
 					f.TypeNative = "double"
 				case "timestamp":
 					f.TypeNative = "timespec"
-				case "binary", "text":
-					f.TypeNative = "colfer_" + f.Type
+				case "opaque":
+					f.TypeNative = "void"
+				case "text":
+					f.TypeNative = "const char"
 				}
 			}
 		}
@@ -66,7 +87,7 @@ func GenerateC(basedir string, packages Packages) error {
 	if err != nil {
 		return err
 	}
-	if err := template.Must(template.New("C-header").Parse(cHeaderTemplate)).Execute(f, packages); err != nil {
+	if err := template.Must(template.New("C-header").Parse(hTemplate)).Execute(f, packages); err != nil {
 		return err
 	}
 	if err = f.Close(); err != nil {
@@ -77,17 +98,51 @@ func GenerateC(basedir string, packages Packages) error {
 	if err != nil {
 		return err
 	}
-	if err := template.Must(template.New("C").Parse(cTemplate)).Execute(f, packages); err != nil {
+	t := template.New("C")
+	template.Must(t.Parse(cTemplate))
+	template.Must(t.New("marshal-integer").Parse(cMarshalIntegerTemplate))
+	template.Must(t.New("marshal16").Parse(cMarshal16Template))
+	template.Must(t.New("marshal32").Parse(cMarshal32Template))
+	template.Must(t.New("marshal64").Parse(cMarshal64Template))
+	template.Must(t.New("unmarshal-integer").Parse(cUnmarshalIntegerTemplate))
+	template.Must(t.New("unmarshal16").Parse(cUnmarshal16Template))
+	template.Must(t.New("unmarshal32").Parse(cUnmarshal32Template))
+	template.Must(t.New("unmarshal64").Parse(cUnmarshal64Template))
+	if err := t.Execute(f, packages); err != nil {
 		return err
 	}
 	return f.Close()
 }
 
-//go:embed template/c-header.txt
-var cHeaderTemplate string
-
 //go:embed template/c.txt
 var cTemplate string
+
+//go:embed template/h.txt
+var hTemplate string
+
+//go:embed template/c-marshal-integer.txt
+var cMarshalIntegerTemplate string
+
+//go:embed template/c-marshal16.txt
+var cMarshal16Template string
+
+//go:embed template/c-marshal32.txt
+var cMarshal32Template string
+
+//go:embed template/c-marshal64.txt
+var cMarshal64Template string
+
+//go:embed template/c-unmarshal-integer.txt
+var cUnmarshalIntegerTemplate string
+
+//go:embed template/c-unmarshal16.txt
+var cUnmarshal16Template string
+
+//go:embed template/c-unmarshal32.txt
+var cUnmarshal32Template string
+
+//go:embed template/c-unmarshal64.txt
+var cUnmarshal64Template string
 
 // ECMAKeywords are the reserved tokens for ECMA Script.
 // Some entries are redundant due to the use of a Go parser.

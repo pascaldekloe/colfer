@@ -1,0 +1,23 @@
+	if (v{{.Index}} < 128) {
+		v{{.Index}} = v{{.Index}} << 1 | 1;
+	} else {
+		p[0] = v{{.Index}};
+		p[1] = v{{.Index}} >> 8;
+		p[2] = v{{.Index}} >> 16;
+		p[3] = v{{.Index}} >> 24;
+		p[4] = v{{.Index}} >> 32;
+		p[5] = v{{.Index}} >> 40;
+		p[6] = v{{.Index}} >> 48;
+		p[7] = v{{.Index}} >> 56;
+
+		size_t bit_count = __builtin_ffsll(v{{.Index}});
+		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += extraN;
+		v{{.Index}} >>= (extraN << 3) - 1;
+		v{{.Index}} = (v{{.Index}} | 1) << extraN;
+	}
+{{- if eq .WordShift 0}}
+	uint64_t word{{.WordIndex}} = v{{.Index}};
+{{- else}}
+	word{{.WordIndex}} |= v{{.Index}} << {{.WordShift}};
+{{- end -}}
