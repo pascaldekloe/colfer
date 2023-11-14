@@ -62,10 +62,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v3 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v3);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v3 >>= (extraN << 3) - 1;
-		v3 = (v3 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v3 >>= (tail_size << 3) - 1;
+		v3 = (v3 | 1) << tail_size;
 	}
 	word0 |= v3 << 48;
 
@@ -84,10 +84,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v4 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v4);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v4 >>= (extraN << 3) - 1;
-		v4 = (v4 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v4 >>= (tail_size << 3) - 1;
+		v4 = (v4 | 1) << tail_size;
 	}
 	word0 |= v4 << 56;
 
@@ -106,10 +106,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v5 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v5);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v5 >>= (extraN << 3) - 1;
-		v5 = (v5 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v5 >>= (tail_size << 3) - 1;
+		v5 = (v5 | 1) << tail_size;
 	}
 	uint64_t word1 = v5;
 
@@ -128,10 +128,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v6 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v6);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v6 >>= (extraN << 3) - 1;
-		v6 = (v6 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v6 >>= (tail_size << 3) - 1;
+		v6 = (v6 | 1) << tail_size;
 	}
 	word1 |= v6 << 8;
 
@@ -150,10 +150,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v7 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v7);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v7 >>= (extraN << 3) - 1;
-		v7 = (v7 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v7 >>= (tail_size << 3) - 1;
+		v7 = (v7 | 1) << tail_size;
 	}
 	word1 |= v7 << 16;
 
@@ -172,10 +172,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v8 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v8);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v8 >>= (extraN << 3) - 1;
-		v8 = (v8 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v8 >>= (tail_size << 3) - 1;
+		v8 = (v8 | 1) << tail_size;
 	}
 	word1 |= v8 << 24;
 
@@ -212,10 +212,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v12 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v12);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v12 >>= (extraN << 3) - 1;
-		v12 = (v12 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v12 >>= (tail_size << 3) - 1;
+		v12 = (v12 | 1) << tail_size;
 	}
 	uint64_t word4 = v12;
 
@@ -234,10 +234,10 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 		p[7] = v13 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v13);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v13 >>= (extraN << 3) - 1;
-		v13 = (v13 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v13 >>= (tail_size << 3) - 1;
+		v13 = (v13 | 1) << tail_size;
 	}
 	word4 |= v13 << 8;
 
@@ -306,78 +306,114 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
 	// unpack .i16 int16
 	uint64_t v3 = word0 >> (48 + 1) & 0x7f;
 	if (((uint64_t)1 << 48 & word0) == 0) {
-		size_t tz = __builtin_ctz(v3 | 0x80) + 1;
-		v3 <<= (tz << 3) - tz;
-		v3 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v3 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v3 | 0x80) + 1;
+		p += tail_size;
+		v3 <<= (tail_size << 3) - tail_size;
+		v3 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->i16 = (int16_t)(v3 >> 1) ^ -(int16_t)(v3 & 1);
 
 	// unpack .u16 uint16
 	uint64_t v4 = word0 >> (56 + 1) & 0x7f;
 	if (((uint64_t)1 << 56 & word0) == 0) {
-		size_t tz = __builtin_ctz(v4 | 0x80) + 1;
-		v4 <<= (tz << 3) - tz;
-		v4 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v4 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v4 | 0x80) + 1;
+		p += tail_size;
+		v4 <<= (tail_size << 3) - tail_size;
+		v4 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->u16 = v4;
 
 	// unpack .i32 int32
 	uint64_t v5 = word1 >> (0 + 1) & 0x7f;
 	if (((uint64_t)1 << 0 & word1) == 0) {
-		size_t tz = __builtin_ctz(v5 | 0x80) + 1;
-		v5 <<= (tz << 3) - tz;
-		v5 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v5 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v5 | 0x80) + 1;
+		p += tail_size;
+		v5 <<= (tail_size << 3) - tail_size;
+		v5 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->i32 = (int32_t)(v5 >> 1) ^ -(int32_t)(v5 & 1);
 
 	// unpack .u32 uint32
 	uint64_t v6 = word1 >> (8 + 1) & 0x7f;
 	if (((uint64_t)1 << 8 & word1) == 0) {
-		size_t tz = __builtin_ctz(v6 | 0x80) + 1;
-		v6 <<= (tz << 3) - tz;
-		v6 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v6 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v6 | 0x80) + 1;
+		p += tail_size;
+		v6 <<= (tail_size << 3) - tail_size;
+		v6 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->u32 = v6;
 
 	// unpack .i64 int64
 	uint64_t v7 = word1 >> (16 + 1) & 0x7f;
 	if (((uint64_t)1 << 16 & word1) == 0) {
-		size_t tz = __builtin_ctz(v7 | 0x80) + 1;
-		v7 <<= (tz << 3) - tz;
-		v7 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v7 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v7 | 0x80) + 1;
+		p += tail_size;
+		v7 <<= (tail_size << 3) - tail_size;
+		v7 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->i64 = (int64_t)(v7 >> 1) ^ -(int64_t)(v7 & 1);
 
 	// unpack .u64 uint64
 	uint64_t v8 = word1 >> (24 + 1) & 0x7f;
 	if (((uint64_t)1 << 24 & word1) == 0) {
-		size_t tz = __builtin_ctz(v8 | 0x80) + 1;
-		v8 <<= (tz << 3) - tz;
-		v8 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v8 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v8 | 0x80) + 1;
+		p += tail_size;
+		v8 <<= (tail_size << 3) - tail_size;
+		v8 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->u64 = v8;
 
@@ -401,26 +437,38 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
 	// unpack .a opaque
 	uint64_t v12 = word4 >> (0 + 1) & 0x7f;
 	if (((uint64_t)1 << 0 & word4) == 0) {
-		size_t tz = __builtin_ctz(v12 | 0x80) + 1;
-		v12 <<= (tz << 3) - tz;
-		v12 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v12 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v12 | 0x80) + 1;
+		p += tail_size;
+		v12 <<= (tail_size << 3) - tail_size;
+		v12 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->a.len = v12;
 
 	// unpack .s text
 	uint64_t v13 = word4 >> (8 + 1) & 0x7f;
 	if (((uint64_t)1 << 8 & word4) == 0) {
-		size_t tz = __builtin_ctz(v13 | 0x80) + 1;
-		v13 <<= (tz << 3) - tz;
-		v13 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v13 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v13 | 0x80) + 1;
+		p += tail_size;
+		v13 <<= (tail_size << 3) - tail_size;
+		v13 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->s.len = v13;
 
@@ -516,10 +564,10 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 		p[7] = v0 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v0);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v0 >>= (extraN << 3) - 1;
-		v0 = (v0 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v0 >>= (tail_size << 3) - 1;
+		v0 = (v0 | 1) << tail_size;
 	}
 	word0 |= v0 << 24;
 
@@ -538,10 +586,10 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 		p[7] = v1 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v1);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v1 >>= (extraN << 3) - 1;
-		v1 = (v1 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v1 >>= (tail_size << 3) - 1;
+		v1 = (v1 | 1) << tail_size;
 	}
 	word0 |= v1 << 32;
 
@@ -560,10 +608,10 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 		p[7] = v2 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v2);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v2 >>= (extraN << 3) - 1;
-		v2 = (v2 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v2 >>= (tail_size << 3) - 1;
+		v2 = (v2 | 1) << tail_size;
 	}
 	word0 |= v2 << 40;
 
@@ -582,10 +630,10 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 		p[7] = v3 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v3);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v3 >>= (extraN << 3) - 1;
-		v3 = (v3 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v3 >>= (tail_size << 3) - 1;
+		v3 = (v3 | 1) << tail_size;
 	}
 	word0 |= v3 << 48;
 
@@ -625,52 +673,76 @@ gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
 	// unpack .f32s []float32
 	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
 	if (((uint64_t)1 << 24 & word0) == 0) {
-		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
-		v0 <<= (tz << 3) - tz;
-		v0 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v0 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v0 | 0x80) + 1;
+		p += tail_size;
+		v0 <<= (tail_size << 3) - tail_size;
+		v0 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->f32s.len = v0;
 
 	// unpack .f64s []float64
 	uint64_t v1 = word0 >> (32 + 1) & 0x7f;
 	if (((uint64_t)1 << 32 & word0) == 0) {
-		size_t tz = __builtin_ctz(v1 | 0x80) + 1;
-		v1 <<= (tz << 3) - tz;
-		v1 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v1 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v1 | 0x80) + 1;
+		p += tail_size;
+		v1 <<= (tail_size << 3) - tail_size;
+		v1 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->f64s.len = v1;
 
 	// unpack .as []opaque
 	uint64_t v2 = word0 >> (40 + 1) & 0x7f;
 	if (((uint64_t)1 << 40 & word0) == 0) {
-		size_t tz = __builtin_ctz(v2 | 0x80) + 1;
-		v2 <<= (tz << 3) - tz;
-		v2 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v2 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v2 | 0x80) + 1;
+		p += tail_size;
+		v2 <<= (tail_size << 3) - tail_size;
+		v2 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->as.len = v2;
 
 	// unpack .ss []text
 	uint64_t v3 = word0 >> (48 + 1) & 0x7f;
 	if (((uint64_t)1 << 48 & word0) == 0) {
-		size_t tz = __builtin_ctz(v3 | 0x80) + 1;
-		v3 <<= (tz << 3) - tz;
-		v3 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v3 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v3 | 0x80) + 1;
+		p += tail_size;
+		v3 <<= (tail_size << 3) - tail_size;
+		v3 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->ss.len = v3;
 
@@ -738,10 +810,10 @@ gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
 		p[7] = v0 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v0);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v0 >>= (extraN << 3) - 1;
-		v0 = (v0 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v0 >>= (tail_size << 3) - 1;
+		v0 = (v0 | 1) << tail_size;
 	}
 	word0 |= v0 << 24;
 
@@ -808,13 +880,19 @@ gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
 	// unpack .a opaque
 	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
 	if (((uint64_t)1 << 24 & word0) == 0) {
-		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
-		v0 <<= (tz << 3) - tz;
-		v0 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v0 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v0 | 0x80) + 1;
+		p += tail_size;
+		v0 <<= (tail_size << 3) - tail_size;
+		v0 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->a.len = v0;
 
@@ -890,10 +968,10 @@ gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start) {
 		p[7] = v0 >> 56;
 
 		size_t bit_count = __builtin_ffsll(v0);
-		size_t extraN = (((bit_count - 1) >> 3) + bit_count) >> 3;
-		p += extraN;
-		v0 >>= (extraN << 3) - 1;
-		v0 = (v0 | 1) << extraN;
+		size_t tail_size = (((bit_count - 1) >> 3) + bit_count) >> 3;
+		p += tail_size;
+		v0 >>= (tail_size << 3) - 1;
+		v0 = (v0 | 1) << tail_size;
 	}
 	word0 |= v0 << 24;
 
@@ -940,13 +1018,19 @@ gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start) {
 	// unpack .PascalCase text
 	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
 	if (((uint64_t)1 << 24 & word0) == 0) {
-		size_t tz = __builtin_ctz(v0 | 0x80) + 1;
-		v0 <<= (tz << 3) - tz;
-		v0 &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v0 |= tail & COLFER_MASKS[tz];
-		p += tz;
+		uint64_t tail = p[0];
+		tail |= (uint64_t)p[1] << 8;
+		tail |= (uint64_t)p[2] << 16;
+		tail |= (uint64_t)p[3] << 24;
+		tail |= (uint64_t)p[4] << 32;
+		tail |= (uint64_t)p[5] << 40;
+		tail |= (uint64_t)p[6] << 48;
+		tail |= (uint64_t)p[7] << 56;
+
+		size_t tail_size = __builtin_ctz(v0 | 0x80) + 1;
+		p += tail_size;
+		v0 <<= (tail_size << 3) - tail_size;
+		v0 |= tail & COLFER_MASKS[tail_size];
 	}
 	o->pascal_case.len = v0;
 
