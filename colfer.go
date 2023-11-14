@@ -223,6 +223,8 @@ func (t *Struct) SetFixedPositions() {
 	t.FixedSize = fixedIndex
 }
 
+// FixedWordIndices returns the index of each 64-bit word filled by the fixed
+// section.
 func (t *Struct) FixedWordIndices() []int {
 	indices := make([]int, t.FixedSize/8)
 	for i := range indices {
@@ -231,11 +233,8 @@ func (t *Struct) FixedWordIndices() []int {
 	return indices
 }
 
-func (t *Struct) FixedTailWordIndex() int {
-	return t.FixedSize / 8
-}
-
-func (t *Struct) FixedTailOctetCount() int {
+// FixedWordRemainderSize returns the octet count.
+func (t *Struct) FixedWordRemainderSize() int {
 	return t.FixedSize % 8
 }
 

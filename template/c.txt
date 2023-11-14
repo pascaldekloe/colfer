@@ -150,8 +150,9 @@ size_t
 {{- range .FixedWordIndices}}
 	memcpy((uint8_t*)start + ({{.}} * 8), &word{{.}}, 8);
 {{- end}}
-{{- if ne .FixedTailOctetCount 0}}
-	memcpy((uint8_t*)start + ({{.FixedTailWordIndex}} * 8), &word{{.FixedTailWordIndex}}, {{.FixedTailOctetCount}});
+{{- if ne .FixedWordRemainderSize 0}}
+ {{- $index := len .FixedWordIndices}}
+	memcpy((uint8_t*)start + ({{$index}} * 8), &word{{$index}}, {{.FixedWordRemainderSize}});
 {{- end}}
 
 	return size;
@@ -164,9 +165,10 @@ size_t
 	uint64_t word{{.}};
 	memcpy(&word{{.}}, (uint8_t *)start + ({{.}} * 8), 8);
 {{- end}}
-{{- if ne .FixedTailOctetCount 0}}
-	uint64_t word{{.FixedTailWordIndex}};
-	memcpy(&word{{.FixedTailWordIndex}}, (uint8_t *)start + ({{.FixedTailWordIndex}} * 8), {{.FixedTailOctetCount}});
+{{- if ne .FixedWordRemainderSize 0}}
+ {{- $index := len .FixedWordIndices}}
+	uint64_t word{{$index}};
+	memcpy(&word{{$index}}, (uint8_t *)start + ({{$index}} * 8), {{.FixedWordRemainderSize}});
 {{- end}}
 
 	// read cursor at variable section
