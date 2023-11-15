@@ -1,5 +1,5 @@
 	{{if eq .WordShift 0 -}}
-        uint64_t word{{.WordIndex}} = v{{.Index}};
+	uint64_t word{{.WordIndex}} = v{{.Index}};
 	{{- else -}}
 	word{{.WordIndex}} |= v{{.Index}} << {{.WordShift}};
 	{{- if eq .WordShift 56}}

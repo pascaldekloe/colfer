@@ -1,4 +1,4 @@
 	uint64_t v{{.Index}} =
-   {{- if eq .WordShift 0}} word{{.WordIndex}};
-   {{- else}} word{{.WordIndex}}>>{{.WordShift}} | word{{.NextWordIndex}}<<(64-{{.WordShift}});
-   {{- end -}}
+	{{- if eq .WordShift 0}} word{{.WordIndex}};
+	{{- else}} word{{.WordIndex}}>>{{.WordShift}} | word{{.NextWordIndex}}<<(64-{{.WordShift}});
+	{{- end -}}
