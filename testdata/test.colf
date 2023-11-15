@@ -49,13 +49,10 @@ type ListTypes struct {
 }
 
 // ArrayTypes contains each BaseType supported in array form.
-/* TODO
 type ArrayTypes struct {
 	f32a2 [2]float32
 	f64a3 [3]float64
-	…
 }
-*/
 
 // OpaqueTypes mixes fixed and variable-byte values.
 type OpaqueTypes struct {

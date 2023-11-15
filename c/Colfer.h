@@ -126,6 +126,27 @@ size_t
 gen_list_types_unmarshal(struct gen_list_types* o, const void* start);
 
 
+// ArrayTypes contains each BaseType supported in array form.
+struct gen_array_types {
+ 
+	float f32a2[2];
+ 
+ 
+	double f64a3[3];
+};
+
+// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
+// return signals that the data in o exceeds COLFER_MAX.
+size_t
+gen_array_types_marshal(const struct gen_array_types* o, void* start);
+
+// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
+// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
+// fields are allocated including null terminator. Caller owns the memory.
+size_t
+gen_array_types_unmarshal(struct gen_array_types* o, const void* start);
+
+
 // OpaqueTypes mixes fixed and variable-byte values.
 struct gen_opaque_types {
  	// A tests variable size.

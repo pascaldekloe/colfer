@@ -143,9 +143,11 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 		return fmt.Errorf("colfer: %s has no fields", dst)
 	}
 
+	var colferFieldIndex int // counts array elements individually
 	for i, f := range src.Fields.List {
-		field := &Field{Struct: dst, Index: i}
+		field := &Field{Struct: dst, Index: colferFieldIndex}
 		dst.Fields = append(dst.Fields, field)
+		colferFieldIndex++
 
 		if len(f.Names) == 0 {
 			return fmt.Errorf("colfer: field %d from %s has no name", i, dst)
@@ -158,38 +160,42 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 
 		field.Docs = docs(f.Doc)
 
-		expr := f.Type
-		for {
-			switch t := expr.(type) {
-			case *ast.ArrayType:
-				expr = t.Elt
-				if t.Len != nil {
-					l, ok := t.Len.(*ast.BasicLit)
-					if !ok {
-						return fmt.Errorf("colfer: unknown array size for field %s", field)
-					}
-					n, err := strconv.Atoi(l.Value)
-					if err != nil {
-						return fmt.Errorf("colfer: illegal array size for field %s: %w", field, err)
-					}
-					field.ElementCount = n
-				} else {
-					field.TypeList = true
+		ftype := f.Type
+		if array, ok := ftype.(*ast.ArrayType); ok {
+			ftype = array.Elt
+
+			if array.Len != nil {
+				l, ok := array.Len.(*ast.BasicLit)
+				if !ok {
+					return fmt.Errorf("colfer: unknown array size for field %s", field)
 				}
-				continue
-			case *ast.Ident:
-				field.Type = t.Name
-			case *ast.SelectorExpr:
-				switch pkgIdent := t.X.(type) {
-				case *ast.Ident:
-					field.Type = pkgIdent.Name + "." + t.Sel.Name
-				default:
-					return fmt.Errorf("colfer: unknown datatype selector expression %T for field %s", pkgIdent, field)
+				n, err := strconv.Atoi(l.Value)
+				if err != nil {
+					return fmt.Errorf("colfer: illegal array size for field %s: %w", field, err)
 				}
-			default:
-				return fmt.Errorf("colfer: unknown datatype declaration %T for field %s", t, field)
+				// TODO: range check
+
+				field.ElementCount = n
+				colferFieldIndex += n - 1
+			} else {
+				field.TypeList = true
 			}
-			break
+		}
+
+		switch t := ftype.(type) {
+		case *ast.Ident:
+			field.Type = t.Name
+
+		case *ast.SelectorExpr:
+			switch pkgIdent := t.X.(type) {
+			case *ast.Ident:
+				field.Type = pkgIdent.Name + "." + t.Sel.Name
+			default:
+				return fmt.Errorf("colfer: unknown datatype selector expression %T for field %s", pkgIdent, field)
+			}
+
+		default:
+			return fmt.Errorf("colfer: unknown datatype declaration %T for field %s", t, field)
 		}
 	}
 

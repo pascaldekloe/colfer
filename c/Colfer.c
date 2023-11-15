@@ -9,25 +9,25 @@
 
 // floating-point byte mapping
 union f32m {
-       float f;
-       uint32_t u;
+	float f;
+	uint32_t u;
 };
 
 union f64m {
-       double f;
-       uint64_t u;
+	double f;
+	uint64_t u;
 };
 
 const uint64_t COLFER_MASKS[9] = {
-    0,
-    0xff,
-    0xffff,
-    0xffffff,
-    0xffffffff,
-    0xffffffffff,
-    0xffffffffffff,
-    0xffffffffffffff,
-    0xffffffffffffffff,
+	0,
+	0xff,
+	0xffff,
+	0xffffff,
+	0xffffffff,
+	0xffffffffff,
+	0xffffffffffff,
+	0xffffffffffffff,
+	0xffffffffffffffff,
 };
 
 size_t
@@ -788,6 +788,124 @@ gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
 }
 
 size_t
+gen_array_types_marshal(const struct gen_array_types* o, void* start) {
+	// fixed section as 64-bit words
+	uint64_t word0 = 35 - 4; // 16-bit size declaration
+
+	// write cursor at variable section
+	uint8_t *p = (uint8_t*)start + 35;
+
+	// pack .f32a2 float32
+	union f32m m0;
+	m0.f = o->f32a2[0];
+	uint64_t v0 = m0.u;
+	word0 |= v0 << 24;
+	union f32m m1;
+	m1.f = o->f32a2[1];
+	uint64_t v1 = m1.u;
+	word0 |= v1 << 56;
+	uint64_t word1 = v1 >> (64-56);
+
+	// pack .f64a3 float64
+	union f64m m2;
+	m2.f = o->f64a3[0];
+	uint64_t v2 = m2.u;
+	word1 |= v2 << 24;
+	uint64_t word2 = v2 >> (64-24);
+	union f64m m3;
+	m3.f = o->f64a3[1];
+	uint64_t v3 = m3.u;
+	word2 |= v3 << 24;
+	uint64_t word3 = v3 >> (64-24);
+	union f64m m4;
+	m4.f = o->f64a3[2];
+	uint64_t v4 = m4.u;
+	word3 |= v4 << 24;
+	uint64_t word4 = v4 >> (64-24);
+
+	size_t size = p - (uint8_t*)start;
+
+	// finish header
+	word0 |= (uint64_t)(size - 35) << 17 | (1 << 16);
+	memcpy((uint8_t*)start + (0 * 8), &word0, 8);
+	memcpy((uint8_t*)start + (1 * 8), &word1, 8);
+	memcpy((uint8_t*)start + (2 * 8), &word2, 8);
+	memcpy((uint8_t*)start + (3 * 8), &word3, 8);
+	memcpy((uint8_t*)start + (4 * 8), &word4, 3);
+
+	return size;
+}
+
+size_t
+gen_array_types_unmarshal(struct gen_array_types* o, const void* start) {
+	// words of fixed section
+	uint64_t word0;
+	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
+	uint64_t word1;
+	memcpy(&word1, (uint8_t *)start + (1 * 8), 8);
+	uint64_t word2;
+	memcpy(&word2, (uint8_t *)start + (2 * 8), 8);
+	uint64_t word3;
+	memcpy(&word3, (uint8_t *)start + (3 * 8), 8);
+	uint64_t word4;
+	memcpy(&word4, (uint8_t *)start + (4 * 8), 3);
+
+	// read cursor at variable section
+	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+
+	uint64_t v = word0 >> 17 & 0x7f;
+	if (((uint64_t)1 << 16 & word0) == 0) {
+		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
+		v <<= (tz << 3) - tz;
+		v &= ~COLFER_MASKS[tz];
+		uint64_t tail;
+		memcpy(&tail, p, 8);
+		v |= tail & COLFER_MASKS[tz];
+		p += tz;
+	}
+	if (v > COLFER_MAX) return 0;
+	size_t size = v + (word0 & 0xffff) + 4;
+
+	// unpack .f32a2 float32
+	uint64_t v0 = word0 >> 24;
+	union f32m m0;
+	m0.u = v0;
+	o->f32a2[0] = m0.f;
+	uint64_t v1 = word0>>56 | word1<<(64-56);
+	union f32m m1;
+	m1.u = v1;
+	o->f32a2[1] = m1.f;
+
+	// unpack .f64a3 float64
+	uint64_t v2 = word1>>24 | word2<<(64-24);
+	union f64m m2;
+	m2.u = v2;
+	o->f64a3[0] = m2.f;
+	uint64_t v3 = word2>>24 | word3<<(64-24);
+	union f64m m3;
+	m3.u = v3;
+	o->f64a3[1] = m3.f;
+	uint64_t v4 = word3>>24 | word4<<(64-24);
+	union f64m m4;
+	m4.u = v4;
+	o->f64a3[2] = m4.f;
+
+	// clear/undo absent fields
+	if ((word0 & 0xffff) < 35 - 4) {
+		switch (word0 & 0xffff) {
+		default:
+			return 0;
+		case 11 - 4:
+			o->f64a3[0] = 0;
+			o->f64a3[1] = 0;
+			o->f64a3[2] = 0;
+		}
+	}
+
+	return size;
+}
+
+size_t
 gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
 	// fixed section as 64-bit words
 	uint64_t word0 = 19 - 4; // 16-bit size declaration
@@ -832,7 +950,7 @@ gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
 	// pack .a64 opaque64
 	uint64_t v4 = o->a64;
 	word1 |= v4 << 24;
-        uint64_t word2 = v4 >> (64-24);
+	uint64_t word2 = v4 >> (64-24);
 
 	// copy payloads
 	if (o->a.len > COLFER_MAX - (p - (uint8_t*)start))

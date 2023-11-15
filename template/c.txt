@@ -15,26 +15,26 @@
 
 // floating-point byte mapping
 union f32m {
-       float f;
-       uint32_t u;
+	float f;
+	uint32_t u;
 };
 
 union f64m {
-       double f;
-       uint64_t u;
+	double f;
+	uint64_t u;
 };
 {{- end}}
 
 const uint64_t COLFER_MASKS[9] = {
-    0,
-    0xff,
-    0xffff,
-    0xffffff,
-    0xffffffff,
-    0xffffffffff,
-    0xffffffffffff,
-    0xffffffffffffff,
-    0xffffffffffffffff,
+	0,
+	0xff,
+	0xffff,
+	0xffffff,
+	0xffffffff,
+	0xffffffffff,
+	0xffffffffffff,
+	0xffffffffffffff,
+	0xffffffffffffffff,
 };
 
 {{- range .}}{{/* packages */}}
@@ -86,16 +86,38 @@ size_t
 {{template "marshal-integer" .}}
 
   {{- else if eq .Type "float32"}}
+   {{- if eq .ElementCount 0}}
 	union f32m m{{.Index}};
 	m{{.Index}}.f = o->{{.NameNative}};
 	uint64_t v{{.Index}} = m{{.Index}}.u;
 {{template "marshal32" .}}
+   {{- else}}
+    {{- range $arrayIndex, $element := .Elements}}
+     {{- with $element}}
+	union f32m m{{.Index}};
+	m{{.Index}}.f = o->{{.NameNative}}[{{$arrayIndex}}];
+	uint64_t v{{.Index}} = m{{.Index}}.u;
+{{template "marshal32" .}}
+     {{- end}}
+    {{- end}}
+   {{- end}}
 
   {{- else if eq .Type "float64"}}
+   {{- if eq .ElementCount 0}}
 	union f64m m{{.Index}};
 	m{{.Index}}.f = o->{{.NameNative}};
 	uint64_t v{{.Index}} = m{{.Index}}.u;
 {{template "marshal64" .}}
+   {{- else}}
+    {{- range $arrayIndex, $element := .Elements}}
+     {{- with $element}}
+	union f64m m{{.Index}};
+	m{{.Index}}.f = o->{{.NameNative}}[{{$arrayIndex}}];
+	uint64_t v{{.Index}} = m{{.Index}}.u;
+{{template "marshal64" .}}
+     {{- end}}
+    {{- end}}
+   {{- end}}
 
   {{- else if eq .Type "timestamp"}}
 	uint64_t v{{.Index}} = o->{{.NameNative}}.tv_sec;
@@ -225,16 +247,38 @@ size_t
 	o->{{.NameNative}} = v{{.Index}};
 
   {{- else if eq .Type "float32"}}
+   {{- if eq .ElementCount 0}}
 {{template "unmarshal32" .}}
 	union f32m m{{.Index}};
 	m{{.Index}}.u = v{{.Index}};
 	o->{{.NameNative}} = m{{.Index}}.f;
+   {{- else}}
+    {{- range $arrayIndex, $element := .Elements}}
+     {{- with $element}}
+{{template "unmarshal32" .}}
+	union f32m m{{.Index}};
+	m{{.Index}}.u = v{{.Index}};
+	o->{{.NameNative}}[{{$arrayIndex}}] = m{{.Index}}.f;
+     {{- end}}
+    {{- end}}
+   {{- end}}
 
   {{- else if eq .Type "float64"}}
+   {{- if eq .ElementCount 0}}
 {{template "unmarshal64" .}}
 	union f64m m{{.Index}};
 	m{{.Index}}.u = v{{.Index}};
 	o->{{.NameNative}} = m{{.Index}}.f;
+   {{- else}}
+    {{- range $arrayIndex, $element := .Elements}}
+     {{- with $element}}
+{{template "unmarshal64" .}}
+	union f64m m{{.Index}};
+	m{{.Index}}.u = v{{.Index}};
+	o->{{.NameNative}}[{{$arrayIndex}}] = m{{.Index}}.f;
+     {{- end}}
+    {{- end}}
+   {{- end}}
 
   {{- else if eq .Type "timestamp"}}
 {{template "unmarshal64" .}}
@@ -285,7 +329,13 @@ size_t
  {{- else if .TypeList}}
 			o->{{.NameNative}}.len = 0;
  {{- else}}
+  {{- if eq .ElementCount 0}}
 			o->{{.NameNative}} = 0;
+  {{- else}}
+   {{- range $arrayIndex, $element := .Elements}}
+			o->{{.NameNative}}[{{$arrayIndex}}] = 0;
+   {{- end}}
+  {{- end}}
  {{- end}}
 {{- end}}
 		}

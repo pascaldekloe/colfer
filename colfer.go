@@ -194,29 +194,21 @@ func (t *Struct) SetFixedPositions() {
 	for _, f := range t.Fields {
 		f.FixedIndex = fixedIndex
 
-		if f.TypeList {
+		switch {
+		case f.TypeList:
 			fixedIndex++
-			continue
-		}
 
-		switch f.Type {
-		default:
-			fixedIndex += max(1, f.ElementCount)
-
-		case "bool":
-			f.BoolIndex = boolCount
+		case f.Type == "bool":
 			boolCount++
 			if f.FirstInBitField() {
 				fixedIndex++
 			} else {
 				f.FixedIndex = -1
 			}
-		case "opaque16":
-			fixedIndex += max(2, 2*f.ElementCount)
-		case "float32", "opaque32":
-			fixedIndex += max(4, 4*f.ElementCount)
-		case "float64", "timestamp", "opaque64":
-			fixedIndex += max(8, 8*f.ElementCount)
+
+		default:
+			fixedSize := f.TypeFixedSize()
+			fixedIndex += max(fixedSize, fixedSize*f.ElementCount)
 		}
 	}
 
@@ -351,7 +343,7 @@ type Field struct {
 	BoolIndex int
 }
 
-// WordIndex locates fixed-data in the 64-bit words.
+// WordIndex locates fixed-data in 64-bit words.
 func (f *Field) WordIndex() int {
 	return f.FixedIndex / 8
 }
@@ -364,6 +356,42 @@ func (f *Field) NextWordIndex() int {
 // WordShift is the bit position of fixed-data at WordIndex.
 func (f *Field) WordShift() int {
 	return (f.FixedIndex & 7) * 8
+}
+
+// TypeFixedSize returns the octet count.
+func (f *Field) TypeFixedSize() int {
+	if f.TypeList {
+		return 1
+	}
+
+	switch f.Type {
+	default:
+		return 1
+	case "bool":
+		return -1
+	case "opaque16":
+		return 2
+	case "float32", "opaque32":
+		return 4
+	case "float64", "timestamp", "opaque64":
+		return 8
+	}
+}
+
+// Elements returns the field definition for each array item.
+func (f *Field) Elements() []Field {
+	size := f.TypeFixedSize()
+	if f.ElementCount == 0 || size < 1 {
+		return nil
+	}
+
+	elements := make([]Field, f.ElementCount)
+	for i := range elements {
+		elements[i] = *f // copy
+		elements[i].Index = f.Index + i
+		elements[i].FixedIndex = f.FixedIndex + i*size
+	}
+	return elements
 }
 
 // FirstInBitField returns whether this boolean is the first (of up to 8 in
