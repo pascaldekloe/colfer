@@ -51,12 +51,6 @@ struct gen_base_types {
  	// T tests timestamps (with nanosecond precision).
 	struct timespec t;
  
- 	// A tests binary data of variable size.
-	struct {
-		void* octets;
-		size_t len; // octet count
-	} a;
- 
  	// C tests Unicode strings of variable size.
 	struct {
 		const char* utf8;
@@ -95,15 +89,6 @@ struct gen_list_types {
 		size_t len; // element count
 	} f64s;
  
- 	// As tests binary data of variable size.
-	struct {
-		struct {
-			void* octets;
-			size_t len; // octet count
-		}* list;
-		size_t len; // element count
-	} as;
- 
  	// Ss tests Unicode strings of variable size.
 	struct {
 		struct {
@@ -127,12 +112,43 @@ gen_list_types_unmarshal(struct gen_list_types* o, const void* start);
 
 
 // ArrayTypes contains each BaseType supported in array form.
+// The odd order is to breach some word boundaries in the fixed section.
 struct gen_array_types {
  
 	float f32a2[2];
  
  
 	double f64a3[3];
+ 
+ 
+	uint64_t u64a2[2];
+ 
+ 
+	int32_t i32a2[2];
+ 
+ 
+	uint32_t u32a2[2];
+ 
+ 
+	int16_t i16a2[2];
+ 
+ 
+	uint16_t u16a2[2];
+ 
+ 
+	int8_t i8a2[2];
+ 
+ 
+	uint8_t u8a2[2];
+ 
+ 
+	struct timespec ta2[2];
+ 
+ 
+	struct {
+		const char* utf8;
+		size_t len; // octet count
+	} sa2[2];
 };
 
 // Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
@@ -149,12 +165,6 @@ gen_array_types_unmarshal(struct gen_array_types* o, const void* start);
 
 // OpaqueTypes mixes fixed and variable-byte values.
 struct gen_opaque_types {
- 	// A tests variable size.
-	struct {
-		void* octets;
-		size_t len; // octet count
-	} a;
- 
  	// A8 tests 8-bit values.
 	uint8_t a8;
  

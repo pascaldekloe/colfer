@@ -103,7 +103,6 @@ int gen_base_types_dfr(const struct gen_base_types a, const struct gen_base_type
 	    || (a.f64 != b.f64 && a.f64 == a.f64 && b.f64 == b.f64)
 	    || (a.f64 == b.f64 && (a.f64 != a.f64 || b.f64 != b.f64))
 	    || a.t.tv_sec != b.t.tv_sec || a.t.tv_nsec != b.t.tv_nsec
-	    || a.a.len != b.a.len || memcmp(a.a.octets, b.a.octets, a.a.len)
 	    || a.s.len != b.s.len || memcmp(a.s.utf8, b.s.utf8, a.s.len)
 	;
 }
@@ -112,7 +111,6 @@ int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_type
 	bool dfr = a.f32s.len != b.f32s.len
 	        || a.f64s.len != b.f64s.len
 	        || a.ss.len != b.ss.len
-	        || a.as.len != b.as.len
 	;
 
 	for (size_t i = 0, n = a.f32s.len; i < n; ++i) {
@@ -128,11 +126,6 @@ int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_type
 		dfr |= fa != fa && fb == fb;
 	}
 
-	for (size_t i = 0, n = a.as.len; i < n; ++i) {
-		size_t len = a.as.list[i].len;
-		dfr |= len != b.as.list[i].len;
-		dfr |= memcmp(a.as.list[i].octets, b.as.list[i].octets, len) != 0;
-	}
 	for (size_t i = 0, n = a.ss.len; i < n; ++i) {
 		size_t len = a.ss.list[i].len;
 		dfr |= len != b.ss.list[i].len;
@@ -160,15 +153,6 @@ void gen_base_types_dump(const struct gen_base_types o) {
 	printf("t.tv_sec=%lld ", (long long) o.t.tv_sec);
 	printf("t.tv_nsec=%lld ", (long long) o.t.tv_nsec);
 
-	if (!o.a.len) {
-		printf("a=0x ");
-	} else if (o.a.len > sizeof(buf) / 2) {
-		printf("a=%zuB ", o.a.len);
-	} else {
-		hexstr(buf, o.a.octets, o.a.len);
-		printf("a=0x%s ", buf);
-	}
-
 	if (!o.s.len) {
 		printf("s=0x ");
 	} else if (o.s.len > sizeof(buf) / 2) {
@@ -192,20 +176,6 @@ void gen_list_types_dump(const struct gen_list_types o) {
 	printf("f64s=[");
 	for (size_t i = 0; i < o.f64s.len; ++i)
 		printf(" %f", o.f64s.list[i]);
-	printf(" ] ");
-
-	printf("as=[");
-	for (size_t i = 0; i < o.as.len; ++i) {
-		printf(" 0x%s", buf);
-		if (!o.as.list[i].len) {
-			printf(" 0x ");
-		} else if (o.as.list[i].len > sizeof(buf) / 2) {
-			printf(" %zuB ", o.as.list[i].len);
-		} else {
-			hexstr(buf, o.as.list[i].octets, o.as.list[i].len);
-			printf(" 0x%s ", buf);
-		}
-	}
 	printf(" ] ");
 
 	printf("ss=[");

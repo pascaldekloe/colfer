@@ -37,8 +37,7 @@ var datatypes = map[string]struct{}{
 	"float64":   {},
 	"timestamp": {},
 
-	"text":   {},
-	"opaque": {},
+	"text": {},
 }
 
 type Packages []*Package
@@ -264,26 +263,6 @@ func (t *Struct) HasFloat() bool {
 func (t *Struct) HasText() bool {
 	for _, f := range t.Fields {
 		if f.Type == "text" {
-			return true
-		}
-	}
-	return false
-}
-
-// HasOpaque returns whether t has one or more opaque fields.
-func (t *Struct) HasOpaque() bool {
-	for _, f := range t.Fields {
-		if f.Type == "opaque" {
-			return true
-		}
-	}
-	return false
-}
-
-// HasOpaqueList returns whether t has one or more opaque list fields.
-func (t *Struct) HasOpaqueList() bool {
-	for _, f := range t.Fields {
-		if f.Type == "opaque" && f.TypeList {
 			return true
 		}
 	}

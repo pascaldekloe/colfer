@@ -33,12 +33,6 @@ struct {{.NameNative}} {
   {{- else if eq .Type "timestamp"}}
 	struct timespec
 
-  {{- else if eq .Type "opaque"}}
-	struct {
-		{{.TypeNative}}* octets;
-		size_t len; // octet count
-	}
-
   {{- else if eq .Type "text"}}
 	struct {
 		{{.TypeNative}}* utf8;
@@ -53,16 +47,7 @@ struct {{.NameNative}} {
 
   {{- end}}{{/* type match */}}
  {{- else}}{{/* is list */}}
-  {{- if eq .Type "opaque"}}
-	struct {
-		struct {
-			{{.TypeNative}}* octets;
-			size_t len; // octet count
-		}* list;
-		size_t len; // element count
-	}
-
-  {{- else if eq .Type "text"}}
+  {{- if eq .Type "text"}}
 	struct {
 		struct {
 			{{.TypeNative}}* utf8;
