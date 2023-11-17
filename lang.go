@@ -69,7 +69,7 @@ func GenerateC(basedir string, packages Packages) error {
 				case "float64":
 					f.TypeNative = "double"
 				case "timestamp":
-					f.TypeNative = "timespec"
+					f.TypeNative = "struct timespec"
 				case "opaque":
 					f.TypeNative = "void"
 				case "text":

@@ -36,11 +36,13 @@ type BaseTypes struct {
 
 // ListTypes contains each BaseType supported in list form.
 type ListTypes struct {
-	// F32s tests a variable-size listing.
+	a8 []opaque8
+	a16 []opaque16
+	a32 []opaque32
+	a64 []opaque64
 	f32s []float32
-	// F64s tests a variable-size listing.
 	f64s []float64
-	// Ss tests Unicode strings of variable size.
+	ts []timestamp
 	ss []text
 }
 

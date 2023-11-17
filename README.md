@@ -33,10 +33,6 @@ The format is inspired by Proto**col** Buf**fer**s.
 * No support for enumerations
 * Framed; suitable for concatenation/streaming
 
-#### TODO's
-
-* Rust and Python support
-
 
 ## Use
 
@@ -172,7 +168,7 @@ type course struct {
 	ID    uint64
 	name  text
 	holes [18]hole
-	image opaque
+	image []opaque8
 	tags  []text
 }
 
@@ -196,7 +192,7 @@ See what the generated code looks like in
 [Java](https://gist.github.com/pascaldekloe/b54326e6b7c5e9f036911a8cbea6ccbf) or
 [JavaScript](https://gist.github.com/pascaldekloe/5653c8bb074ebd29ffcc0deece7495a4).
 
-The following table shows hows the default data-types per programming language.
+The following table shows the default data-types per programming language.
 
 | Colfer	| C		| Go		| Java		| Rust		|
 |:--------------|:--------------|:--------------|:--------------|:--------------|

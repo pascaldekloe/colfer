@@ -77,19 +77,49 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start);
 
 // ListTypes contains each BaseType supported in list form.
 struct gen_list_types {
- 	// F32s tests a variable-size listing.
+ 
+	struct {
+		uint8_t* list;
+		size_t len; // element count
+	} a8;
+ 
+ 
+	struct {
+		uint16_t* list;
+		size_t len; // element count
+	} a16;
+ 
+ 
+	struct {
+		uint32_t* list;
+		size_t len; // element count
+	} a32;
+ 
+ 
+	struct {
+		uint64_t* list;
+		size_t len; // element count
+	} a64;
+ 
+ 
 	struct {
 		float* list;
 		size_t len; // element count
 	} f32s;
  
- 	// F64s tests a variable-size listing.
+ 
 	struct {
 		double* list;
 		size_t len; // element count
 	} f64s;
  
- 	// Ss tests Unicode strings of variable size.
+ 
+	struct {
+		struct timespec* list;
+		size_t len; // element count
+	} ts;
+ 
+ 
 	struct {
 		struct {
 			const char* utf8;

@@ -30,8 +30,6 @@ struct {{.NameNative}} {
  {{- if not .TypeList}}
   {{- if eq .Type "bool"}}
 	// {{.NameNative}} in bools bit-field;
-  {{- else if eq .Type "timestamp"}}
-	struct timespec
 
   {{- else if eq .Type "text"}}
 	struct {

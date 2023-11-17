@@ -37,6 +37,13 @@ const uint64_t COLFER_MASKS[9] = {
 	0xffffffffffffffff,
 };
 
+// Saturating subtract prevents overflows branchless.
+static inline size_t
+satsub(size_t minuend, size_t subtrahend) {
+	// TODO: utilize ARM instructions
+	return (minuend - subtrahend) * (minuend >= subtrahend);
+}
+
 {{- range .}}{{/* packages */}}
 {{- range .Structs}}
 
@@ -46,11 +53,14 @@ size_t
 	uint64_t word0 = {{.FixedSize}} - 4; // 16-bit size declaration
 
 	// write cursor at variable section
-	uint8_t *p = (uint8_t*)start + {{.FixedSize}};
+	uint8_t *p = (uint8_t *)start + {{.FixedSize}};
 {{- range .Fields}}
 
 	// pack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
- {{- if not .TypeList}}
+ {{- if .TypeList}}
+	uint64_t v{{.Index}} = o->{{.NameNative}}.len;
+{{template "marshal-integer" .}}
+ {{- else}}{{/* not list */}}
   {{- if eq .Type "bool"}}
    {{- if .FirstInBitField}}
     {{- if eq .WordShift 0}}
@@ -189,51 +199,102 @@ size_t
    {{- end}}{{end}}{{end}}
 
   {{- end}}{{/* type match */}}
- {{- else}}{{/* is list */}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}.len;
-{{template "marshal-integer" .}}
-
- {{- end}}{{/* is list */}}
+ {{- end}}{{/* not list */}}
 {{- end}}{{/* field range */}}
 
-{{- if or .HasText}}
+{{- if or .HasText .HasList}}
 
 	// copy payloads
  {{- range .FieldsReversed}}
-  {{- if eq .Type "text"}}
-   {{- if not .TypeList}}
-    {{- if eq .ElementCount 0}}
+  {{- if eq .Type "uint8" "opaque8"}}
+   {{- if .TypeList}}
+	{
+		size_t size = o->{{.NameNative}}.len * 4;
+		if (size > COLFER_MAX - (p - (uint8_t *)start))
+			return 0;
+		memcpy(p, o->{{.NameNative}}.list, size);
+		p += size;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "float32" "opaque32"}}
+   {{- if .TypeList}}
+	{
+		size_t size = o->{{.NameNative}}.len * 4;
+		if (size > COLFER_MAX - (p - (uint8_t *)start))
+			return 0;
+		memcpy(p, o->{{.NameNative}}.list, size);
+		p += size;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "float64" "opaque64"}}
+   {{- if .TypeList}}
+	{
+		size_t size = o->{{.NameNative}}.len * 8;
+		if (size > COLFER_MAX - (p - (uint8_t *)start))
+			return 0;
+		memcpy(p, o->{{.NameNative}}.list, size);
+		p += size;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "timestamp"}}
+   {{- if .TypeList}}
+	{
+		uint64_t *a = (uint64_t *)p;
+		size_t i = o->{{.NameNative}}.len;
+		p += i * 8;
+		if ((p - (uint8_t *)start) > COLFER_MAX)
+			return 0;
+		while (i--)
+			a[i] = (uint64_t)o->{{.NameNative}}.list[i].tv_sec << 30 | o->{{.NameNative}}.list[i].tv_nsec;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "text"}}
+   {{- if .TypeList}}
+	for (size_t i = o->{{.NameNative}}.len; i-- != 0; ) {
+		// TODO: encode size
+	}
+	for (size_t i = o->{{.NameNative}}.len; i-- != 0; ) {
+		size_t len = o->{{.NameNative}}.list[i].len;
+		if (len > COLFER_MAX - (p - (uint8_t *)start))
+			return 0;
+		memcpy(p, o->{{.NameNative}}.list[i].utf8, len);
+	}
+   {{- else if eq .ElementCount 0}}
 	{
 		size_t len = o->{{.NameNative}}.len;
-		if (len > COLFER_MAX - (p - (uint8_t*)start))
+		if (len > COLFER_MAX - (p - (uint8_t *)start))
 			return 0;
-		memcpy(p, o->{{.NameNative}}.{{if eq .Type "text"}}utf8{{else}}octets{{end}}, len);
+		memcpy(p, o->{{.NameNative}}.utf8, len);
 		p += len;
 	}
-    {{- else}}{{range $arrayIndex, $element := .Elements}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}
 	{
 		size_t len = o->{{.NameNative}}[{{$arrayIndex}}].len;
-		if (len > COLFER_MAX - (p - (uint8_t*)start))
+		if (len > COLFER_MAX - (p - (uint8_t *)start))
 			return 0;
-		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].{{if eq .Type "text"}}utf8{{else}}octets{{end}}, len);
+		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].utf8, len);
 		p += len;
 	}
-    {{- end}}{{end}}
-   {{- end}}
+   {{- end}}{{end}}
+
   {{- end}}{{/* type match */}}
  {{- end}}{{/* reverse field range */}}
 {{- end}}{{/* has payloads */}}
 
-	size_t size = p - (uint8_t*)start;
+	size_t size = p - (uint8_t *)start;
 
 	// finish header
 	word0 |= (uint64_t)(size - {{.FixedSize}}) << 17 | (1 << 16);
 {{- range .FixedWordIndices}}
-	memcpy((uint8_t*)start + ({{.}} * 8), &word{{.}}, 8);
+	memcpy((uint8_t *)start + ({{.}} * 8), &word{{.}}, 8);
 {{- end}}
 {{- if ne .FixedWordRemainderSize 0}}
  {{- $index := len .FixedWordIndices}}
-	memcpy((uint8_t*)start + ({{$index}} * 8), &word{{$index}}, {{.FixedWordRemainderSize}});
+	memcpy((uint8_t *)start + ({{$index}} * 8), &word{{$index}}, {{.FixedWordRemainderSize}});
 {{- end}}
 
 	return size;
@@ -253,7 +314,7 @@ size_t
 {{- end}}
 
 	// read cursor at variable section
-	uint8_t* p = (uint8_t*)start + (word0 & 0xffff) + 4;
+	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
 
 	uint64_t v = word0 >> 17 & 0x7f;
 	if (((uint64_t)1 << 16 & word0) == 0) {
@@ -271,7 +332,10 @@ size_t
 {{- range .Fields}}
 
 	// unpack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
- {{- if not .TypeList}}
+ {{- if .TypeList}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}}.len = v{{.Index}};
+ {{- else}}{{/* not list */}}
   {{- if eq .Type "bool"}}
 
    {{- if .FirstInBitField}}
@@ -403,12 +467,7 @@ size_t
    {{- end}}{{end}}{{end}}
 
   {{- end}}{{/* type match */}}
-
- {{- else}}{{/* is list */}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}.len = v{{.Index}};
-
- {{- end}}{{/* is list */}}
+ {{- end}}{{/* not list */}}
 {{- end}}{{/* field range */}}
 
 	// clear/undo absent fields
@@ -417,15 +476,19 @@ size_t
 		default:
 			return 0;
 {{- range .Fields}}
- {{- if eq .Index 0}}{{/* first field required */}}{{continue}}{{end}}
- {{- if eq .Type "bool"}}{{- if not .FirstInBitField}}{{continue}}{{end}}{{end}}
+ {{- if eq .Index 0}}
+  {{- continue}}{{/* one field required */}}
+ {{- end}}
+ {{- if eq .Type "bool"}}{{- if not .FirstInBitField}}
+  {{- continue}}{{/* packed per eight */}}
+ {{- end}}{{end}}
 		case {{.FixedIndex}} - 4:
 
- {{- if eq .Type "bool"}}
-			o->bools &= (1 << {{.BoolIndex}}) - 1;
-
- {{- else if .TypeList}}
+ {{- if .TypeList}}
 			o->{{.NameNative}}.len = 0;
+
+ {{- else if eq .Type "bool"}}
+			o->bools &= (1 << {{.BoolIndex}}) - 1;
 
  {{- else if eq .Type "timestamp"}}
   {{- if eq .ElementCount 0}}
@@ -439,8 +502,10 @@ size_t
  {{- else if eq .Type "text"}}
   {{- if eq .ElementCount 0}}
 			o->{{.NameNative}}.len = 0;
+			o->{{.NameNative}}.utf8 = 0;
   {{- else}}{{range $arrayIndex, $element := .Elements}}
 			o->{{.NameNative}}[{{$arrayIndex}}].len = 0;
+			o->{{.NameNative}}[{{$arrayIndex}}].utf8 = 0;
   {{- end}}{{end}}
 
  {{- else}}
@@ -450,37 +515,100 @@ size_t
 			o->{{.NameNative}}[{{$arrayIndex}}] = 0;
   {{- end}}{{end}}
 
- {{- end}}
+ {{- end}}{{/* type select */}}
 {{- end}}{{/* field range */}}
 		}{{/* switch */}}
 	}{{/* absent fields */}}
 
-{{- if or .HasText}}
+{{- if or .HasText .HasList}}{{/* has payloads */}}
 
 	// copy payloads
-	uint8_t *end = (uint8_t *)start + size;
-	uint8_t *offset = end;
-	{{range .FieldsReversed}}{{if eq .Type "text" -}}
-	{{- if eq .ElementCount 0}}
-	offset -= o->{{.NameNative}}.len;
-	{{- else}}{{range $arrayIndex, $element := .Elements}}
-	offset -= o->{{.NameNative}}[{{$arrayIndex}}].len;
-	{{- end}}{{end}}{{end}}{{end}};
-	if (offset < p) return 0;
+	size_t offset = size;
  {{- range .FieldsReversed}}
-  {{- if eq .Type "text"}}
-   {{- if eq .ElementCount 0}}
-    {{- if not .TypeList}}
-	{
-		size_t len = o->{{.NameNative}}.len ;
-		char *s = malloc(len + 1);
-		memcpy(s, offset, len);
-		s[len] = 0; // null terminator
-		o->{{.NameNative}}.utf8 = s;
-		offset += len;
-	}
+  {{- if eq .Type "opaque8" "opaque16" "opaque32" "opaque64" "float32" "float64"}}
+   {{- if .TypeList}}
+	offset = satsub(offset, o->{{.NameNative}}.len * sizeof({{.TypeNative}}));
+   {{- end}}
 
-    {{- else}}
+  {{- else if eq .Type "timestamp"}}
+   {{- if .TypeList}}
+	offset = satsub(offset, o->{{.NameNative}}.len * 8);
+   {{- end}}
+
+  {{- else if eq .Type "text" -}}
+   {{- if .TypeList}}
+	// TODO: unmarshal text list
+   {{- else if eq .ElementCount 0}}
+	offset = satsub(offset, o->{{.NameNative}}.len);
+   {{- else}}
+    {{- range $arrayIndex, $element := .Elements}}
+	offset = satsub(offset, o->{{.NameNative}}[{{$arrayIndex}}].len);
+    {{- end}}
+   {{- end}}
+
+  {{- end}}{{/* type match */}}
+ {{- end}}{{/* field range */}}
+	uint8_t *split = (uint8_t *)start + offset;
+	if (split < p) return 0;
+	p = split;
+ {{range .FieldsReversed}}
+  {{- if eq .Type "opaque8"}}
+   {{- if .TypeList}}
+	if (o->{{.NameNative}}.len != 0) {
+		size_t len = o->{{.NameNative}}.len;
+		o->{{.NameNative}}.list = malloc(len);
+		memcpy(o->{{.NameNative}}.list, p, len);
+		p += len;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "opaque16"}}
+   {{- if .TypeList}}
+	if (o->{{.NameNative}}.len != 0) {
+		size_t len = o->{{.NameNative}}.len;
+		o->{{.NameNative}}.list = malloc(len * 2);
+		memcpy(o->{{.NameNative}}.list, p, len * 2);
+		p += len * 2;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "float32" "opaque32"}}
+   {{- if .TypeList}}
+	if (o->{{.NameNative}}.len != 0) {
+		size_t len = o->{{.NameNative}}.len;
+		o->{{.NameNative}}.list = malloc(len * 4);
+		memcpy(o->{{.NameNative}}.list, p, len * 4);
+		p += len * 4;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "float64" "opaque64"}}
+   {{- if .TypeList}}
+	if (o->{{.NameNative}}.len != 0) {
+		size_t len = o->{{.NameNative}}.len;
+		o->{{.NameNative}}.list = malloc(len * 8);
+		memcpy(o->{{.NameNative}}.list, p, len * 8);
+		p += len * 8;
+	}
+   {{- end}}
+
+  {{- else if eq .Type "timestamp"}}
+   {{- if .TypeList}}
+	if (o->{{.NameNative}}.len != 0) {
+		size_t len = o->{{.NameNative}}.len;
+		o->{{.NameNative}}.list = malloc(len * sizeof({{.TypeNative}}));
+		const uint64_t *view = (uint64_t *)p;
+		p += len * 8;
+		for (size_t i = o->{{.NameNative}}.len; i--; ) {
+			o->{{.NameNative}}.list[i].tv_sec = view[i] >> 30;
+			o->{{.NameNative}}.list[i].tv_nsec = view[i] & (1<<30) - 1;
+		}
+	}
+   {{- end}}
+
+  {{- else if eq .Type "text"}}
+   {{- if .TypeList}}
+
 	if (o->{{.NameNative}}.len != 0) {
 		o->{{.NameNative}}.list = malloc(o->{{.NameNative}}.len);
 
@@ -488,23 +616,34 @@ size_t
 
 		for (int i = 0; i < o->{{.NameNative}}.len; i++) {
 			char *s = malloc(o->{{.NameNative}}.list[i].len + 1);
-			memcpy(s, offset, o->{{.NameNative}}.len);
+			memcpy(s, p, o->{{.NameNative}}.len);
 			s[o->{{.NameNative}}.list[i].len] = 0; // null terminator
 			o->{{.NameNative}}.list[i].utf8 = s;
 		}
 	}
+   {{- else if eq .ElementCount 0}}
 
-    {{- end}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}
+	{
+		size_t len = o->{{.NameNative}}.len;
+		char *s = malloc(len + 1);
+		memcpy(s, p, len);
+		s[len] = 0; // null terminator
+		o->{{.NameNative}}.utf8 = s;
+		p += len;
+	}
+   {{- else}}{{/* is array */}}
+    {{range $arrayIndex, $element := .Elements}}
 	{
 		size_t len = o->{{.NameNative}}[{{$arrayIndex}}].len ;
 		char *s = malloc(len + 1);
-		memcpy(s, offset, len);
+		memcpy(s, p, len);
 		s[len] = 0; // null terminator
 		o->{{.NameNative}}[{{$arrayIndex}}].utf8 = s;
-		offset += len;
+		p += len;
 	}
-   {{- end}}{{end}}
+    {{- end}}
+   {{- end}}{{/* is array */}}
+
   {{- end}}{{/* type match */}}
  {{- end}}{{/* reverse field range */}}
 {{- end}}{{/* has payloads */}}
