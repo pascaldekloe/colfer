@@ -167,13 +167,12 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 			if array.Len != nil {
 				l, ok := array.Len.(*ast.BasicLit)
 				if !ok {
-					return fmt.Errorf("colfer: unknown array size for field %s", field)
+					return fmt.Errorf("colfer: unknown array lenth type %T for field %s", array.Len, field)
 				}
 				n, err := strconv.Atoi(l.Value)
-				if err != nil {
-					return fmt.Errorf("colfer: illegal array size for field %s: %w", field, err)
+				if err != nil || n < 2 || n > 256 {
+					return fmt.Errorf("colfer: array size %q for field %s not within range [2, 256]", l.Value, field)
 				}
-				// TODO: range check
 
 				field.ElementCount = n
 				colferFieldIndex += n - 1

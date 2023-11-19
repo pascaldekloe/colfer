@@ -39,8 +39,7 @@ satsub(size_t minuend, size_t subtrahend) {
 
 size_t
 gen_base_types_marshal(const struct gen_base_types* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = 33 - 4; // 16-bit size declaration
+	uint64_t word0 = 33 - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + 33;
@@ -227,18 +226,17 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 	uint64_t word4 = v12;
 
 	// copy payloads
+	const uint8_t *max = p + COLFER_MAX;
 	{
-		size_t len = o->s.len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->s.utf8, len);
-		p += len;
+		size_t size = o->s.len;
+		if (max - p < size) return 0;
+		memcpy(p, o->s.utf8, size);
+		p += size;
 	}
 
-	size_t size = p - (uint8_t *)start;
-
-	// finish header
-	word0 |= (uint64_t)(size - 33) << 17 | (1 << 16);
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - 33;
+	word0 |= variable_size << 17;
 	memcpy((uint8_t *)start + (0 * 8), &word0, 8);
 	memcpy((uint8_t *)start + (1 * 8), &word1, 8);
 	memcpy((uint8_t *)start + (2 * 8), &word2, 8);
@@ -250,7 +248,6 @@ gen_base_types_marshal(const struct gen_base_types* o, void* start) {
 
 size_t
 gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
-	// words of fixed section
 	uint64_t word0;
 	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
 	uint64_t word1;
@@ -262,21 +259,15 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
 	uint64_t word4;
 	memcpy(&word4, (uint8_t *)start + (4 * 8), 1);
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
 
 	// unpack .b bool
 	o->bools = word0 >> 24 & 0xff;
@@ -438,34 +429,34 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
 	o->s.len = v12;
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < 33 - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < 33) {
+		switch (fixed_size) {
 		default:
 			return 0;
-		case 4 - 4:
+		case 4:
 			o->i8 = 0;
-		case 5 - 4:
+		case 5:
 			o->u8 = 0;
-		case 6 - 4:
+		case 6:
 			o->i16 = 0;
-		case 7 - 4:
+		case 7:
 			o->u16 = 0;
-		case 8 - 4:
+		case 8:
 			o->i32 = 0;
-		case 9 - 4:
+		case 9:
 			o->u32 = 0;
-		case 10 - 4:
+		case 10:
 			o->i64 = 0;
-		case 11 - 4:
+		case 11:
 			o->u64 = 0;
-		case 12 - 4:
+		case 12:
 			o->f32 = 0;
-		case 16 - 4:
+		case 16:
 			o->f64 = 0;
-		case 24 - 4:
+		case 24:
 			o->t.tv_sec = 0;
 			o->t.tv_nsec = 0;
-		case 32 - 4:
+		case 32:
 			o->s.len = 0;
 			o->s.utf8 = 0;
 		}
@@ -493,8 +484,7 @@ gen_base_types_unmarshal(struct gen_base_types* o, const void* start) {
 
 size_t
 gen_list_types_marshal(const struct gen_list_types* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = 11 - 4; // 16-bit size declaration
+	uint64_t word0 = 11 - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + 11;
@@ -676,64 +666,61 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 	word1 |= v7 << 16;
 
 	// copy payloads
+	const uint8_t *max = p + COLFER_MAX;
 	for (size_t i = o->ss.len; i-- != 0; ) {
 		// TODO: encode size
 	}
 	for (size_t i = o->ss.len; i-- != 0; ) {
-		size_t len = o->ss.list[i].len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->ss.list[i].utf8, len);
+		size_t size = o->ss.list[i].len;
+		if (max - p < size) return 0;
+		memcpy(p, o->ss.list[i].utf8, size);
+		p += size;
 	}
 	{
-		uint64_t *a = (uint64_t *)p;
 		size_t i = o->ts.len;
-		p += i * 8;
-		if ((p - (uint8_t *)start) > COLFER_MAX)
-			return 0;
-		while (i--)
-			a[i] = (uint64_t)o->ts.list[i].tv_sec << 30 | o->ts.list[i].tv_nsec;
+		size_t size = i * 8;
+		if (max - p < size) return 0;
+		while (i--) {
+			uint64_t v = (uint64_t)o->ts.list[i].tv_sec << 30;
+			v |= o->ts.list[i].tv_nsec;
+			memcpy(p, &v, 8);
+			p += 8;
+		}
 	}
 	{
 		size_t size = o->f64s.len * 8;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->f64s.list, size);
 		p += size;
 	}
 	{
 		size_t size = o->f32s.len * 4;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->f32s.list, size);
 		p += size;
 	}
 	{
 		size_t size = o->a64.len * 8;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->a64.list, size);
 		p += size;
 	}
 	{
 		size_t size = o->a32.len * 4;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->a32.list, size);
 		p += size;
 	}
 	{
 		size_t size = o->a8.len * 4;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->a8.list, size);
 		p += size;
 	}
 
-	size_t size = p - (uint8_t *)start;
-
-	// finish header
-	word0 |= (uint64_t)(size - 11) << 17 | (1 << 16);
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - 11;
+	word0 |= variable_size << 17;
 	memcpy((uint8_t *)start + (0 * 8), &word0, 8);
 	memcpy((uint8_t *)start + (1 * 8), &word1, 3);
 
@@ -742,27 +729,20 @@ gen_list_types_marshal(const struct gen_list_types* o, void* start) {
 
 size_t
 gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
-	// words of fixed section
 	uint64_t word0;
 	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
 	uint64_t word1;
 	memcpy(&word1, (uint8_t *)start + (1 * 8), 3);
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
 
 	// unpack .a8 []opaque8
 	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
@@ -917,23 +897,23 @@ gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
 	o->ss.len = v7;
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < 11 - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < 11) {
+		switch (fixed_size) {
 		default:
 			return 0;
-		case 4 - 4:
+		case 4:
 			o->a16.len = 0;
-		case 5 - 4:
+		case 5:
 			o->a32.len = 0;
-		case 6 - 4:
+		case 6:
 			o->a64.len = 0;
-		case 7 - 4:
+		case 7:
 			o->f32s.len = 0;
-		case 8 - 4:
+		case 8:
 			o->f64s.len = 0;
-		case 9 - 4:
+		case 9:
 			o->ts.len = 0;
-		case 10 - 4:
+		case 10:
 			o->ss.len = 0;
 		}
 	}
@@ -1017,8 +997,7 @@ gen_list_types_unmarshal(struct gen_list_types* o, const void* start) {
 
 size_t
 gen_array_types_marshal(const struct gen_array_types* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = 67 - 4; // 16-bit size declaration
+	uint64_t word0 = 67 - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + 67;
@@ -1324,25 +1303,23 @@ gen_array_types_marshal(const struct gen_array_types* o, void* start) {
 	word8 |= v22 << 16;
 
 	// copy payloads
+	const uint8_t *max = p + COLFER_MAX;
 	{
-		size_t len = o->sa2[0].len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->sa2[0].utf8, len);
-		p += len;
+		size_t size = o->sa2[0].len;
+		if (max - p < size) return 0;
+		memcpy(p, o->sa2[0].utf8, size);
+		p += size;
 	}
 	{
-		size_t len = o->sa2[1].len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->sa2[1].utf8, len);
-		p += len;
+		size_t size = o->sa2[1].len;
+		if (max - p < size) return 0;
+		memcpy(p, o->sa2[1].utf8, size);
+		p += size;
 	}
 
-	size_t size = p - (uint8_t *)start;
-
-	// finish header
-	word0 |= (uint64_t)(size - 67) << 17 | (1 << 16);
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - 67;
+	word0 |= variable_size << 17;
 	memcpy((uint8_t *)start + (0 * 8), &word0, 8);
 	memcpy((uint8_t *)start + (1 * 8), &word1, 8);
 	memcpy((uint8_t *)start + (2 * 8), &word2, 8);
@@ -1358,7 +1335,6 @@ gen_array_types_marshal(const struct gen_array_types* o, void* start) {
 
 size_t
 gen_array_types_unmarshal(struct gen_array_types* o, const void* start) {
-	// words of fixed section
 	uint64_t word0;
 	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
 	uint64_t word1;
@@ -1378,21 +1354,15 @@ gen_array_types_unmarshal(struct gen_array_types* o, const void* start) {
 	uint64_t word8;
 	memcpy(&word8, (uint8_t *)start + (8 * 8), 3);
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
 
 	// unpack .f32a2 float32
 	uint64_t v0 = word0 >> 24;
@@ -1651,41 +1621,41 @@ gen_array_types_unmarshal(struct gen_array_types* o, const void* start) {
 	o->sa2[1].len = v22;
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < 67 - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < 67) {
+		switch (fixed_size) {
 		default:
 			return 0;
-		case 11 - 4:
+		case 11:
 			o->f64a3[0] = 0;
 			o->f64a3[1] = 0;
 			o->f64a3[2] = 0;
-		case 35 - 4:
+		case 35:
 			o->u64a2[0] = 0;
 			o->u64a2[1] = 0;
-		case 37 - 4:
+		case 37:
 			o->i32a2[0] = 0;
 			o->i32a2[1] = 0;
-		case 39 - 4:
+		case 39:
 			o->u32a2[0] = 0;
 			o->u32a2[1] = 0;
-		case 41 - 4:
+		case 41:
 			o->i16a2[0] = 0;
 			o->i16a2[1] = 0;
-		case 43 - 4:
+		case 43:
 			o->u16a2[0] = 0;
 			o->u16a2[1] = 0;
-		case 45 - 4:
+		case 45:
 			o->i8a2[0] = 0;
 			o->i8a2[1] = 0;
-		case 47 - 4:
+		case 47:
 			o->u8a2[0] = 0;
 			o->u8a2[1] = 0;
-		case 49 - 4:
+		case 49:
 			o->ta2[0].tv_sec = 0;
 			o->ta2[0].tv_nsec = 0;
 			o->ta2[1].tv_sec = 0;
 			o->ta2[1].tv_nsec = 0;
-		case 65 - 4:
+		case 65:
 			o->sa2[0].len = 0;
 			o->sa2[0].utf8 = 0;
 			o->sa2[1].len = 0;
@@ -1724,8 +1694,7 @@ gen_array_types_unmarshal(struct gen_array_types* o, const void* start) {
 
 size_t
 gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = 18 - 4; // 16-bit size declaration
+	uint64_t word0 = 18 - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + 18;
@@ -1747,10 +1716,9 @@ gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
 	word1 |= v3 << 16;
 	uint64_t word2 = v3 >> (64-16);
 
-	size_t size = p - (uint8_t *)start;
-
-	// finish header
-	word0 |= (uint64_t)(size - 18) << 17 | (1 << 16);
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - 18;
+	word0 |= variable_size << 17;
 	memcpy((uint8_t *)start + (0 * 8), &word0, 8);
 	memcpy((uint8_t *)start + (1 * 8), &word1, 8);
 	memcpy((uint8_t *)start + (2 * 8), &word2, 2);
@@ -1760,7 +1728,6 @@ gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start) {
 
 size_t
 gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
-	// words of fixed section
 	uint64_t word0;
 	memcpy(&word0, (uint8_t *)start + (0 * 8), 8);
 	uint64_t word1;
@@ -1768,21 +1735,15 @@ gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
 	uint64_t word2;
 	memcpy(&word2, (uint8_t *)start + (2 * 8), 2);
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
 
 	// unpack .a8 opaque8
 	o->a8 = word0 >> 24;
@@ -1800,15 +1761,15 @@ gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
 	o->a64 = v3;
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < 18 - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < 18) {
+		switch (fixed_size) {
 		default:
 			return 0;
-		case 4 - 4:
+		case 4:
 			o->a16 = 0;
-		case 6 - 4:
+		case 6:
 			o->a32 = 0;
-		case 10 - 4:
+		case 10:
 			o->a64 = 0;
 		}
 	}
@@ -1818,8 +1779,7 @@ gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start) {
 
 size_t
 gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = 5 - 4; // 16-bit size declaration
+	uint64_t word0 = 5 - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + 5;
@@ -1850,18 +1810,17 @@ gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start) {
 	word0 |= (uint64_t)o->with_snake << 32;
 
 	// copy payloads
+	const uint8_t *max = p + COLFER_MAX;
 	{
-		size_t len = o->pascal_case.len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->pascal_case.utf8, len);
-		p += len;
+		size_t size = o->pascal_case.len;
+		if (max - p < size) return 0;
+		memcpy(p, o->pascal_case.utf8, size);
+		p += size;
 	}
 
-	size_t size = p - (uint8_t *)start;
-
-	// finish header
-	word0 |= (uint64_t)(size - 5) << 17 | (1 << 16);
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - 5;
+	word0 |= variable_size << 17;
 	memcpy((uint8_t *)start + (0 * 8), &word0, 5);
 
 	return size;
@@ -1869,25 +1828,18 @@ gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start) {
 
 size_t
 gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start) {
-	// words of fixed section
 	uint64_t word0;
 	memcpy(&word0, (uint8_t *)start + (0 * 8), 5);
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
 
 	// unpack .PascalCase text
 	uint64_t v0 = word0 >> (24 + 1) & 0x7f;
@@ -1912,11 +1864,11 @@ gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start) {
 	o->with_snake = word0 >> 32;
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < 5 - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < 5) {
+		switch (fixed_size) {
 		default:
 			return 0;
-		case 4 - 4:
+		case 4:
 			o->with_snake = 0;
 		}
 	}

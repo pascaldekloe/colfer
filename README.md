@@ -250,6 +250,9 @@ renamed to clearly discourage their use. For backwards compatibility new fields
 must be added to the end of colfer structs. Thus the number of fields can be
 seen as the schema version.
 
+Serials from Colfer version 1 always start with an octet in range [0x00, 0x7f].
+Any (custom) prefix in range [0x80, 0xff] on version 2 serials will allow for a
+distriction between the two when mixing both formats.
 
 
 ## Performance

@@ -49,8 +49,7 @@ satsub(size_t minuend, size_t subtrahend) {
 
 size_t
 {{.NameNative}}_marshal(const struct {{.NameNative}}* o, void* start) {
-	// fixed section as 64-bit words
-	uint64_t word0 = {{.FixedSize}} - 4; // 16-bit size declaration
+	uint64_t word0 = {{.FixedSize}} - 4 | 0x10000;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + {{.FixedSize}};
@@ -205,13 +204,13 @@ size_t
 {{- if or .HasText .HasList}}
 
 	// copy payloads
+	const uint8_t *max = p + COLFER_MAX;
  {{- range .FieldsReversed}}
   {{- if eq .Type "uint8" "opaque8"}}
    {{- if .TypeList}}
 	{
 		size_t size = o->{{.NameNative}}.len * 4;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
@@ -221,8 +220,7 @@ size_t
    {{- if .TypeList}}
 	{
 		size_t size = o->{{.NameNative}}.len * 4;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
@@ -232,8 +230,7 @@ size_t
    {{- if .TypeList}}
 	{
 		size_t size = o->{{.NameNative}}.len * 8;
-		if (size > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
+		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
@@ -242,13 +239,15 @@ size_t
   {{- else if eq .Type "timestamp"}}
    {{- if .TypeList}}
 	{
-		uint64_t *a = (uint64_t *)p;
 		size_t i = o->{{.NameNative}}.len;
-		p += i * 8;
-		if ((p - (uint8_t *)start) > COLFER_MAX)
-			return 0;
-		while (i--)
-			a[i] = (uint64_t)o->{{.NameNative}}.list[i].tv_sec << 30 | o->{{.NameNative}}.list[i].tv_nsec;
+		size_t size = i * 8;
+		if (max - p < size) return 0;
+		while (i--) {
+			uint64_t v = (uint64_t)o->{{.NameNative}}.list[i].tv_sec << 30;
+			v |= o->{{.NameNative}}.list[i].tv_nsec;
+			memcpy(p, &v, 8);
+			p += 8;
+		}
 	}
    {{- end}}
 
@@ -258,26 +257,24 @@ size_t
 		// TODO: encode size
 	}
 	for (size_t i = o->{{.NameNative}}.len; i-- != 0; ) {
-		size_t len = o->{{.NameNative}}.list[i].len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->{{.NameNative}}.list[i].utf8, len);
+		size_t size = o->{{.NameNative}}.list[i].len;
+		if (max - p < size) return 0;
+		memcpy(p, o->{{.NameNative}}.list[i].utf8, size);
+		p += size;
 	}
    {{- else if eq .ElementCount 0}}
 	{
-		size_t len = o->{{.NameNative}}.len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->{{.NameNative}}.utf8, len);
-		p += len;
+		size_t size = o->{{.NameNative}}.len;
+		if (max - p < size) return 0;
+		memcpy(p, o->{{.NameNative}}.utf8, size);
+		p += size;
 	}
    {{- else}}{{range $arrayIndex, $element := .Elements}}
 	{
-		size_t len = o->{{.NameNative}}[{{$arrayIndex}}].len;
-		if (len > COLFER_MAX - (p - (uint8_t *)start))
-			return 0;
-		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].utf8, len);
-		p += len;
+		size_t size = o->{{.NameNative}}[{{$arrayIndex}}].len;
+		if (max - p < size) return 0;
+		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].utf8, size);
+		p += size;
 	}
    {{- end}}{{end}}
 
@@ -285,10 +282,10 @@ size_t
  {{- end}}{{/* reverse field range */}}
 {{- end}}{{/* has payloads */}}
 
-	size_t size = p - (uint8_t *)start;
+	const size_t size = p - (uint8_t *)start;
+	const size_t variable_size = size - {{.FixedSize}};
+	word0 |= variable_size << 17;
 
-	// finish header
-	word0 |= (uint64_t)(size - {{.FixedSize}}) << 17 | (1 << 16);
 {{- range .FixedWordIndices}}
 	memcpy((uint8_t *)start + ({{.}} * 8), &word{{.}}, 8);
 {{- end}}
@@ -302,7 +299,6 @@ size_t
 
 size_t
 {{.NameNative}}_unmarshal(struct {{.NameNative}}* o, const void* start) {
-	// words of fixed section
 {{- range .FixedWordIndices}}
 	uint64_t word{{.}};
 	memcpy(&word{{.}}, (uint8_t *)start + ({{.}} * 8), 8);
@@ -313,21 +309,16 @@ size_t
 	memcpy(&word{{$index}}, (uint8_t *)start + ({{$index}} * 8), {{.FixedWordRemainderSize}});
 {{- end}}
 
+	const size_t fixed_size = (word0 & 0xffff) + 4;
 	// read cursor at variable section
-	uint8_t* p = (uint8_t *)start + (word0 & 0xffff) + 4;
-
-	uint64_t v = word0 >> 17 & 0x7f;
-	if (((uint64_t)1 << 16 & word0) == 0) {
-		uint64_t tz = __builtin_ctz(v | 0x80) + 1;
-		v <<= (tz << 3) - tz;
-		v &= ~COLFER_MASKS[tz];
-		uint64_t tail;
-		memcpy(&tail, p, 8);
-		v |= tail & COLFER_MASKS[tz];
-		p += tz;
+	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	size_t variable_size = word0 >> 17 & 0x7f;
+	if ((word0 & 0x10000) == 0) {
+		if ((word0 & 0x20000) == 0) return 0;
+		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
 	}
-	if (v > COLFER_MAX) return 0;
-	size_t size = v + (word0 & 0xffff) + 4;
+	const size_t size = fixed_size + variable_size;
+
 
 {{- range .Fields}}
 
@@ -471,8 +462,8 @@ size_t
 {{- end}}{{/* field range */}}
 
 	// clear/undo absent fields
-	if ((word0 & 0xffff) < {{.FixedSize}} - 4) {
-		switch (word0 & 0xffff) {
+	if (fixed_size < {{.FixedSize}}) {
+		switch (fixed_size) {
 		default:
 			return 0;
 {{- range .Fields}}
@@ -482,7 +473,7 @@ size_t
  {{- if eq .Type "bool"}}{{- if not .FirstInBitField}}
   {{- continue}}{{/* packed per eight */}}
  {{- end}}{{end}}
-		case {{.FixedIndex}} - 4:
+		case {{.FixedIndex}}:
 
  {{- if .TypeList}}
 			o->{{.NameNative}}.len = 0;

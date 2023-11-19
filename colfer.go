@@ -189,29 +189,28 @@ func (t *Struct) FieldsReversed() []*Field {
 
 func (t *Struct) SetFixedPositions() {
 	boolCount := 0
-	fixedIndex := 3 // start position
+	t.FixedSize = 3 // header
 	for _, f := range t.Fields {
-		f.FixedIndex = fixedIndex
+		f.FixedIndex = t.FixedSize
 
 		switch {
 		case f.TypeList:
-			fixedIndex++
+			t.FixedSize++
 
 		case f.Type == "bool":
+			f.BoolIndex = boolCount
 			boolCount++
 			if f.FirstInBitField() {
-				fixedIndex++
+				t.FixedSize++
 			} else {
 				f.FixedIndex = -1
 			}
 
 		default:
-			fixedSize := f.TypeFixedSize()
-			fixedIndex += max(fixedSize, fixedSize*f.ElementCount)
+			size := f.TypeFixedSize()
+			t.FixedSize += max(size, size*f.ElementCount)
 		}
 	}
-
-	t.FixedSize = fixedIndex
 }
 
 // FixedWordIndices returns the index of each 64-bit word filled by the fixed

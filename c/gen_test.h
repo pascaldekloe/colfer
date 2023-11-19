@@ -9,7 +9,7 @@ const struct {
 } golden_base_types[] = {
 
 	// all zero
-	{"1d0001"
+	{"1d0001" // 33 bytes fixed, 0 bytes variable
 		"00" // bool
 		"00" // int8
 		"00" // uint8
@@ -29,7 +29,7 @@ const struct {
 	},
 
 	// small values
-	{"1d0003" // fixed size 78, variable size 2
+	{"1d0003" // 33 bytes fixed, 1 byte variable
 		"01" // bool
 		"02" // int8
 		"03" // uint8
@@ -44,7 +44,7 @@ const struct {
 		"0d00000003000000" // timestamp
 		"03" // text
 		// variable section (reversed order)
-		"63" // text
+		"63" // text payload
 		, {
 			.bools = 1, .i8 = 2, .u8 = 3, .i16= 4, .u16 = 5,
 			.i32 = 6, .u32 = 7, .i64 = 8, .u64 = 9,
