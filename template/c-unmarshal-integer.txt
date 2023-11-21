@@ -14,4 +14,4 @@
 		v{{.Index}} <<= (tail_size << 3) - tail_size;
 		v{{.Index}} |= tail & COLFER_MASKS[tail_size];
 	}
-{{- /* no tailing new-line */ -}}
+{{- /* no trailing new-line */ -}}
