@@ -78,10 +78,6 @@ type Package struct {
 	Structs []*Struct
 	// SchemaFiles are the source filenames.
 	SchemaFiles []string
-	// SizeMax is the uper limit expression.
-	SizeMax string
-	// ListMax is the uper limit expression.
-	ListMax string
 	// SuperClass is the fully qualified path.
 	SuperClass string
 	// SuperClassNative is the language specific SuperClass.
@@ -176,8 +172,14 @@ type Struct struct {
 	// TagAdd has optional source code additions.
 	TagAdd []string
 
-	// FixedSize counts the number of fixed bytes in the serial.
+	// FixedSize counts the number of bytes fixed in the serial.
 	FixedSize int
+	// SizeMin is the smallest serial size in bytes possible with only the
+	// first field encoded.
+	SizeMin int
+	// SizeMax is the largest serial size in bytes possible with zero for
+	// structures without such limit.
+	SizeMax int
 }
 
 // FieldsReversed returns .Fields in reversed order.
@@ -188,27 +190,52 @@ func (t *Struct) FieldsReversed() []*Field {
 }
 
 func (t *Struct) SetFixedPositions() {
+	// need boolean postions first for size calculation below
 	boolCount := 0
+	for _, f := range t.Fields {
+		if f.Type == "bool" {
+			f.BoolIndex = boolCount
+			boolCount++
+		}
+	}
+
 	t.FixedSize = 3 // header
 	for _, f := range t.Fields {
 		f.FixedIndex = t.FixedSize
+		t.FixedSize += f.TypeFixedSize() * max(1, f.ElementCount)
+	}
 
-		switch {
-		case f.TypeList:
-			t.FixedSize++
+	t.SizeMin = 3 + t.Fields[0].TypeFixedSize()*max(1, t.Fields[0].ElementCount)
 
-		case f.Type == "bool":
-			f.BoolIndex = boolCount
-			boolCount++
+	t.SizeMax = 3 // header
+	for _, f := range t.Fields {
+		if f.TypeList {
+			t.SizeMax = 0
+			return
+		}
+
+		switch f.Type {
+		case "bool":
 			if f.FirstInBitField() {
-				t.FixedSize++
-			} else {
-				f.FixedIndex = -1
+				t.SizeMax += 1
 			}
-
-		default:
-			size := f.TypeFixedSize()
-			t.FixedSize += max(size, size*f.ElementCount)
+		case "opaque8", "uint8", "int8":
+			t.SizeMax += 1
+		case "opaque16":
+			t.SizeMax += 2
+		case "uint16", "int16":
+			t.SizeMax += 3
+		case "opaque32", "float32":
+			t.SizeMax += 4
+		case "uint32", "int32":
+			t.SizeMax += 5
+		case "opaque64", "float64", "timestamp":
+			t.SizeMax += 8
+		case "uint64", "int64":
+			t.SizeMax += 9
+		case "text":
+			t.SizeMax = 0
+			return
 		}
 	}
 }
@@ -346,12 +373,15 @@ func (f *Field) TypeFixedSize() int {
 	default:
 		return 1
 	case "bool":
-		return -1
+		if f.FirstInBitField() {
+			return 1
+		}
+		return 0 // travels for free
 	case "opaque16":
 		return 2
-	case "float32", "opaque32":
+	case "opaque32", "float32":
 		return 4
-	case "float64", "timestamp", "opaque64":
+	case "opaque64", "float64", "timestamp":
 		return 8
 	}
 }

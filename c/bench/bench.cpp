@@ -19,7 +19,7 @@ const size_t test_data_len = sizeof(test_data) / sizeof(struct bench_colfer);
 
 
 static void BM_marshal_colfer(benchmark::State& state) {
-	void* buf = malloc(COLFER_MAX);
+	void* buf = malloc(bench_colfer_marshal_max);
 
 	for (int i = 0; state.KeepRunning(); i++) {
 		auto data = &test_data[i % test_data_len];
@@ -38,7 +38,7 @@ static void BM_marshal_colfer(benchmark::State& state) {
 static void BM_unmarshal_colfer(benchmark::State& state) {
 	void* serials[test_data_len];
 	for (size_t i = 0; i < test_data_len; i++) {
-		serials[i] = malloc(COLFER_MAX);
+		serials[i] = malloc(bench_colfer_marshal_max);
 		size_t n = bench_colfer_marshal(&test_data[i], serials[i]);
 		if (n == 0) {
 			state.SkipWithError("marshall error");
@@ -133,7 +133,7 @@ static void BM_unmarshal_protobuf(benchmark::State& state) {
 }
 
 static void BM_marshal_flatbuffers(benchmark::State& state) {
-	flatbuffers::FlatBufferBuilder fbb(COLFER_MAX);
+	flatbuffers::FlatBufferBuilder fbb(bench_colfer_marshal_max);
 
 	for (int i = 0; state.KeepRunning(); i++) {
 		auto data = test_data[i % test_data_len];
@@ -151,7 +151,7 @@ static void BM_marshal_flatbuffers(benchmark::State& state) {
 }
 
 static void BM_unmarshal_flatbuffers(benchmark::State& state) {
-	flatbuffers::FlatBufferBuilder fbb(COLFER_MAX);
+	flatbuffers::FlatBufferBuilder fbb(bench_colfer_marshal_max);
 
 	void* serials[test_data_len];
 	for (size_t i = 0; i < test_data_len; ++i) {

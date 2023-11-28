@@ -19,9 +19,6 @@ var (
 	format  = flag.Bool("f", false, "Normalize the format of all schema input on the fly.")
 	verbose = flag.Bool("v", false, "Enable verbose reporting to "+italic+"standard error"+clear+".")
 
-	sizeMax = flag.String("s", "16 * 1024 * 1024", "Set the default upper limit for serial byte sizes. The\n`expression` is applied to the target language under the name\nColferSizeMax.")
-	listMax = flag.String("l", "64 * 1024", "Set the default upper limit for the number of elements in a\nlist. The `expression` is applied to the target language under\nthe name ColferListMax.")
-
 	superClass  = flag.String("x", "", "Make all generated classes extend a super `class`.")
 	interfaces  = flag.String("i", "", "Make all generated classes implement one or more `interfaces`.\nUse commas as a list separator.")
 	tagFiles    = flag.String("t", "", "Supply custom tags with one or more `files`. Use commas as a list\nseparator. See the TAGS section for details.")
@@ -151,8 +148,6 @@ func main() {
 
 	for _, p := range packages {
 		p.Name = path.Join(*prefix, p.Name)
-		p.SizeMax = *sizeMax
-		p.ListMax = *listMax
 		p.SuperClass = *superClass
 		if *interfaces != "" {
 			p.Interfaces = strings.Split(*interfaces, ",")
@@ -225,16 +220,12 @@ func printManual() {
 	synopsisSection := bold + "SYNOPSIS\n\t" + name + clear + " [" + bold + "-h" + clear + "]\n\t" +
 		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
 		bold + "-b" + clear + " directory] [" +
-		bold + "-p" + clear + " package] \\\n\t\t[" +
-		bold + "-s" + clear + " expression] [" +
-		bold + "-l" + clear + " expression] " + bold + "C" + clear +
+		bold + "-p" + clear + " package] " + bold + "C" + clear +
 		" [file ...]\n\t" +
 		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
 		bold + "-b" + clear + " directory] [" +
 		bold + "-p" + clear + " package] [" +
-		bold + "-t" + clear + " files] \\\n\t\t[" +
-		bold + "-s" + clear + " expression] [" +
-		bold + "-l" + clear + " expression] " + bold + "Go" + clear +
+		bold + "-t" + clear + " files] " + bold + "Go" + clear +
 		" [file ...]\n\t" +
 		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
 		bold + "-b" + clear + " directory] [" +
@@ -242,15 +233,11 @@ func printManual() {
 		bold + "-t" + clear + " files] \\\n\t\t[" +
 		bold + "-x" + clear + " class] [" +
 		bold + "-i" + clear + " interfaces] [" +
-		bold + "-c" + clear + " file] \\\n\t\t[" +
-		bold + "-s" + clear + " expression] [" +
-		bold + "-l" + clear + " expression] " + bold + "Java" + clear +
+		bold + "-c" + clear + " file] " + bold + "Java" + clear +
 		" [file ...]\n\t" +
 		bold + name + clear + " [" + bold + "-vf" + clear + "] [" +
 		bold + "-b" + clear + " directory] [" +
-		bold + "-p" + clear + " package] \\\n\t\t[" +
-		bold + "-s" + clear + " expression] [" +
-		bold + "-l" + clear + " expression] " + bold + "JavaScript" + clear +
+		bold + "-p" + clear + " package] " + bold + "JavaScript" + clear +
 		" [file ...]\n"
 
 	descriptionSection := bold + "DESCRIPTION" + clear + "\n" +
@@ -281,8 +268,8 @@ func printManual() {
 		"\twithout arguments.\n"
 
 	examplesSection := bold + "EXAMPLES" + clear + "\n" +
-		"\tCompile ./io.colf with compact limits as C:\n\n" +
-		"\t\t" + name + " -b src -s 2048 -l 96 C io.colf\n\n" +
+		"\tCompile ./io.colf into the src directory as C:\n\n" +
+		"\t\t" + name + " -b src C io.colf\n\n" +
 		"\tCompile ./*.colf with a common parent as Java:\n\n" +
 		"\t\t" + name + " -p com.example.model -x com.example.io.IOBean Java\n"
 

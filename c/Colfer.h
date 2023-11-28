@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Upper boundary for octets in a Colfer serial.
-#define COLFER_MAX (16 * 1024 * 1024)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,14 +60,19 @@ struct gen_base_types {
 // Boolean fields of struct gen_base_types.
 #define GEN_BASE_TYPES_B_FLAG (1 << 0)
 
-// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
-// return signals that the data in o exceeds COLFER_MAX.
-size_t
-gen_base_types_marshal(const struct gen_base_types* o, void* start);
+// octet boundaries for gen_base_types_marshal output
+#define gen_base_types_marshal_min 33
+#define gen_base_types_marshal_max 4096
 
-// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
-// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
-// fields are allocated including null terminator. Caller owns the memory.
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_base_types_marshal_min, and at most gen_base_types_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_base_types_marshal(const struct gen_base_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
+// and at most 4096 octets. A zero return signals malformed data.
+// Each UTF-8 string includes a null terminator. Caller owns the memory.
 size_t
 gen_base_types_unmarshal(struct gen_base_types* o, const void* start);
 
@@ -129,14 +131,19 @@ struct gen_list_types {
 	} ss;
 };
 
-// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
-// return signals that the data in o exceeds COLFER_MAX.
-size_t
-gen_list_types_marshal(const struct gen_list_types* o, void* start);
+// octet boundaries for gen_list_types_marshal output
+#define gen_list_types_marshal_min 11
+#define gen_list_types_marshal_max 4096
 
-// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
-// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
-// fields are allocated including null terminator. Caller owns the memory.
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_list_types_marshal_min, and at most gen_list_types_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_list_types_marshal(const struct gen_list_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
+// and at most 4096 octets. A zero return signals malformed data.
+// Each UTF-8 string includes a null terminator. Caller owns the memory.
 size_t
 gen_list_types_unmarshal(struct gen_list_types* o, const void* start);
 
@@ -181,14 +188,19 @@ struct gen_array_types {
 	} sa2[2];
 };
 
-// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
-// return signals that the data in o exceeds COLFER_MAX.
-size_t
-gen_array_types_marshal(const struct gen_array_types* o, void* start);
+// octet boundaries for gen_array_types_marshal output
+#define gen_array_types_marshal_min 67
+#define gen_array_types_marshal_max 4096
 
-// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
-// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
-// fields are allocated including null terminator. Caller owns the memory.
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_array_types_marshal_min, and at most gen_array_types_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_array_types_marshal(const struct gen_array_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 11
+// and at most 4096 octets. A zero return signals malformed data.
+// Each UTF-8 string includes a null terminator. Caller owns the memory.
 size_t
 gen_array_types_unmarshal(struct gen_array_types* o, const void* start);
 
@@ -208,14 +220,17 @@ struct gen_opaque_types {
 	uint64_t a64;
 };
 
-// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
-// return signals that the data in o exceeds COLFER_MAX.
-size_t
-gen_opaque_types_marshal(const struct gen_opaque_types* o, void* start);
+// octet boundaries for gen_opaque_types_marshal output
+#define gen_opaque_types_marshal_min 18
+#define gen_opaque_types_marshal_max 18
 
-// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
-// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
-// fields are allocated including null terminator. Caller owns the memory.
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_opaque_types_marshal_min, and at most gen_opaque_types_marshal_max.
+size_t
+gen_opaque_types_marshal(const struct gen_opaque_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
+// and at most 4096 octets. A zero return signals malformed data.
 size_t
 gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start);
 
@@ -232,14 +247,19 @@ struct gen_dromedary_case {
 	uint8_t with_snake;
 };
 
-// Marshal encodes o as Colfer at start, up to COLFER_MAX octets in size. A zero
-// return signals that the data in o exceeds COLFER_MAX.
-size_t
-gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* start);
+// octet boundaries for gen_dromedary_case_marshal output
+#define gen_dromedary_case_marshal_min 5
+#define gen_dromedary_case_marshal_max 4096
 
-// Unmarshal decodes o as Colfer from start. The number of octets consumed is at
-// least 3, and at most COLFER_MAX. A zero return signals malformed data. String
-// fields are allocated including null terminator. Caller owns the memory.
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_dromedary_case_marshal_min, and at most gen_dromedary_case_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
+// and at most 4096 octets. A zero return signals malformed data.
+// Each UTF-8 string includes a null terminator. Caller owns the memory.
 size_t
 gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start);
 

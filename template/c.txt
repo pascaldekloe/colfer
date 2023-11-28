@@ -49,7 +49,7 @@ satsub(size_t minuend, size_t subtrahend) {
 
 size_t
 {{.NameNative}}_marshal(const struct {{.NameNative}}* o, void* start) {
-	uint64_t word0 = {{.FixedSize}} - 4 | 0x10000;
+	uint64_t word0 = {{.FixedSize}} << 12;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + {{.FixedSize}};
@@ -204,7 +204,7 @@ size_t
 {{- if or .HasText .HasList}}
 
 	// copy payloads
-	const uint8_t *max = p + COLFER_MAX;
+	const uint8_t *max = p + 0xfff;
  {{- range .FieldsReversed}}
   {{- if eq .Type "uint8" "opaque8"}}
    {{- if .TypeList}}
@@ -283,8 +283,7 @@ size_t
 {{- end}}{{/* has payloads */}}
 
 	const size_t size = p - (uint8_t *)start;
-	const size_t variable_size = size - {{.FixedSize}};
-	word0 |= variable_size << 17;
+	word0 |= size;
 
 {{- range .FixedWordIndices}}
 	memcpy((uint8_t *)start + ({{.}} * 8), &word{{.}}, 8);
@@ -309,16 +308,12 @@ size_t
 	memcpy(&word{{$index}}, (uint8_t *)start + ({{$index}} * 8), {{.FixedWordRemainderSize}});
 {{- end}}
 
-	const size_t fixed_size = (word0 & 0xffff) + 4;
+	const size_t size = word0 & 0xfff;
+	const size_t fixed_size = (word0 >> 12) & 0x7f;
+	if ((word0 & 0xfff) < fixed_size) return 0;
+
 	// read cursor at variable section
 	const uint8_t *p = (const uint8_t *)start + fixed_size;
-	size_t variable_size = word0 >> 17 & 0x7f;
-	if ((word0 & 0x10000) == 0) {
-		if ((word0 & 0x20000) == 0) return 0;
-		variable_size = variable_size >> 1 | (size_t)*p++ << 6;
-	}
-	const size_t size = fixed_size + variable_size;
-
 
 {{- range .Fields}}
 
@@ -514,7 +509,7 @@ size_t
 {{- if or .HasText .HasList}}{{/* has payloads */}}
 
 	// copy payloads
-	size_t offset = size;
+	size_t offset = word0 & 0xfff;
  {{- range .FieldsReversed}}
   {{- if eq .Type "opaque8" "opaque16" "opaque32" "opaque64" "float32" "float64"}}
    {{- if .TypeList}}
@@ -639,7 +634,7 @@ size_t
  {{- end}}{{/* reverse field range */}}
 {{- end}}{{/* has payloads */}}
 
-	return size;
+	return word0 & 0xfff;
 }
 
 {{- end}}{{/* struct range */}}

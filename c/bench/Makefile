@@ -14,7 +14,7 @@ bench.txt: bench
 	@$(CC) --version >> $@
 
 Colfer.h Colfer.c &: ../../testdata/bench/scheme.colf ../../*.go ../../cmd/colf/*.go
-	$(COLF) -f -s 1024 C ../../testdata/bench/scheme.colf
+	$(COLF) -f C ../../testdata/bench/scheme.colf
 
 # ProtoBuf
 scheme.pb.cc: ../../testdata/bench/scheme.proto

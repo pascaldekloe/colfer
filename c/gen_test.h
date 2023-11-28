@@ -9,7 +9,7 @@ const struct {
 } golden_base_types[] = {
 
 	// all zero
-	{"1d0001" // 33 bytes fixed, 0 bytes variable
+	{"211002"
 		"00" // bool
 		"00" // int8
 		"00" // uint8
@@ -29,7 +29,7 @@ const struct {
 	},
 
 	// small values
-	{"1d0003" // 33 bytes fixed, 1 byte variable
+	{"221002"
 		"01" // bool
 		"02" // int8
 		"03" // uint8

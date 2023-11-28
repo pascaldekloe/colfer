@@ -40,8 +40,8 @@ int main(void) {
 		}
 	}
 
-	char buf[COLFER_MAX];
-	char hex[COLFER_MAX * 2 + 1];
+	char buf[4096];
+	char hex[4096 * 2 + 1];
 
 	printf("TEST encoding roundtrip...\n");
 	for (int i = 0; i < n; ++i) {
