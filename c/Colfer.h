@@ -10,49 +10,49 @@ extern "C" {
 #endif
 
 
-// BaseTypes contains common data-types.
+// BaseTypes contains all data types understood by Colfer.
 struct gen_base_types {
- 	// B tests binary values.
-	// GEN_BASE_TYPES_B_FLAG in bools bit-field; GEN_BASE_TYPES_B_FLAG;
- 
- 	// I8 tests signed integer values.
-	int8_t i8;
- 
- 	// U8 tests unsigned integer values.
+	// Test 8 bit–unsigned integers.
 	uint8_t u8;
  
- 	// I16 tests signed integer values.
-	int16_t i16;
+	// Test 8 bit–signed integers.
+	int8_t i8;
  
- 	// U16 tests unsigned integer values.
+	// Test 16 bit–unsigned integers.
 	uint16_t u16;
  
- 	// I32 tests signed integer values.
-	int32_t i32;
+	// Test 16 bit–signed integers.
+	int16_t i16;
  
- 	// U32 tests unsigned integer values.
+	// Test 32 bit–unsigned integers.
 	uint32_t u32;
  
- 	// I64 tests signed integer values.
-	int64_t i64;
+	// Test 32 bit–signed integers.
+	int32_t i32;
  
- 	// U64 tests unsigned integer values.
+	// Test 64 bit–unsigned integers.
 	uint64_t u64;
  
- 	// F32 tests floating-point values.
+	// Test 64 bit–signed integers.
+	int64_t i64;
+ 
+	// Tests single precision–floating points.
 	float f32;
  
- 	// F64 tests floating-point values.
+	// Tests double precision–floating points.
 	double f64;
  
- 	// T tests timestamps (with nanosecond precision).
+	// Test timestamps (with nanosecond precision).
 	struct timespec t;
  
- 	// C tests Unicode strings of variable size.
+	// Test Unicode strings of variable size.
 	struct {
 		const char* utf8;
 		size_t len; // octet count
 	} s;
+ 
+	// Test binary flags.
+	// GEN_BASE_TYPES_B_FLAG in bools bit-field; GEN_BASE_TYPES_B_FLAG;
 
 	// Bit field for booleans.
 	unsigned int bools;
@@ -77,58 +77,187 @@ size_t
 gen_base_types_unmarshal(struct gen_base_types* o, const void* start);
 
 
-// ListTypes contains each BaseType supported in list form.
-struct gen_list_types {
+// ArrayTypes contains each BaseType supported in array form,
+// which is all but bool(ean).
+struct gen_array_types {
+	// Test 8 bit–unsigned integers. Two elements set the
+	// minimium size to 5.
+	uint8_t u8n2[2];
  
+	// Test 8 bit–signed integers.
+	int8_t i8n2[2];
+ 
+	// Test 16 bit–unsigned integers.
+	uint32_t u16n2[2];
+ 
+	// Test 16 bit–signed integers.
+	int32_t i16n2[2];
+ 
+	// Test 32 bit–unsigned integers.
+	uint16_t u32n2[2];
+ 
+	// Test 32 bit–signed integers.
+	int16_t i32n2[2];
+ 
+	// Test 64 bit–unsigned integers.
+	uint64_t u64n2[2];
+ 
+	// Test 64 bit–signed integers.
+	int64_t i64n2[2];
+ 
+	// Test single precision–floating points.
+	float f32n2[2];
+ 
+	// Test double precision–floating points.
+	double f64n2[2];
+ 
+	// Test timestamps (with nanosecond precision).
+	struct timespec tn2[2];
+ 
+	// Test Unicode strings of variable size.
+	struct {
+		const char* utf8;
+		size_t len; // octet count
+	} sn2[2];
+};
+
+// octet boundaries for gen_array_types_marshal output
+#define gen_array_types_marshal_min 61
+#define gen_array_types_marshal_max 4096
+
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_array_types_marshal_min, and at most gen_array_types_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_array_types_marshal(const struct gen_array_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 5
+// and at most 4096 octets. A zero return signals malformed data.
+// Each UTF-8 string includes a null terminator. Caller owns the memory.
+size_t
+gen_array_types_unmarshal(struct gen_array_types* o, const void* start);
+
+
+// OpaqueTypes mixes fixed and variable-sized values.
+struct gen_opaque_types {
+	// Test 8-bit values.
+	uint8_t a8;
+ 
+	// Test 8-bit arrays.
+	uint8_t a8n2[2];
+ 
+	// Test 8-bit lists.
 	struct {
 		uint8_t* list;
 		size_t len; // element count
-	} a8;
+	} a8l;
  
+	// Test 16-bit values.
+	uint16_t a16;
  
+	// Test 16-bit arrays.
+	uint16_t a16n2[2];
+ 
+	// Test 16-bit lists.
 	struct {
 		uint16_t* list;
 		size_t len; // element count
-	} a16;
+	} a16l;
  
+	// Test 32-bit values.
+	uint32_t a32;
  
+	// Test 32-bit arrays.
+	uint32_t a32n2[2];
+ 
+	// Test 32-bit lists.
 	struct {
 		uint32_t* list;
 		size_t len; // element count
-	} a32;
+	} a32l;
  
+	// Test 64-bit values.
+	uint64_t a64;
  
+	// Test 64-bit arrays.
+	uint64_t a64n2[2];
+ 
+	// Test 64-bit lists.
 	struct {
 		uint64_t* list;
 		size_t len; // element count
-	} a64;
+	} a64l;
+};
+
+// octet boundaries for gen_opaque_types_marshal output
+#define gen_opaque_types_marshal_min 52
+#define gen_opaque_types_marshal_max 4096
+
+// Encode a struct as Colfer into a buffer. The encoder writes at least
+// gen_opaque_types_marshal_min, and at most gen_opaque_types_marshal_max.
+// The return is zero only when encoding halted on the size maximum.
+size_t
+gen_opaque_types_marshal(const struct gen_opaque_types* o, void* buf);
+
+// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
+// and at most 4096 octets. A zero return signals malformed data.
+// Caller owns the memory.
+size_t
+gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start);
+
+
+// ListTypes contains each type supported in list form.
+struct gen_list_types {
+	// Test 8-bit values.
+	struct {
+		uint8_t* list;
+		size_t len; // element count
+	} a8l;
  
+	// Test 16-bit values.
+	struct {
+		uint16_t* list;
+		size_t len; // element count
+	} a16l;
  
+	// Test 32-bit values.
+	struct {
+		uint32_t* list;
+		size_t len; // element count
+	} a32l;
+ 
+	// Test 64-bit values.
+	struct {
+		uint64_t* list;
+		size_t len; // element count
+	} a64l;
+ 
+	// Test single precision–floating points.
 	struct {
 		float* list;
 		size_t len; // element count
-	} f32s;
+	} f32l;
  
- 
+	// Test double precision–floating points.
 	struct {
 		double* list;
 		size_t len; // element count
-	} f64s;
+	} f64l;
  
- 
+	// Test timestamps (with nanosecond precision).
 	struct {
 		struct timespec* list;
 		size_t len; // element count
-	} ts;
+	} tl;
  
- 
+	// Test Unicode strings of variable size.
 	struct {
 		struct {
 			const char* utf8;
 			size_t len; // octet count
 		}* list;
 		size_t len; // element count
-	} ss;
+	} sl;
 };
 
 // octet boundaries for gen_list_types_marshal output
@@ -148,118 +277,27 @@ size_t
 gen_list_types_unmarshal(struct gen_list_types* o, const void* start);
 
 
-// ArrayTypes contains each BaseType supported in array form.
-// The odd order is to breach some word boundaries in the fixed section.
-struct gen_array_types {
- 
-	float f32a2[2];
- 
- 
-	double f64a3[3];
- 
- 
-	uint64_t u64a2[2];
- 
- 
-	int32_t i32a2[2];
- 
- 
-	uint32_t u32a2[2];
- 
- 
-	int16_t i16a2[2];
- 
- 
-	uint16_t u16a2[2];
- 
- 
-	int8_t i8a2[2];
- 
- 
-	uint8_t u8a2[2];
- 
- 
-	struct timespec ta2[2];
- 
- 
-	struct {
-		const char* utf8;
-		size_t len; // octet count
-	} sa2[2];
-};
-
-// octet boundaries for gen_array_types_marshal output
-#define gen_array_types_marshal_min 67
-#define gen_array_types_marshal_max 4096
-
-// Encode a struct as Colfer into a buffer. The encoder writes at least
-// gen_array_types_marshal_min, and at most gen_array_types_marshal_max.
-// The return is zero only when encoding halted on the size maximum.
-size_t
-gen_array_types_marshal(const struct gen_array_types* o, void* buf);
-
-// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 11
-// and at most 4096 octets. A zero return signals malformed data.
-// Each UTF-8 string includes a null terminator. Caller owns the memory.
-size_t
-gen_array_types_unmarshal(struct gen_array_types* o, const void* start);
-
-
-// OpaqueTypes mixes fixed and variable-byte values.
-struct gen_opaque_types {
- 	// A8 tests 8-bit values.
-	uint8_t a8;
- 
- 	// A16 tests 16-bit values.
-	uint16_t a16;
- 
- 	// A32 tests 32-bit values.
-	uint32_t a32;
- 
- 	// A64 tests 64-bit values.
-	uint64_t a64;
-};
-
-// octet boundaries for gen_opaque_types_marshal output
-#define gen_opaque_types_marshal_min 18
-#define gen_opaque_types_marshal_max 18
-
-// Encode a struct as Colfer into a buffer. The encoder writes at least
-// gen_opaque_types_marshal_min, and at most gen_opaque_types_marshal_max.
-size_t
-gen_opaque_types_marshal(const struct gen_opaque_types* o, void* buf);
-
-// Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
-// and at most 4096 octets. A zero return signals malformed data.
-size_t
-gen_opaque_types_unmarshal(struct gen_opaque_types* o, const void* start);
-
-
 // DromedaryCase mixes name conventions.
+// Its serial size has a natural limit.
 struct gen_dromedary_case {
+	// title-case option
+	int32_t pascal_case;
  
-	struct {
-		const char* utf8;
-		size_t len; // octet count
-	} pascal_case;
- 
- 
+	// best-case scenario
 	uint8_t with_snake;
 };
 
 // octet boundaries for gen_dromedary_case_marshal output
 #define gen_dromedary_case_marshal_min 5
-#define gen_dromedary_case_marshal_max 4096
+#define gen_dromedary_case_marshal_max 9
 
 // Encode a struct as Colfer into a buffer. The encoder writes at least
 // gen_dromedary_case_marshal_min, and at most gen_dromedary_case_marshal_max.
-// The return is zero only when encoding halted on the size maximum.
 size_t
 gen_dromedary_case_marshal(const struct gen_dromedary_case* o, void* buf);
 
 // Decode a struct from a data pointer as Colfer. Unmarshal reads at least 4
 // and at most 4096 octets. A zero return signals malformed data.
-// Each UTF-8 string includes a null terminator. Caller owns the memory.
 size_t
 gen_dromedary_case_unmarshal(struct gen_dromedary_case* o, const void* start);
 

@@ -108,28 +108,28 @@ int gen_base_types_dfr(const struct gen_base_types a, const struct gen_base_type
 }
 
 int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_types b) {
-	bool dfr = a.f32s.len != b.f32s.len
-	        || a.f64s.len != b.f64s.len
-	        || a.ss.len != b.ss.len
+	bool dfr = a.f32l.len != b.f32l.len
+	        || a.f64l.len != b.f64l.len
+	        || a.sl.len != b.sl.len
 	;
 
-	for (size_t i = 0, n = a.f32s.len; i < n; ++i) {
-		float fa = a.f32s.list[i];
-		float fb = b.f32s.list[i];
+	for (size_t i = 0, n = a.f32l.len; i < n; ++i) {
+		float fa = a.f32l.list[i];
+		float fb = b.f32l.list[i];
 		dfr |= fa == fa && fa != fb;
 		dfr |= fa != fa && fb == fb;
 	}
-	for (size_t i = 0, n = a.f64s.len; i < n; ++i) {
-		double fa = a.f64s.list[i];
-		double fb = b.f64s.list[i];
+	for (size_t i = 0, n = a.f64l.len; i < n; ++i) {
+		double fa = a.f64l.list[i];
+		double fb = b.f64l.list[i];
 		dfr |= fa == fa && fa != fb;
 		dfr |= fa != fa && fb == fb;
 	}
 
-	for (size_t i = 0, n = a.ss.len; i < n; ++i) {
-		size_t len = a.ss.list[i].len;
-		dfr |= len != b.ss.list[i].len;
-		dfr |= memcmp(a.ss.list[i].utf8, b.ss.list[i].utf8, len) != 0;
+	for (size_t i = 0, n = a.sl.len; i < n; ++i) {
+		size_t len = a.sl.list[i].len;
+		dfr |= len != b.sl.list[i].len;
+		dfr |= memcmp(a.sl.list[i].utf8, b.sl.list[i].utf8, len) != 0;
 	}
 
 	return dfr;
@@ -139,28 +139,31 @@ void gen_base_types_dump(const struct gen_base_types o) {
 	char buf[1024];
 
 	printf("{ ");
-	printf("b=%d ", (o.bools & GEN_BASE_TYPES_B_FLAG));
-	printf("i8=%" PRId8 " ", o.i8);
+
 	printf("u8=%" PRIu8 " ", o.u8);
-	printf("i16=%" PRId16 " ", o.i16);
+	printf("i8=%" PRId8 " ", o.i8);
 	printf("u16=%" PRIu16 " ", o.u16);
-	printf("i32=%" PRId32 " ", o.i32);
+	printf("i16=%" PRId16 " ", o.i16);
 	printf("u32=%" PRIu32 " ", o.u32);
-	printf("i64=%" PRId64 " ", o.i64);
+	printf("i32=%" PRId32 " ", o.i32);
 	printf("u64=%" PRIu64 " ", o.u64);
+	printf("i64=%" PRId64 " ", o.i64);
+
 	printf("f32=%f ", o.f32);
 	printf("f64=%f ", o.f64);
-	printf("t.tv_sec=%lld ", (long long) o.t.tv_sec);
-	printf("t.tv_nsec=%lld ", (long long) o.t.tv_nsec);
+
+	printf("t=%lld.%09ld s ", (long long) o.t.tv_sec, (long)o.t.tv_nsec);
 
 	if (!o.s.len) {
 		printf("s=0x ");
 	} else if (o.s.len > sizeof(buf) / 2) {
-		printf("s=%zuB ", o.s.len);
+		printf("s=%zu B ", o.s.len);
 	} else {
 		hexstr(buf, o.s.utf8, o.s.len);
 		printf("s=0x%s ", buf);
 	}
+
+	printf("b=%d ", (o.bools & GEN_BASE_TYPES_B_FLAG));
 
 	putchar('}');
 }
@@ -169,23 +172,46 @@ void gen_list_types_dump(const struct gen_list_types o) {
 	char buf[1024];
 
 	printf("{ ");
-	printf("f32s=[");
-	for (size_t i = 0; i < o.f32s.len; ++i)
-		printf(" %f", o.f32s.list[i]);
+
+	printf("a8l=[");
+	for (size_t i = 0; i < o.a8l.len; ++i)
+		printf(" %x", o.a8l.list[i]);
 	printf(" ] ");
-	printf("f64s=[");
-	for (size_t i = 0; i < o.f64s.len; ++i)
-		printf(" %f", o.f64s.list[i]);
+	printf("a16l=[");
+	for (size_t i = 0; i < o.a16l.len; ++i)
+		printf(" %x", o.a16l.list[i]);
+	printf(" ] ");
+	printf("a32l=[");
+	for (size_t i = 0; i < o.a32l.len; ++i)
+		printf(" %x", o.a32l.list[i]);
+	printf(" ] ");
+	printf("a64l=[");
+	for (size_t i = 0; i < o.a64l.len; ++i)
+		printf(" %llx", o.a64l.list[i]);
 	printf(" ] ");
 
-	printf("ss=[");
-	for (size_t i = 0; i < o.ss.len; ++i) {
-		if (!o.ss.list[i].len) {
+	printf("f32l=[");
+	for (size_t i = 0; i < o.f32l.len; ++i)
+		printf(" %f", o.f32l.list[i]);
+	printf(" ] ");
+	printf("f64l=[");
+	for (size_t i = 0; i < o.f64l.len; ++i)
+		printf(" %f", o.f64l.list[i]);
+	printf(" ] ");
+
+	printf("tl=[");
+	for (size_t i = 0; i < o.tl.len; ++i)
+		printf(" %lld.%09ld s", (long long)o.tl.list[i].tv_sec, (long)o.tl.list[i].tv_nsec);
+	printf(" ] ");
+
+	printf("sl=[");
+	for (size_t i = 0; i < o.sl.len; ++i) {
+		if (!o.sl.list[i].len) {
 			printf(" 0x ");
-		} else if (o.ss.list[i].len > sizeof(buf) / 2) {
-			printf(" %zuB ", o.ss.list[i].len);
+		} else if (o.sl.list[i].len > sizeof(buf) / 2) {
+			printf(" %zuB ", o.sl.list[i].len);
 		} else {
-			hexstr(buf, o.ss.list[i].utf8, o.ss.list[i].len);
+			hexstr(buf, o.sl.list[i].utf8, o.sl.list[i].len);
 			printf(" 0x%s ", buf);
 		}
 	}

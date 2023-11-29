@@ -21,7 +21,7 @@ struct {{.NameNative}} {
 {{- range .Fields}}
  {{- if ne .Index 0}}{{/* newline separator */}}
  {{end}}
- {{.DocText "\t// "}}
+{{.DocText "\t// "}}
  {{- if not .TypeList}}
   {{- if eq .Type "bool"}}
 	// {{.NameNative}} in bools bit-field;

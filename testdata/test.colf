@@ -1,83 +1,128 @@
 // Package gen tests all supported data types.
 package gen
 
-// BaseTypes contains common data-types.
+// BaseTypes contains all data types understood by Colfer.
 type BaseTypes struct {
-	// B tests binary values.
-	b bool
-
-	// I8 tests signed integer values.
-	i8 int8
-	// U8 tests unsigned integer values.
+	// Test 8 bit–unsigned integers.
 	u8 uint8
-	// I16 tests signed integer values.
-	i16 int16
-	// U16 tests unsigned integer values.
+	// Test 8 bit–signed integers.
+	i8 int8
+	// Test 16 bit–unsigned integers.
 	u16 uint16
-	// I32 tests signed integer values.
-	i32 int32
-	// U32 tests unsigned integer values.
+	// Test 16 bit–signed integers.
+	i16 int16
+	// Test 32 bit–unsigned integers.
 	u32 uint32
-	// I64 tests signed integer values.
-	i64 int64
-	// U64 tests unsigned integer values.
+	// Test 32 bit–signed integers.
+	i32 int32
+	// Test 64 bit–unsigned integers.
 	u64 uint64
+	// Test 64 bit–signed integers.
+	i64 int64
 
-	// F32 tests floating-point values.
+	// Tests single precision–floating points.
 	f32 float32
-	// F64 tests floating-point values.
+	// Tests double precision–floating points.
 	f64 float64
 
-	// T tests timestamps (with nanosecond precision).
+	// Test timestamps (with nanosecond precision).
 	t timestamp
-	// C tests Unicode strings of variable size.
+	// Test Unicode strings of variable size.
 	s text
+	// Test binary flags.
+	b bool
 }
 
-// ListTypes contains each BaseType supported in list form.
-type ListTypes struct {
-	a8 []opaque8
-	a16 []opaque16
-	a32 []opaque32
-	a64 []opaque64
-	f32s []float32
-	f64s []float64
-	ts []timestamp
-	ss []text
-}
-
-// ArrayTypes contains each BaseType supported in array form.
-// The odd order is to breach some word boundaries in the fixed section.
+// ArrayTypes contains each BaseType supported in array form,
+// which is all but bool(ean).
 type ArrayTypes struct {
-	f32a2 [2]float32
-	f64a3 [3]float64
-	u64a2 [2]uint64
-	i32a2 [2]int32
-	u32a2 [2]uint32
-	i16a2 [2]int16
-	u16a2 [2]uint16
-	i8a2  [2]int8
-	u8a2  [2]uint8
-	ta2   [2]timestamp
-	sa2   [2]text
+	// Test 8 bit–unsigned integers. Two elements set the
+	// minimium size to 5.
+	u8n2  [2]uint8
+	// Test 8 bit–signed integers.
+	i8n2  [2]int8
+	// Test 16 bit–unsigned integers.
+	u16n2 [2]uint32
+	// Test 16 bit–signed integers.
+	i16n2 [2]int32
+	// Test 32 bit–unsigned integers.
+	u32n2 [2]uint16
+	// Test 32 bit–signed integers.
+	i32n2 [2]int16
+	// Test 64 bit–unsigned integers.
+	u64n2 [2]uint64
+	// Test 64 bit–signed integers.
+	i64n2 [2]int64
+
+	// Test single precision–floating points.
+	f32n2 [2]float32
+	// Test double precision–floating points.
+	f64n2 [2]float64
+
+	// Test timestamps (with nanosecond precision).
+	tn2   [2]timestamp
+	// Test Unicode strings of variable size.
+	sn2   [2]text
 }
 
-// OpaqueTypes mixes fixed and variable-byte values.
+// OpaqueTypes mixes fixed and variable-sized values.
 type OpaqueTypes struct {
-	// A8 tests 8-bit values.
+	// Test 8-bit values.
 	a8 opaque8
-	// A16 tests 16-bit values.
-	a16 opaque16
-	// A32 tests 32-bit values.
-	a32 opaque32
-	// A64 tests 64-bit values.
-	a64 opaque64
+	// Test 8-bit arrays.
+	a8n2 [2]opaque8
+	// Test 8-bit lists.
+	a8l []opaque8
 
-	// TODO: list and array forms
+	// Test 16-bit values.
+	a16 opaque16
+	// Test 16-bit arrays.
+	a16n2 [2]opaque16
+	// Test 16-bit lists.
+	a16l []opaque16
+
+	// Test 32-bit values.
+	a32 opaque32
+	// Test 32-bit arrays.
+	a32n2 [2]opaque32
+	// Test 32-bit lists.
+	a32l []opaque32
+
+	// Test 64-bit values.
+	a64 opaque64
+	// Test 64-bit arrays.
+	a64n2 [2]opaque64
+	// Test 64-bit lists.
+	a64l []opaque64
+}
+
+// ListTypes contains each type supported in list form.
+type ListTypes struct {
+	// Test 8-bit values.
+	a8l []opaque8
+	// Test 16-bit values.
+	a16l []opaque16
+	// Test 32-bit values.
+	a32l []opaque32
+	// Test 64-bit values.
+	a64l []opaque64
+
+	// Test single precision–floating points.
+	f32l []float32
+	// Test double precision–floating points.
+	f64l []float64
+
+	// Test timestamps (with nanosecond precision).
+	tl []timestamp
+	// Test Unicode strings of variable size.
+	sl []text
 }
 
 // DromedaryCase mixes name conventions.
+// Its serial size has a natural limit.
 type dromedaryCase struct {
-	PascalCase text
+	// title-case option
+	PascalCase int32
+	// best-case scenario
 	with_snake opaque8
 }
