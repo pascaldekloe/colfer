@@ -1,0 +1,5 @@
+		int v{{.Index}} = (int)
+{{- if eq .WordShift 0}}word{{.WordIndex}};
+{{- else if le .WordShift 32}}(word{{.WordIndex}} >>> {{.WordShift}});
+{{- else}}(word{{.WordIndex}}>>>{{.WordShift}} | word{{.NextWordIndex}}<<(64-{{.WordShift}}));
+{{- end -}}

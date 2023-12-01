@@ -7,8 +7,8 @@ public class bench {
 
 	public static void main(String[] args) {
 		benchMarshal();
-		benchMarshalReuse();
 		benchUnmarshal();
+		System.out.printf("checksum %x\n", sum);
 	}
 
 	private static Colfer[] newTestData() {
@@ -19,7 +19,7 @@ public class bench {
 		c1.size = 452;
 		c1.hash = 0x488b5c2428488918L;
 		c1.ratio = 0.99;
-		c1.route = true;
+		c1.bools = Colfer.ROUTE_FLAG;
 
 		Colfer c2 = new Colfer();
 		c2.key = 1234567891L;
@@ -28,7 +28,7 @@ public class bench {
 		c2.size = 4096;
 		c2.hash = 0x243048899c24c824L;
 		c2.ratio = 0.20;
-		c2.route = false;
+		c1.bools = 0;
 
 		Colfer c3 = new Colfer();
 		c3.key = 1234567892L;
@@ -37,7 +37,7 @@ public class bench {
 		c3.size = 1984;
 		c3.hash = 0x000048891c24485cL;
 		c3.ratio = 0.06;
-		c3.route = false;
+		c1.bools = 0;
 
 		Colfer c4 = new Colfer();
 		c4.key = 1234567893L;
@@ -46,61 +46,60 @@ public class bench {
 		c4.size = 59741;
 		c4.hash = 0x5c2408488b9c2489L;
 		c4.ratio = 0.0;
-		c4.route = true;
+		c1.bools = Colfer.ROUTE_FLAG;
 
 		return new Colfer[] {c1, c2, c3, c4};
 	}
 
-	// prevent compiler optimization
-	public static byte[] holdSerial;
-	public static Colfer holdData;
+	public static int sum; // prevents compiler optimization
 
 	static void benchMarshal() {
 		Colfer[] testData = newTestData();
+		byte[] buf = new byte[Colfer.MARSHAL_MAX];
 		final int n = 20000000;
 
 		long start = System.nanoTime();
 		for (int i = 0; i < n; i++) {
-			holdSerial = new byte[200];
-			testData[i % testData.length].marshal(holdSerial, 0);
+			int size = testData[i % testData.length].marshalWithBounds(buf, 0);
+			if (size == 0) {
+				System.out.println("exit on marshal error");
+				return;
+			}
+			sum += size;
 		}
 		long end = System.nanoTime();
 
-		System.out.printf("%dM marshals avg %dns\n", n / 1000000, (end - start) / n);
-	}
-
-	static void benchMarshalReuse() {
-		Colfer[] testData = newTestData();
-		holdSerial = new byte[Colfer.colferSizeMax];
-		final int n = 20000000;
-
-		long start = System.nanoTime();
-		for (int i = 0; i < n; i++) {
-			testData[i % testData.length].marshal(holdSerial, 0);
-		}
-		long end = System.nanoTime();
-
-		System.out.printf("%dM marshals with buffer reuse avg %dns\n", n / 1000000, (end - start) / n);
+		System.out.printf("%d M marshals avg %d ns\n", n / 1000000, (end - start) / n);
+		sum += Arrays.hashCode(buf);
 	}
 
 	static void benchUnmarshal() {
 		Colfer[] testData = newTestData();
 		byte[][] serials = new byte[testData.length][];
 		for (int i = 0; i < serials.length; i++) {
-			byte[] buf = new byte[200];
-			int n = testData[i].marshal(buf, 0);
-			serials[i] = Arrays.copyOf(buf, n);
+			serials[i] = new byte[200];
+			int size = testData[i].marshalWithBounds(serials[i], 0);
+			if (size == 0) {
+				System.out.println("exit on marshal error");
+				return;
+			}
 		}
+		Colfer o = new Colfer();
 		final int n = 20000000;
 
 		long start = System.nanoTime();
 		for (int i = 0; i < n; i++) {
-			holdData = new Colfer();
-			holdData.unmarshal(serials[i % serials.length], 0);
+			int size = o.unmarshal(serials[i % serials.length], 0, 200);
+			if (size < Colfer.MARSHAL_MIN) {
+				System.out.println("exit on unmarshal error");
+				return;
+			}
+			sum += size;
 		}
 		long end = System.nanoTime();
 
-		System.out.printf("%dM unmarshals avg %dns\n", n / 1000000, (end - start) / n);
+		System.out.printf("%d M unmarshals avg %d ns\n", n / 1000000, (end - start) / n);
+		sum += o.hashCode();
 	}
 
 }

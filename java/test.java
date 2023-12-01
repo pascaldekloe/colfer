@@ -1,363 +1,292 @@
-import gen.O;
+import gen.BaseTypes;
+import gen.ListTypes;
+import gen.OpaqueTypes;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
+import java.nio.BufferOverflowException;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 
 public class test {
 
-	static boolean testSuccess = true;
+	private static boolean testSuccess = true;
 
+	private static void failf(String format, Object... args) {
+		System.err.printf(format + "\n", args);
+		testSuccess = false;
+	}
 
 	public static void main(String[] args) {
+		// core
 		try {
 			identity();
+			marshaling();
+			unmarshaling();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 
-			marshal();
-			unmarshal();
-			stream();
-
-			marshalMax();
-			marshalTextMax();
-			marshalBinaryMax();
-			marshalListMax();
-
-			unmarshalMax();
-			unmarshalTextMax();
-			unmarshalBinaryMax();
-			unmarshalListMax();
-
+		// I/O streams
+		try {
+			streaming();
 			serializable();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 
+		// serial boundaries
+		try {
+			marshalMax();
+			// TODO: unmarshalMax();
+			bufferOverflow();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
 		if (! testSuccess) System.exit(2);
+		System.err.println("all tests passed");
 	}
 
-	static void fail(String format, Object... args) {
-		format += "\n";
-		System.err.printf(format, args);
+	/** Instantiates test cases per serial hex as key. */
+	static Map<String, BaseTypes> newGoldenBaseTypes() {
+		// FIXME(pascaldekloe): iterator order is consitent yet undefined
+		return Map.of(
 
-		testSuccess = false;
+			// all zero
+			"211002"
+				+ "00" // uint8
+				+ "00" // int8
+				+ "01" // uint16
+				+ "01" // int16
+				+ "01" // uint32
+				+ "01" // int32
+				+ "01" // uint64
+				+ "01" // int64
+				+ "00000000" // float32
+				+ "0000000000000000" // float64
+				+ "0000000000000000" // timestamp
+				+ "01" // text size
+				+ "00", // bool
+			new BaseTypes(),
+
+			// small values
+			"221002"
+				+ "01" // uint8
+				+ "02" // int8
+				+ "07" // uint16
+				+ "11" // int16
+				+ "0b" // uint32
+				+ "19" // int32
+				+ "0f" // uint64
+				+ "21" // int64
+				+ "00002041" // float32
+				+ "0000000000002640" // float64
+				+ "0d00000003000000" // timestamp
+				+ "03" // text size
+				+ "01" // bool
+				+ "63", // text payload
+			new BaseTypes()
+				.withU8((byte)1)
+				.withI8((byte)2)
+				.withU16((short)3)
+				.withI16((short)4)
+				.withU32(5)
+				.withI32(6)
+				.withU64(7L)
+				.withI64(8L)
+				.withF32(10)
+				.withF64(11)
+				.withT(Instant.ofEpochSecond(12L, 13L))
+				.withS("c")
+				.withBools(1)
+		);
 	}
-
-	static Map<String, O> newGoldenCases() {
-		Map<String, O> goldenCases = new LinkedHashMap<>();
-		newCase(goldenCases, "7f");
-		newCase(goldenCases, "007f").b = true;
-		newCase(goldenCases, "01017f").u32 = 1;
-		newCase(goldenCases, "01ff017f").u32 = 255;
-		newCase(goldenCases, "01ffff037f").u32 = 65535;
-		newCase(goldenCases, "81ffffffff7f").u32 = -1;
-		newCase(goldenCases, "02017f").u64 = 1L;
-		newCase(goldenCases, "02ff017f").u64 = 255L;
-		newCase(goldenCases, "02ffff037f").u64 = 65535L;
-		newCase(goldenCases, "02ffffffff0f7f").u64 = 4294967295L;
-		newCase(goldenCases, "82ffffffffffffffff7f").u64 = -1L;
-		newCase(goldenCases, "03017f").i32 = 1;
-		newCase(goldenCases, "83017f").i32 = -1;
-		newCase(goldenCases, "037f7f").i32 = Byte.MAX_VALUE;
-		newCase(goldenCases, "8380017f").i32 = Byte.MIN_VALUE;
-		newCase(goldenCases, "03ffff017f").i32 = Short.MAX_VALUE;
-		newCase(goldenCases, "838080027f").i32 = Short.MIN_VALUE;
-		newCase(goldenCases, "03ffffffff077f").i32 = Integer.MAX_VALUE;
-		newCase(goldenCases, "8380808080087f").i32 = Integer.MIN_VALUE;
-		newCase(goldenCases, "04017f").i64 = 1;
-		newCase(goldenCases, "84017f").i64 = -1;
-		newCase(goldenCases, "047f7f").i64 = Byte.MAX_VALUE;
-		newCase(goldenCases, "8480017f").i64 = Byte.MIN_VALUE;
-		newCase(goldenCases, "04ffff017f").i64 = Short.MAX_VALUE;
-		newCase(goldenCases, "848080027f").i64 = Short.MIN_VALUE;
-		newCase(goldenCases, "04ffffffff077f").i64 = Integer.MAX_VALUE;
-		newCase(goldenCases, "8480808080087f").i64 = Integer.MIN_VALUE;
-		newCase(goldenCases, "04ffffffffffffffff7f7f").i64 = Long.MAX_VALUE;
-		newCase(goldenCases, "848080808080808080807f").i64 = Long.MIN_VALUE;
-		newCase(goldenCases, "05000000017f").f32 = Float.MIN_VALUE;
-		newCase(goldenCases, "057f7fffff7f").f32 = Float.MAX_VALUE;
-		newCase(goldenCases, "057fc000007f").f32 = Float.NaN;
-		newCase(goldenCases, "0600000000000000017f").f64 = Double.MIN_VALUE;
-		newCase(goldenCases, "067fefffffffffffff7f").f64 = Double.MAX_VALUE;
-		newCase(goldenCases, "067ff80000000000007f").f64 = Double.NaN;
-		newCase(goldenCases, "0755ef312a2e5da4e77f").t = Instant.ofEpochSecond(1441739050L, 777888999);
-		newCase(goldenCases, "87000007dba8218000000003e87f").t = Instant.ofEpochSecond((long) 864E10, 1000);
-		newCase(goldenCases, "87fffff82457de8000000003e97f").t = Instant.ofEpochSecond((long) -864E10, 1001);
-		newCase(goldenCases, "87ffffffffffffffff2e5da4e77f").t = Instant.ofEpochSecond(-1L, 777888999);
-		newCase(goldenCases, "0801417f").s = "A";
-		newCase(goldenCases, "080261007f").s = "a\0";
-		newCase(goldenCases, "0809c280e0a080f09080807f").s = "\u0080\u0800\ud800\udc00";
-		newCase(goldenCases, "08800120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020207f").s = "                                                                                                                                ";
-		newCase(goldenCases, "0901ff7f").a = new byte[]{-1};
-		newCase(goldenCases, "090202007f").a = new byte[]{2, 0};
-		newCase(goldenCases, "09c0010909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909097f").a = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t".getBytes(UTF_8);
-		newCase(goldenCases, "0a7f7f").o = new O();
-		O inner = new O();
-		inner.b = true;
-		newCase(goldenCases, "0a007f7f").o = inner;
-		O element = new O();
-		element.b = true;
-		newCase(goldenCases, "0b01007f7f").os = new O[] {element};
-		newCase(goldenCases, "0b027f7f7f").os = new O[] {new O(), new O()};
-		newCase(goldenCases, "0c0300016101627f").ss = new String[] {"", "a", "b"};
-		newCase(goldenCases, "0d0201000201027f").as = new byte[][]{new byte[]{0}, new byte[]{1, 2}};
-		newCase(goldenCases, "0e017f").u8 = 1;
-		newCase(goldenCases, "0eff7f").u8 = -1;
-		newCase(goldenCases, "8f017f").u16 = 1;
-		newCase(goldenCases, "0fffff7f").u16 = -1;
-		newCase(goldenCases, "1002000000003f8000007f").f32s = new float[] {0, 1};
-		newCase(goldenCases, "11014058c000000000007f").f64s = new double[] {99};
-		return goldenCases;
-	}
-
-	static O newCase(Map<String, O> cases, String hex) {
-		O o = new O();
-		cases.put(hex, o);
-		return o;
-	}
-
 
 	static void identity() {
-		if (new O().equals((Object) null))
-			fail("equals null Object");
-		if (new O().equals((O) null))
-			fail("equals null O");
+		if (new BaseTypes().equals((Object) null))
+			failf("BaseTypes equals null Object");
+		if (new BaseTypes().equals((BaseTypes) null))
+			failf("BaseTypes equals null BaseTypes");
 
-		Object[] a = newGoldenCases().values().toArray();
-		Object[] b = newGoldenCases().values().toArray();
+		BaseTypes[] a = newGoldenBaseTypes().values().toArray(new BaseTypes[0]);
+		BaseTypes[] b = newGoldenBaseTypes().values().toArray(new BaseTypes[0]);
 		if (! Arrays.equals(a, b))
-			fail("golden cases not equal");
+			failf("identity: golden BaseTypes not equal to self");
 		if (Arrays.hashCode(a) != Arrays.hashCode(b))
-			fail("golden cases hash not equal");
+			failf("identity: golden BaseTypes hash inconsistent");
 	}
 
-	static void marshal() throws Exception {
-		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			byte[] buf = new byte[e.getValue().marshalFit()];
-			int n = e.getValue().marshal(buf, 0);
-			if (n != e.getKey().length() / 2)
-				fail("marshal: got write index %d for serial 0x%s", n, e.getKey());
-			String got = toHex(Arrays.copyOf(buf, n));
-			if (! got.equals(e.getKey()))
-				fail("marshal: got serial 0x%s, want %s", got, e.getKey());
+	static void marshaling() throws Exception {
+		for (Entry<String, BaseTypes> e : newGoldenBaseTypes().entrySet()) {
+			byte[] buf = new byte[BaseTypes.MARSHAL_MAX];
+			int n = e.getValue().marshalWithBounds(buf, 0);
+			String got = toHex(buf, 0, n);
+			String want = e.getKey();
+			if (!got.equals(want))
+				failf("marshaling: got serial 0x%s, want 0x%s", got, want);
 		}
 	}
 
-	static void unmarshal() {
-		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			O o = new O();
-			byte[] serial = parseHex(e.getKey());
-			int i = o.unmarshal(serial, 0);
+	static void unmarshaling() {
+		for (Entry<String, BaseTypes> golden : newGoldenBaseTypes().entrySet()) {
+			BaseTypes want = golden.getValue();
+			String hex = golden.getKey();
+			byte[] buf = new byte[BaseTypes.UNMARSHAL_MAX];
+			fromHex(buf, hex);
 
-			if (i != serial.length)
-				fail("unmarshal: 0x%s: got read index %d for serial 0x%s", i, e.getKey());
-			if (! e.getValue().equals(o))
-				fail("unmarshal: mismatch for serial 0x%s", e.getKey());
+			BaseTypes got = new BaseTypes();
+			int n = got.unmarshal(buf, 0, hex.length() / 2);
+			if (n != hex.length() / 2)
+				failf("unmarshaling: read %d bytes of serial 0x%s", n, hex);
+			if (!got.equals(want)) {
+				failf("unmarshaling: mismatch for serial 0x%s\ngot:", hex);
+				dumpBaseTypes(got);
+				failf("want:");
+				dumpBaseTypes(want);
+			}
 		}
 	}
 
-	static void stream() throws Exception {
+	static void streaming() throws Exception {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-		byte[] buf = new byte[1];
-		for (O o : newGoldenCases().values()) {
-			buf = o.marshal(out, buf);
-		}
-
-		O.Unmarshaller unmarshaller = new O.Unmarshaller(new ByteArrayInputStream(out.toByteArray()), new byte[1]);
-		for (Entry<String, O> e : newGoldenCases().entrySet()) {
-			O got = unmarshaller.next();
-			if (got == null) {
-				fail("stream: missing as of serial 0x%s", e.getKey());
+		byte[] buf = new byte[BaseTypes.MARSHAL_MAX];
+		for (BaseTypes o : newGoldenBaseTypes().values()) {
+			int n = o.marshalWithBounds(buf, 0);
+			if (n == 0) {
+				failf("streaming: test abort on marshal error");
 				return;
 			}
-			if (! e.getValue().equals(got))
-				fail("stream: mismatch for serial 0x%s", e.getKey());
+			out.write(buf, 0, n);
 		}
-		if (unmarshaller.next() != null)
-			fail("stream: data tail");
-	}
 
-	static void marshalMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 2;
-		try {
-			O o = new O();
-			o.u64 = 1;
-			o.marshal(new byte[o.marshalFit()], 0);
-			fail("no marshal max exception");
-		} catch (IllegalStateException e) {
-			String want = "colfer: gen.o exceeds 2 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("marshal max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
+		BaseTypes.Unmarshaller unmarshaller = new BaseTypes.Unmarshaller(new ByteArrayInputStream(out.toByteArray()), 0);
+		for (Entry<String, BaseTypes> golden : newGoldenBaseTypes().entrySet()) {
+			BaseTypes got = unmarshaller.nextOrNull();
+			if (got == null) {
+				failf("streaming: unmarshal ended before serial 0x%s", golden.getKey());
+				return;
+			}
+			if (! golden.getValue().equals(got)) {
+				failf("streaming: unmarshal mismatch for serial 0x%s\ngot:", golden.getKey());
+				dumpBaseTypes(got);
+				failf("want:");
+				dumpBaseTypes(golden.getValue());
+				return;
+			}
 		}
-	}
 
-	static void marshalTextMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 2;
-		try {
-			O o = new O();
-			o.s = "AAA";
-			o.marshal(new byte[6], 0);
-			fail("no marshal text max exception");
-		} catch (IllegalStateException e) {
-			String want = "colfer: gen.o.s size 3 exceeds 2 UTF-8 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("marshal text max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
-		}
-	}
-
-	static void marshalBinaryMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 2;
-		try {
-			O o = new O();
-			o.a = new byte[]{0, 1, 2};
-			o.marshal(new byte[o.marshalFit()], 0);
-			fail("no marshal binary max exception");
-		} catch (IllegalStateException e) {
-			String want = "colfer: gen.o.a size 3 exceeds 2 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("marshal binary max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
-		}
-	}
-
-	static void marshalListMax() {
-		int origMax = O.colferListMax;
-		O.colferListMax = 9;
-		try {
-			O o = new O();
-			o.os = new O[10];
-			o.marshal(new byte[o.marshalFit()], 0);
-			fail("no marshal list max exception");
-		} catch (IllegalStateException e) {
-			String want = "colfer: gen.o.os length 10 exceeds 9 elements";
-			if (! want.equals(e.getMessage()))
-				fail("marshal list max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferListMax = origMax;
-		}
-	}
-
-	static void unmarshalMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 2;
-		try {
-			byte[] serial = parseHex("02017f");
-			new O().unmarshal(serial, 0);
-			fail("no unmarshal max exception");
-		} catch (SecurityException e) {
-			String want = "colfer: gen.o exceeds 2 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("unmarshal max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
-		}
-	}
-
-	static void unmarshalTextMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 9;
-		try {
-			byte[] serial = parseHex("080a414141");
-			new O().unmarshal(serial, 0);
-			fail("no unmarshal text max exception");
-		} catch (SecurityException e) {
-			String want = "colfer: gen.o.s size 10 exceeds 9 UTF-8 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("unmarshal text max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
-		}
-	}
-
-	static void unmarshalBinaryMax() {
-		int origMax = O.colferSizeMax;
-		O.colferSizeMax = 9;
-		try {
-			byte[] serial = parseHex("090a414141");
-			new O().unmarshal(serial, 0);
-			fail("no unmarshal binary max exception");
-		} catch (SecurityException e) {
-			String want = "colfer: gen.o.a size 10 exceeds 9 bytes";
-			if (! want.equals(e.getMessage()))
-				fail("unmarshal binary max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferSizeMax = origMax;
-		}
-	}
-
-	static void unmarshalListMax() {
-		int origMax = O.colferListMax;
-		O.colferListMax = 9;
-		try {
-			byte[] serial = parseHex("0b0a7f7f7f");
-			new O().unmarshal(serial, 0);
-			fail("no unmarshal list max exception");
-		} catch (SecurityException e) {
-			String want = "colfer: gen.o.os length 10 exceeds 9 elements";
-			if (! want.equals(e.getMessage()))
-				fail("unmarshal list max error: %s\nwant: %s", e.getMessage(), want);
-		} finally {
-			O.colferListMax = origMax;
+		BaseTypes got = unmarshaller.nextOrNull();
+		if (got != null) {
+			failf("stream: unmarshal got an additional object:");
+			dumpBaseTypes(got);
+			return;
 		}
 	}
 
 	static void serializable() throws Exception {
-		Set<Entry<String, O>> cases = newGoldenCases().entrySet();
+		Set<Entry<String, BaseTypes>> cases = newGoldenBaseTypes().entrySet();
 		ByteArrayOutputStream buf = new ByteArrayOutputStream();
 
 		ObjectOutputStream out = new ObjectOutputStream(buf);
-		for (Entry<String, O> e : cases)
+		for (Entry<String, BaseTypes> e : cases)
 			out.writeObject(e.getValue());
 		out.close();
 
 		ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(buf.toByteArray()));
-		for (Entry<String, O> e : cases) {
-			O got = (O) in.readObject();
-			O want = e.getValue();
-			if (want.equals(got)) continue;
-			byte[] serial = new byte[O.colferSizeMax];
-			int n = got.marshal(serial, 0);
-			fail("got 0x%s, want 0x%s", toHex(Arrays.copyOf(serial, n)), e.getKey());
+		for (Entry<String, BaseTypes> golden : cases) {
+			BaseTypes got = (BaseTypes) in.readObject();
+			BaseTypes want = golden.getValue();
+			if (!got.equals(want)) {
+				failf("serializable: mismatch for serial 0x%s\ngot:", golden.getKey());
+				dumpBaseTypes(got);
+				failf("want:");
+				dumpBaseTypes(want);
+			}
 		}
 	}
 
-	static String toHex(byte[] bytes) {
-		String hex = new BigInteger(1, bytes).toString(16);
-		while (bytes.length * 2 > hex.length())
+	static void marshalMax() {
+		int n;
+
+		n = new OpaqueTypes()
+			.withA16l(new short[OpaqueTypes.MARSHAL_MAX / 2])
+			.marshalWithBounds(new byte[OpaqueTypes.BUF_MIN], 0);
+		if (n != 0)
+			failf("marshal max: marshaled an oversized opaque16 binary into %d bytes", n);
+
+		n = new BaseTypes()
+			.withS("A".repeat(BaseTypes.MARSHAL_MAX))
+			.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 1], 1);
+		if (n != 0)
+			failf("marshal max: marshaled an oversized text into %d bytes", n);
+
+		n = new ListTypes()
+			.withF32l(new float[ListTypes.MARSHAL_MAX / 4])
+			.marshalWithBounds(new byte[ListTypes.BUF_MIN + 2], 2);
+		if (n != 0)
+			failf("marshal max: marshaled an oversized float32-list into %d bytes", n);
+	}
+
+	static void bufferOverflow() {
+		try {
+			int n = new BaseTypes()
+				.withS("A".repeat(BaseTypes.MARSHAL_MAX / 2))
+				.marshalWithBounds(new byte[BaseTypes.BUF_MIN], 0);
+			failf("marshal max: marshaled an oversized text into %d bytes", n);
+		} catch (BufferOverflowException ignored) {}
+
+		// again with offset
+		try {
+			int n = new BaseTypes()
+				.withS("A".repeat(BaseTypes.MARSHAL_MAX / 2))
+				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 99], 99);
+			failf("marshal max: marshaled an oversized text into %d bytes", n);
+		} catch (BufferOverflowException ignored) {}
+	}
+
+	private static String toHex(byte[] bytes, int offset, int length) {
+		String hex = new BigInteger(1, bytes, offset, length).toString(16);
+		while (length * 2 > hex.length())
 			hex = "0" + hex;
 		return hex;
 	}
 
-	static byte[] parseHex(String s) {
+	private static void fromHex(byte[] buf, String s) {
 		int len = s.length();
-		byte[] data = new byte[len / 2];
+		if (len % 2 != 0)
+			throw new IllegalArgumentException("odd number of hexadecimals");
+		if (len / 2 > buf.length)
+			throw new IllegalArgumentException("hex exceeds buffer capacity");
 		for (int i = 0; i < len; i += 2) {
-			int nibble0 = Character.digit(s.charAt(i), 16);
-			int nibble1 = Character.digit(s.charAt(i + 1), 16);
-			data[i / 2] = (byte) ((nibble0 << 4) + nibble1);
+			int msn = Character.digit(s.charAt(i), 16);
+			int lsn = Character.digit(s.charAt(i + 1), 16);
+			buf[i / 2] = (byte) ((msn << 4) + lsn);
 		}
-		return data;
+	}
+
+	private static void dumpBaseTypes(BaseTypes o) {
+		System.err.printf("{ u8=%d i8=%d", o.u8, o.i8);
+		System.err.printf(" u16=%d i16=%d", o.u16, o.i16);
+		System.err.printf(" u32=%d i32=%d", o.u32, o.i32);
+		System.err.printf(" u64=%d i64=%d", o.u64, o.i64);
+		System.err.printf(" f32=%f f64=%f", o.f32, o.f64);
+		System.err.printf(" t=%s s=0x", o.t);
+		int utf16n = o.s.length();
+		for (int i = 0; i < utf16n; i++)
+			 System.err.printf("%04x", (short)o.s.charAt(i));
+		System.err.printf(" b=%b }\n", o.getB());
 	}
 
 }

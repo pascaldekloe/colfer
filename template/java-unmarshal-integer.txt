@@ -1,0 +1,13 @@
+		long v{{.Index}} = word{{.WordIndex}} >> ({{.WordShift}} + 1) & 0x7f;
+		if ((1L << {{.WordShift}} & word{{.WordIndex}}) == 0) {
+			long tail = (buf[r] & 255L) | (buf[r+1] & 255L) << 8
+				| (buf[r+2] & 255L) << 16 | (buf[r+3] & 255L) << 24
+				| (buf[r+4] & 255L) << 32 | (buf[r+5] & 255L) << 40
+				| (buf[r+6] & 255L) << 48 | (buf[r+7] & 255L) << 56;
+
+			int tailSize = Long.numberOfTrailingZeros(v{{.Index}} | 0x80) + 1;
+			r += tailSize;
+			v{{.Index}} <<= (tailSize << 3) - tailSize;
+			v{{.Index}} |= tail & COLFER_MASKS[tailSize];
+		}
+{{- /* no trailing new-line */ -}}

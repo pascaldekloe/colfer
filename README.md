@@ -17,7 +17,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 
 * **C**, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
 * **Go**, a.k.a. golang
-* **Java**, Android compatible
+* **Java**, base module exclusively, Android compatible
 * **JavaScript**, a.k.a. ECMAScript, NodeJS compatible
 * 🚧 Gergely Bódi realised a functional **Dart** [port](https://github.com/vendelin8/colfer).
 * 🚧 Karthik Kumar Viswanathan has a **Python** [alternative](https://github.com/guilt/colfer-python) under construction.

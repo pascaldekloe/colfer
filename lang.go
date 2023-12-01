@@ -30,6 +30,7 @@ var cKeywords = map[string]struct{}{
 
 // GenerateC writes the code into file "Colfer.h" and "Colfer.c".
 func GenerateC(basedir string, packages Packages) error {
+	// set native names and types
 	for _, p := range packages {
 		for _, t := range p.Structs {
 			t.NameNative = strings.ToLower(name.SnakeCase(p.Name + "_" + t.Name))
@@ -46,34 +47,35 @@ func GenerateC(basedir string, packages Packages) error {
 				}
 
 				switch f.Type {
-				case "bool":
-					f.TypeNative = "int"
+				case "opaque8", "uint8":
+					f.TypeNative = "uint8_t"
+				case "opaque16", "uint16":
+					f.TypeNative = "uint16_t"
+				case "opaque32", "uint32":
+					f.TypeNative = "uint32_t"
+				case "opaque64", "uint64":
+					f.TypeNative = "uint64_t"
+
 				case "int8":
 					f.TypeNative = "int8_t"
-				case "uint8", "opaque8":
-					f.TypeNative = "uint8_t"
 				case "int16":
 					f.TypeNative = "int16_t"
-				case "uint16", "opaque16":
-					f.TypeNative = "uint16_t"
 				case "int32":
 					f.TypeNative = "int32_t"
-				case "uint32", "opaque32":
-					f.TypeNative = "uint32_t"
 				case "int64":
 					f.TypeNative = "int64_t"
-				case "uint64", "opaque64":
-					f.TypeNative = "uint64_t"
+
 				case "float32":
 					f.TypeNative = "float"
 				case "float64":
 					f.TypeNative = "double"
+
 				case "timestamp":
 					f.TypeNative = "struct timespec"
-				case "opaque":
-					f.TypeNative = "void"
 				case "text":
 					f.TypeNative = "const char"
+				case "bool":
+					f.TypeNative = "int"
 				}
 			}
 		}
@@ -87,7 +89,7 @@ func GenerateC(basedir string, packages Packages) error {
 	if err != nil {
 		return err
 	}
-	if err := template.Must(template.New("C-header").Parse(hTemplate)).Execute(f, packages); err != nil {
+	if err := template.Must(template.New("c-header").Parse(hTemplate)).Execute(f, packages); err != nil {
 		return err
 	}
 	if err = f.Close(); err != nil {
@@ -98,7 +100,7 @@ func GenerateC(basedir string, packages Packages) error {
 	if err != nil {
 		return err
 	}
-	t := template.New("C")
+	t := template.New("c")
 	template.Must(t.Parse(cTemplate))
 	template.Must(t.New("marshal-integer").Parse(cMarshalIntegerTemplate))
 	template.Must(t.New("marshal16").Parse(cMarshal16Template))
@@ -360,26 +362,48 @@ func toJavaName(name string) string {
 // GenerateJava writes the code into the respective ".java" files.
 func GenerateJava(basedir string, packages Packages) error {
 	titleCache := make(map[string]string)
-	funcs := template.FuncMap{"title": func(s string) string {
-		if t, ok := titleCache[s]; ok {
+	upperSnakeCache := make(map[string]string)
+
+	funcs := template.FuncMap{
+		"title": func(s string) string {
+			if t, ok := titleCache[s]; ok {
+				return t
+			}
+
+			r, size := utf8.DecodeRuneInString(s)
+			if size == 0 {
+				return s
+			}
+			t := string([]rune{unicode.ToUpper(r)}) + s[size:]
+
+			titleCache[s] = t
 			return t
-		}
-
-		r, size := utf8.DecodeRuneInString(s)
-		if size == 0 {
-			return s
-		}
-		t := string([]rune{unicode.ToUpper(r)}) + s[size:]
-
-		titleCache[s] = t
-		return t
-	}}
+		},
+		"upperSnake": func(s string) string {
+			if t, ok := upperSnakeCache[s]; ok {
+				return t
+			}
+			t := strings.ToUpper(name.SnakeCase(s))
+			upperSnakeCache[s] = t
+			return t
+		},
+	}
 
 	packageTemplate := template.New("java-package")
-	template.Must(packageTemplate.Parse(javaPackage))
-	codeTemplate := template.New("java-code").Funcs(funcs)
-	template.Must(codeTemplate.Parse(javaCode))
+	template.Must(packageTemplate.Parse(javaPackageTemplate))
 
+	classTemplate := template.New("java-class").Funcs(funcs)
+	template.Must(classTemplate.Parse(javaTemplate))
+	template.Must(classTemplate.New("marshal-integer").Parse(javaMarshalIntegerTemplate))
+	template.Must(classTemplate.New("marshal16").Parse(javaMarshal16Template))
+	template.Must(classTemplate.New("marshal32").Parse(javaMarshal32Template))
+	template.Must(classTemplate.New("marshal64").Parse(javaMarshal64Template))
+	template.Must(classTemplate.New("unmarshal-integer").Parse(javaUnmarshalIntegerTemplate))
+	template.Must(classTemplate.New("unmarshal16").Parse(javaUnmarshal16Template))
+	template.Must(classTemplate.New("unmarshal32").Parse(javaUnmarshal32Template))
+	template.Must(classTemplate.New("unmarshal64").Parse(javaUnmarshal64Template))
+
+	// set native names and types
 	for _, p := range packages {
 		p.NameNative = toJavaName(p.Name)
 		p.SuperClassNative = toJavaName(p.SuperClass)
@@ -430,26 +454,27 @@ func GenerateJava(basedir string, packages Packages) error {
 							f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
 						}
 					}
-				case "bool":
-					f.TypeNative = "boolean"
-				case "uint8":
+
+				case "opaque8", "uint8", "int8":
 					f.TypeNative = "byte"
-				case "uint16":
+				case "opaque16", "uint16", "int16":
 					f.TypeNative = "short"
-				case "uint32", "int32":
+				case "opaque32", "uint32", "int32":
 					f.TypeNative = "int"
-				case "uint64", "int64":
+				case "opaque64", "uint64", "int64":
 					f.TypeNative = "long"
+
 				case "float32":
 					f.TypeNative = "float"
 				case "float64":
 					f.TypeNative = "double"
+
 				case "timestamp":
 					f.TypeNative = "java.time.Instant"
 				case "text":
 					f.TypeNative = "String"
-				case "binary":
-					f.TypeNative = "byte[]"
+				case "bool":
+					f.TypeNative = "int"
 				}
 			}
 
@@ -459,7 +484,7 @@ func GenerateJava(basedir string, packages Packages) error {
 			}
 			defer f.Close()
 
-			if err := codeTemplate.Execute(f, t); err != nil {
+			if err := classTemplate.Execute(f, t); err != nil {
 				return err
 			}
 		}
@@ -468,7 +493,31 @@ func GenerateJava(basedir string, packages Packages) error {
 }
 
 //go:embed template/java-package.txt
-var javaPackage string
+var javaPackageTemplate string
 
 //go:embed template/java.txt
-var javaCode string
+var javaTemplate string
+
+//go:embed template/java-marshal-integer.txt
+var javaMarshalIntegerTemplate string
+
+//go:embed template/java-marshal16.txt
+var javaMarshal16Template string
+
+//go:embed template/java-marshal32.txt
+var javaMarshal32Template string
+
+//go:embed template/java-marshal64.txt
+var javaMarshal64Template string
+
+//go:embed template/java-unmarshal-integer.txt
+var javaUnmarshalIntegerTemplate string
+
+//go:embed template/java-unmarshal16.txt
+var javaUnmarshal16Template string
+
+//go:embed template/java-unmarshal32.txt
+var javaUnmarshal32Template string
+
+//go:embed template/java-unmarshal64.txt
+var javaUnmarshal64Template string

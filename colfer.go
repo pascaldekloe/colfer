@@ -172,14 +172,16 @@ type Struct struct {
 	// TagAdd has optional source code additions.
 	TagAdd []string
 
-	// FixedSize counts the number of bytes fixed in the serial.
+	// FixedSize is the encoding space in the fixed section.
 	FixedSize int
-	// SizeMin is the smallest serial size in bytes possible with only the
-	// first field encoded.
+
+	// OverflowMax is the upper boundary for encoding space in the overflow
+	// section.
+	OverflowMax int
+
+	// SizeMin is the smallest encoding size possible (with only the first
+	// field present).
 	SizeMin int
-	// SizeMax is the largest serial size in bytes possible with zero for
-	// structures without such limit.
-	SizeMax int
 }
 
 // FieldsReversed returns .Fields in reversed order.
@@ -190,54 +192,25 @@ func (t *Struct) FieldsReversed() []*Field {
 }
 
 func (t *Struct) SetFixedPositions() {
-	// need boolean postions first for size calculation below
+	t.FixedSize = 3 // header
+	t.OverflowMax = 0
 	boolCount := 0
 	for _, f := range t.Fields {
+		f.FixedIndex = t.FixedSize
+
+		// The boolean index is required before
+		// the following size calculations!
 		if f.Type == "bool" {
 			f.BoolIndex = boolCount
 			boolCount++
 		}
-	}
 
-	t.FixedSize = 3 // header
-	for _, f := range t.Fields {
-		f.FixedIndex = t.FixedSize
-		t.FixedSize += f.TypeFixedSize() * max(1, f.ElementCount)
+		n := max(1, f.ElementCount)
+		t.FixedSize += n * f.TypeFixedSize()
+		t.OverflowMax += n * f.TypeOverflowMax()
 	}
 
 	t.SizeMin = 3 + t.Fields[0].TypeFixedSize()*max(1, t.Fields[0].ElementCount)
-
-	t.SizeMax = 3 // header
-	for _, f := range t.Fields {
-		if f.TypeList {
-			t.SizeMax = 0
-			return
-		}
-
-		switch f.Type {
-		case "bool":
-			if f.FirstInBitField() {
-				t.SizeMax += 1
-			}
-		case "opaque8", "uint8", "int8":
-			t.SizeMax += 1
-		case "opaque16":
-			t.SizeMax += 2
-		case "uint16", "int16":
-			t.SizeMax += 3
-		case "opaque32", "float32":
-			t.SizeMax += 4
-		case "uint32", "int32":
-			t.SizeMax += 5
-		case "opaque64", "float64", "timestamp":
-			t.SizeMax += 8
-		case "uint64", "int64":
-			t.SizeMax += 9
-		case "text":
-			t.SizeMax = 0
-			return
-		}
-	}
 }
 
 // FixedWordIndices returns the index of each 64-bit word filled by the fixed
@@ -263,6 +236,10 @@ func (t *Struct) DocText(indent string) string {
 // String returns the qualified name.
 func (t *Struct) String() string {
 	return fmt.Sprintf("%s.%s", t.Pkg.Name, t.Name)
+}
+
+func (t *Struct) HasPayloadSection() bool {
+	return t.HasText() || t.HasList()
 }
 
 // HasBool returns whether t has one or more boolean fields.
@@ -363,27 +340,47 @@ func (f *Field) WordShift() int {
 	return (f.FixedIndex & 7) * 8
 }
 
-// TypeFixedSize returns the octet count.
-func (f *Field) TypeFixedSize() int {
+// TypeFixedSize returns its space in the fixed section.
+func (f *Field) TypeFixedSize() (octets int) {
 	if f.TypeList {
 		return 1
 	}
 
 	switch f.Type {
-	default:
-		return 1
-	case "bool":
-		if f.FirstInBitField() {
-			return 1
-		}
-		return 0 // travels for free
 	case "opaque16":
 		return 2
 	case "opaque32", "float32":
 		return 4
 	case "opaque64", "float64", "timestamp":
 		return 8
+
+	case "bool":
+		if f.FirstInBitField() {
+			return 1
+		}
+		return 0 // travels for free
 	}
+
+	return 1
+}
+
+// TypeOverflowMax returns the upper boundary for its space in the overflow
+// section.
+func (f *Field) TypeOverflowMax() (octets int) {
+	if f.Type == "text" || f.TypeList {
+		// This limit would be an error though.
+		return 8
+	}
+
+	switch f.Type {
+	case "uint16", "int16", "uint32", "int32":
+		// This limit would be an error though.
+		return 8
+	case "uint64", "int64":
+		return 8
+	}
+
+	return 0
 }
 
 // Elements returns the field definition for each array item.
