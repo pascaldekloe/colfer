@@ -615,14 +615,24 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		final int fixedSize = (int)(word0 >> 12) & 0xfff;
 		if (size < fixedSize || fixedSize < 4) return 1;
 		if (size > len) return 0;
+{{- if .HasPayloadSection}}
+		// payloads read backwards
+		int end = off + size;
+{{- end}}
 
 		r = off + fixedSize;
 {{- range .Fields}}
 		// unpack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
 {{template "unmarshal-integer" .}}
-		// TODO: size check
+		final long v{{.Index}}Size = v{{.Index}} * {{.TypeFixedSize}};
+		if ((long)(end - r) < v{{.Index}}Size)
+			return 1;
 		this.{{.NameNative}} = new {{.TypeNative}}[(int) v{{.Index}}];
+  {{- if eq .Type "opaque8" "uint8" "int8"}}
+		end -= this.{{.NameNative}}.length;
+		System.arraycopy(buf, end, this.{{.NameNative}}, 0, this.{{.NameNative}}.length);
+  {{- end}}{{/* list type selection */}}
 
  {{- else if eq .Type "opaque8" "uint8" "int8"}}
   {{- if eq .ElementCount 0}}
@@ -742,14 +752,19 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
  {{- else if eq .Type "text"}}
   {{- if not .ElementCount}}
 {{template "unmarshal-integer" .}}
-		int {{.NameNative}}_size = (int)v{{.Index}};
-  {{- else}}
-		int[] {{.NameNative}}_sizes = new int[{{.ElementCount}}];
-   {{range $arrayIndex, $element := .Elements}}{{with $element}}
+		if ((long)(end - r) < v{{.Index}})
+			return 1;
+		end -= (int)v{{.Index}};
+		this.{{.NameNative}} = new String(buf, end, (int)v{{.Index}}, java.nio.charset.StandardCharsets.UTF_8);
+
+  {{else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
 {{template "unmarshal-integer" .}}
-		{{.NameNative}}_sizes[{{$arrayIndex}}] = (int)v{{.Index}};
-   {{- end}}{{end}}{{/* array range */}}
-  {{- end}}
+		if ((long)(end - r) < v{{.Index}})
+			return 1;
+		end -= (int)v{{.Index}};
+		this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, end, (int)v{{.Index}}, java.nio.charset.StandardCharsets.UTF_8);
+
+  {{- end}}{{end}}{{end}}{{/* is array */}}
 
  {{- else if eq .Type "bool"}}
   {{- if eq .BoolIndex 0}}
@@ -761,48 +776,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
  {{- end}}{{/* type select */}}
 {{- end}}{{/* field range */}}
 
-	// TODO clear/reset on older versions
-	// variable section reads backwords
-
-{{if .HasPayloadSection}}
-	int start = off + fixedSize;
-	int end = off + size;
-
-	// read payloads
- {{range .FieldsReversed}}
-  {{- if .TypeList}}
-   {{- if eq .Type "opaque8"}}
-
-   {{- else if eq .Type "opaque16"}}
-
-   {{- else if eq .Type "float32" "opaque32"}}
-
-   {{- else if eq .Type "float64" "opaque64"}}
-
-   {{- else if eq .Type "timestamp"}}
-
-   {{- else if eq .Type "text"}}
-
-   {{- end}}{{/* type match */}}
-  {{- else}}{{/* not list */}}
-
-   {{- if eq .Type "text"}}
-    {{if not .ElementCount}}
-	if (end - {{.NameNative}}_size < start)
-		return 0;
-	this.{{.NameNative}} = new String(buf, end - {{.NameNative}}_size, {{.NameNative}}_size, java.nio.charset.StandardCharsets.UTF_8);
-	end -= {{.NameNative}}_size;
-    {{else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	if (end - {{.NameNative}}_sizes[{{$arrayIndex}}] < start)
-		return 0;
-	this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, end - {{.NameNative}}_sizes[{{$arrayIndex}}], {{.NameNative}}_sizes[{{$arrayIndex}}], java.nio.charset.StandardCharsets.UTF_8);
-	end -= {{.NameNative}}_sizes[{{$arrayIndex}}];
-    {{- end}}{{end}}{{end}}{{/* is array */}}
-
-   {{- end}}{{/* type match */}}
-  {{- end}}{{/* not list */}}
- {{- end}}{{/* reverse field range */}}
-{{- end}}{{/* has payloads */}}
+		// TODO: clear/undo absent fields
 
 		return size;
 	}
