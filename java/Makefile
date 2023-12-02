@@ -5,7 +5,7 @@ JAVAC ?= javac
 JAVADOC ?= javadoc
 
 .PHONY: test
-test: test.class breaktest
+test: test.class breaktest gen-doc
 	$(JAVA) test
 
 breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
@@ -19,7 +19,10 @@ gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../template/*.txt 
 	$(JAVAC) $@/*.java
 	touch $@
 
-test.class: gen
+gen-doc: gen
+	$(JAVADOC) -d $@ -Werror $?/*.java
+
+test.class: test.java gen
 	$(JAVAC) test.java
 
 .PHONY: clean
@@ -29,4 +32,4 @@ clean:
 
 .PHONY: clean-all
 clean-all: clean
-	rm -fr gen
+	rm -fr gen gen-doc
