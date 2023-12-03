@@ -6,10 +6,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.math.BigInteger;
 import java.nio.BufferOverflowException;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -60,11 +60,10 @@ public class test {
 
 	/** Instantiates test cases per serial hex as key. */
 	static Map<String, BaseTypes> newGoldenBaseTypes() {
-		// FIXME(pascaldekloe): iterator order is consitent yet undefined
-		return Map.of(
+		return new LinkedHashMap<String, BaseTypes>() {{
 
 			// all zero
-			"211002"
+			put("211002"
 				+ "00" // uint8
 				+ "00" // int8
 				+ "01" // uint16
@@ -78,10 +77,10 @@ public class test {
 				+ "0000000000000000" // timestamp
 				+ "01" // text size
 				+ "00", // bool
-			new BaseTypes(),
+				new BaseTypes());
 
 			// small values
-			"221002"
+			put("221002"
 				+ "01" // uint8
 				+ "02" // int8
 				+ "07" // uint16
@@ -96,21 +95,21 @@ public class test {
 				+ "03" // text size
 				+ "01" // bool
 				+ "63", // text payload
-			new BaseTypes()
-				.withU8((byte)1)
-				.withI8((byte)2)
-				.withU16((short)3)
-				.withI16((short)4)
-				.withU32(5)
-				.withI32(6)
-				.withU64(7L)
-				.withI64(8L)
-				.withF32(10)
-				.withF64(11)
-				.withT(Instant.ofEpochSecond(12L, 13L))
-				.withS("c")
-				.withBools(1)
-		);
+				new BaseTypes()
+					.withU8((byte)1)
+					.withI8((byte)2)
+					.withU16((short)3)
+					.withI16((short)4)
+					.withU32(5)
+					.withI32(6)
+					.withU64(7L)
+					.withI64(8L)
+					.withF32(10)
+					.withF64(11)
+					.withT(Instant.ofEpochSecond(12L, 13L))
+					.withS("c")
+					.withBools(1));
+		}};
 	}
 
 	static void identity() {
@@ -131,7 +130,10 @@ public class test {
 		for (Entry<String, BaseTypes> e : newGoldenBaseTypes().entrySet()) {
 			byte[] buf = new byte[BaseTypes.MARSHAL_MAX];
 			int n = e.getValue().marshalWithBounds(buf, 0);
-			String got = toHex(buf, 0, n);
+			StringBuilder hex = new StringBuilder(n * 2);
+			for (int i = 0; i < n; i++)
+				hex.append(String.format("%02x", buf[i]));
+			String got = hex.toString();
 			String want = e.getKey();
 			if (!got.equals(want))
 				failf("marshaling: got serial 0x%s, want 0x%s", got, want);
@@ -227,7 +229,7 @@ public class test {
 			failf("marshal max: marshaled an oversized opaque16 binary into %d bytes", n);
 
 		n = new BaseTypes()
-			.withS("A".repeat(BaseTypes.MARSHAL_MAX))
+			.withS(new String(new char[BaseTypes.MARSHAL_MAX]))
 			.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 1], 1);
 		if (n != 0)
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
@@ -242,7 +244,7 @@ public class test {
 	static void bufferOverflow() {
 		try {
 			int n = new BaseTypes()
-				.withS("A".repeat(BaseTypes.MARSHAL_MAX / 2))
+				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
 				.marshalWithBounds(new byte[BaseTypes.BUF_MIN], 0);
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
 		} catch (BufferOverflowException ignored) {}
@@ -250,17 +252,10 @@ public class test {
 		// again with offset
 		try {
 			int n = new BaseTypes()
-				.withS("A".repeat(BaseTypes.MARSHAL_MAX / 2))
+				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
 				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 99], 99);
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
 		} catch (BufferOverflowException ignored) {}
-	}
-
-	private static String toHex(byte[] bytes, int offset, int length) {
-		String hex = new BigInteger(1, bytes, offset, length).toString(16);
-		while (length * 2 > hex.length())
-			hex = "0" + hex;
-		return hex;
 	}
 
 	private static void fromHex(byte[] buf, String s) {
