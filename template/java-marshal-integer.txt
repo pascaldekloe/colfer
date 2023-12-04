@@ -1,15 +1,7 @@
 		if (v{{.Index}} < 128) {
 			v{{.Index}} = v{{.Index}} << 1 | 1L;
 		} else {
-			buf[w+0] = (byte)v{{.Index}};
-			buf[w+1] = (byte)(v{{.Index}} >>> 8);
-			buf[w+2] = (byte)(v{{.Index}} >>> 16);
-			buf[w+3] = (byte)(v{{.Index}} >>> 24);
-			buf[w+4] = (byte)(v{{.Index}} >>> 32);
-			buf[w+5] = (byte)(v{{.Index}} >>> 40);
-			buf[w+6] = (byte)(v{{.Index}} >>> 48);
-			buf[w+7] = (byte)(v{{.Index}} >>> 56);
-
+			java_unsafe.putLong(buf, w + JAVA_ARRAY_OFFSET, w);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v{{.Index}});
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
