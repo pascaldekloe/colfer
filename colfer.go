@@ -228,6 +228,14 @@ func (t *Struct) FixedWordRemainderSize() int {
 	return t.FixedSize % 8
 }
 
+func (t *Struct) FixedWordRemainderByteIndices() []int {
+	indices := make([]int, t.FixedWordRemainderSize())
+	for i := range indices {
+		indices[i] = i
+	}
+	return indices
+}
+
 // DocText returns the documentation lines prefixed with ident.
 func (t *Struct) DocText(indent string) string {
 	return docText(t.Docs, indent)
