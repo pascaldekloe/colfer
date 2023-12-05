@@ -404,7 +404,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v3 | 0x80) + 1;
 			r += tailSize;
 			v3 <<= (tailSize << 3) - tailSize;
-			v3 |= tail & COLFER_MASKS[tailSize];
+			v3 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		final long v3Size = v3 * 1;
 		if ((long)(end - r) < v3Size)
@@ -427,7 +427,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v7 | 0x80) + 1;
 			r += tailSize;
 			v7 <<= (tailSize << 3) - tailSize;
-			v7 |= tail & COLFER_MASKS[tailSize];
+			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		final long v7Size = v7 * 1;
 		if ((long)(end - r) < v7Size)
@@ -448,7 +448,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v11 | 0x80) + 1;
 			r += tailSize;
 			v11 <<= (tailSize << 3) - tailSize;
-			v11 |= tail & COLFER_MASKS[tailSize];
+			v11 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		final long v11Size = v11 * 1;
 		if ((long)(end - r) < v11Size)
@@ -469,7 +469,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v15 | 0x80) + 1;
 			r += tailSize;
 			v15 <<= (tailSize << 3) - tailSize;
-			v15 |= tail & COLFER_MASKS[tailSize];
+			v15 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		final long v15Size = v15 * 1;
 		if ((long)(end - r) < v15Size)

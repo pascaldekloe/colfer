@@ -230,7 +230,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v0 | 0x80) + 1;
 			r += tailSize;
 			v0 <<= (tailSize << 3) - tailSize;
-			v0 |= tail & COLFER_MASKS[tailSize];
+			v0 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.pascalCase = (int)(v0 >>> 1) ^ -(int)(v0 & 1L);
 		// unpack .with_snake opaque8

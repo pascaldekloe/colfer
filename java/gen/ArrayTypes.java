@@ -476,7 +476,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v4 | 0x80) + 1;
 			r += tailSize;
 			v4 <<= (tailSize << 3) - tailSize;
-			v4 |= tail & COLFER_MASKS[tailSize];
+			v4 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u16n2[0] = (int)v4;
 		long v5 = word1 >> (0 + 1) & 0x7f;
@@ -485,7 +485,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v5 | 0x80) + 1;
 			r += tailSize;
 			v5 <<= (tailSize << 3) - tailSize;
-			v5 |= tail & COLFER_MASKS[tailSize];
+			v5 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u16n2[1] = (int)v5;
 		// unpack .i16n2 int32
@@ -495,7 +495,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v6 | 0x80) + 1;
 			r += tailSize;
 			v6 <<= (tailSize << 3) - tailSize;
-			v6 |= tail & COLFER_MASKS[tailSize];
+			v6 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i16n2[0] = (int)(v6 >>> 1) ^ -(int)(v6 & 1L);
 		long v7 = word1 >> (16 + 1) & 0x7f;
@@ -504,7 +504,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v7 | 0x80) + 1;
 			r += tailSize;
 			v7 <<= (tailSize << 3) - tailSize;
-			v7 |= tail & COLFER_MASKS[tailSize];
+			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i16n2[1] = (int)(v7 >>> 1) ^ -(int)(v7 & 1L);
 		// unpack .u32n2 uint16
@@ -514,7 +514,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v8 | 0x80) + 1;
 			r += tailSize;
 			v8 <<= (tailSize << 3) - tailSize;
-			v8 |= tail & COLFER_MASKS[tailSize];
+			v8 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u32n2[0] = (short)v8;
 		long v9 = word1 >> (32 + 1) & 0x7f;
@@ -523,7 +523,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v9 | 0x80) + 1;
 			r += tailSize;
 			v9 <<= (tailSize << 3) - tailSize;
-			v9 |= tail & COLFER_MASKS[tailSize];
+			v9 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u32n2[1] = (short)v9;
 		// unpack .i32n2 int16
@@ -533,7 +533,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v10 | 0x80) + 1;
 			r += tailSize;
 			v10 <<= (tailSize << 3) - tailSize;
-			v10 |= tail & COLFER_MASKS[tailSize];
+			v10 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i32n2[0] = (short)((short)(v10 >>> 1) ^ -(short)(v10 & 1L));
 		long v11 = word1 >> (48 + 1) & 0x7f;
@@ -542,7 +542,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v11 | 0x80) + 1;
 			r += tailSize;
 			v11 <<= (tailSize << 3) - tailSize;
-			v11 |= tail & COLFER_MASKS[tailSize];
+			v11 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i32n2[1] = (short)((short)(v11 >>> 1) ^ -(short)(v11 & 1L));
 		// unpack .u64n2 uint64
@@ -552,7 +552,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v12 | 0x80) + 1;
 			r += tailSize;
 			v12 <<= (tailSize << 3) - tailSize;
-			v12 |= tail & COLFER_MASKS[tailSize];
+			v12 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u64n2[0] = v12;
 		long v13 = word2 >> (0 + 1) & 0x7f;
@@ -561,7 +561,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v13 | 0x80) + 1;
 			r += tailSize;
 			v13 <<= (tailSize << 3) - tailSize;
-			v13 |= tail & COLFER_MASKS[tailSize];
+			v13 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u64n2[1] = v13;
 		// unpack .i64n2 int64
@@ -571,7 +571,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v14 | 0x80) + 1;
 			r += tailSize;
 			v14 <<= (tailSize << 3) - tailSize;
-			v14 |= tail & COLFER_MASKS[tailSize];
+			v14 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i64n2[0] = v14 >>> 1 ^ -(v14 & 1L);
 		long v15 = word2 >> (16 + 1) & 0x7f;
@@ -580,7 +580,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v15 | 0x80) + 1;
 			r += tailSize;
 			v15 <<= (tailSize << 3) - tailSize;
-			v15 |= tail & COLFER_MASKS[tailSize];
+			v15 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i64n2[1] = v15 >>> 1 ^ -(v15 & 1L);
 		// unpack .f32n2 float32
@@ -605,7 +605,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v22 | 0x80) + 1;
 			r += tailSize;
 			v22 <<= (tailSize << 3) - tailSize;
-			v22 |= tail & COLFER_MASKS[tailSize];
+			v22 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		if ((long)(end - r) < v22)
 			return 1;
@@ -617,7 +617,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v23 | 0x80) + 1;
 			r += tailSize;
 			v23 <<= (tailSize << 3) - tailSize;
-			v23 |= tail & COLFER_MASKS[tailSize];
+			v23 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		if ((long)(end - r) < v23)
 			return 1;

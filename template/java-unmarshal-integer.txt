@@ -4,6 +4,6 @@
 			int tailSize = Long.numberOfTrailingZeros(v{{.Index}} | 0x80) + 1;
 			r += tailSize;
 			v{{.Index}} <<= (tailSize << 3) - tailSize;
-			v{{.Index}} |= tail & COLFER_MASKS[tailSize];
+			v{{.Index}} |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 {{- /* no trailing new-line */ -}}

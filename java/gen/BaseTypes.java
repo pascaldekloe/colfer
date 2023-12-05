@@ -432,7 +432,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v2 | 0x80) + 1;
 			r += tailSize;
 			v2 <<= (tailSize << 3) - tailSize;
-			v2 |= tail & COLFER_MASKS[tailSize];
+			v2 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u16 = (short)v2;
 		// unpack .i16 int16
@@ -442,7 +442,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v3 | 0x80) + 1;
 			r += tailSize;
 			v3 <<= (tailSize << 3) - tailSize;
-			v3 |= tail & COLFER_MASKS[tailSize];
+			v3 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i16 = (short)((short)(v3 >>> 1) ^ -(short)(v3 & 1L));
 		// unpack .u32 uint32
@@ -452,7 +452,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v4 | 0x80) + 1;
 			r += tailSize;
 			v4 <<= (tailSize << 3) - tailSize;
-			v4 |= tail & COLFER_MASKS[tailSize];
+			v4 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u32 = (int)v4;
 		// unpack .i32 int32
@@ -462,7 +462,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v5 | 0x80) + 1;
 			r += tailSize;
 			v5 <<= (tailSize << 3) - tailSize;
-			v5 |= tail & COLFER_MASKS[tailSize];
+			v5 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i32 = (int)(v5 >>> 1) ^ -(int)(v5 & 1L);
 		// unpack .u64 uint64
@@ -472,7 +472,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v6 | 0x80) + 1;
 			r += tailSize;
 			v6 <<= (tailSize << 3) - tailSize;
-			v6 |= tail & COLFER_MASKS[tailSize];
+			v6 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.u64 = v6;
 		// unpack .i64 int64
@@ -482,7 +482,7 @@ implements java.io.Serializable {
 			int tailSize = Long.numberOfTrailingZeros(v7 | 0x80) + 1;
 			r += tailSize;
 			v7 <<= (tailSize << 3) - tailSize;
-			v7 |= tail & COLFER_MASKS[tailSize];
+			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
 		}
 		this.i64 = v7 >>> 1 ^ -(v7 & 1L);
 		// unpack .f32 float32
