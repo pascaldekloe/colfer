@@ -465,9 +465,9 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 			}
 		}
 		// size declaration in fixed section
-		if (w - {{.NameNative}}_offset > 127)
+		if (w - {{.NameNative}}_offset > 255)
 			throw new java.nio.BufferOverflowException();
-		word{{.WordIndex}} |= (long)((w - {{.NameNative}}_offset) << 1 | 1) << {{.WordShift}};
+		word{{.WordIndex}} |= (long)(w - {{.NameNative}}_offset) << {{.WordShift}};
 
     {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
 		// TODO: size plus payload encoding
@@ -676,10 +676,10 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 
  {{- else if eq .Type "text"}}
   {{- if not .ElementCount}}
-{{template "unmarshal-integer" .}}
-		if ((long)(end - r) < v{{.Index}})
+		int v{{.Index}} = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		if ((end - r) < v{{.Index}})
 			return 1;
-		end -= (int)v{{.Index}};
+		end -= v{{.Index}};
 		this.{{.NameNative}} = new String(buf, end, (int)v{{.Index}}, java.nio.charset.StandardCharsets.UTF_8);
 
   {{else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}

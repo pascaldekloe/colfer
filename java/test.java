@@ -75,7 +75,7 @@ public class test {
 				+ "00000000" // float32
 				+ "0000000000000000" // float64
 				+ "0000000000000000" // timestamp
-				+ "01" // text size
+				+ "00" // text size
 				+ "00", // bool
 				new BaseTypes());
 
@@ -92,7 +92,7 @@ public class test {
 				+ "00002041" // float32
 				+ "0000000000002640" // float64
 				+ "0d00000003000000" // timestamp
-				+ "03" // text size
+				+ "01" // text size
 				+ "01" // bool
 				+ "63", // text payload
 				new BaseTypes()

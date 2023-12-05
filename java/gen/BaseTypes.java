@@ -363,9 +363,9 @@ implements java.io.Serializable {
 			}
 		}
 		// size declaration in fixed section
-		if (w - s_offset > 127)
+		if (w - s_offset > 255)
 			throw new java.nio.BufferOverflowException();
-		word3 |= (long)((w - s_offset) << 1 | 1) << 56;
+		word3 |= (long)(w - s_offset) << 56;
 
 		// write fixed positions
 		int size = w - off;
@@ -497,17 +497,10 @@ implements java.io.Serializable {
 		long v10 = word2>>>56 | word3<<(64-56);
 		this.t = java.time.Instant.ofEpochSecond(v10 >>> 30, (int) v10 & (1 << 30) - 1);
 		// unpack .s text
-		long v11 = word3 >> (56 + 1) & 0x7f;
-		if ((1L << 56 & word3) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_BYTE_BASE_OFFSET);
-			int tailSize = Long.numberOfTrailingZeros(v11 | 0x80) + 1;
-			r += tailSize;
-			v11 <<= (tailSize << 3) - tailSize;
-			v11 |= tail & COLFER_MASKS[tailSize];
-		}
-		if ((long)(end - r) < v11)
+		int v11 = (int)(word3 >> 56) & 0xff;
+		if ((end - r) < v11)
 			return 1;
-		end -= (int)v11;
+		end -= v11;
 		this.s = new String(buf, end, (int)v11, java.nio.charset.StandardCharsets.UTF_8);
 
   
