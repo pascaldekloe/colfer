@@ -56,9 +56,9 @@ public class bench {
 	static void benchMarshal() {
 		Colfer[] testData = newTestData();
 		byte[] buf = new byte[Colfer.MARSHAL_MAX];
-		final int n = 20000000;
 
 		long start = System.nanoTime();
+		final int n = 20000000 + (int)(start & 7);
 		for (int i = 0; i < n; i++) {
 			int size = testData[i % testData.length].marshalWithBounds(buf, 0);
 			if (size == 0) {
@@ -85,9 +85,9 @@ public class bench {
 			}
 		}
 		Colfer o = new Colfer();
-		final int n = 20000000;
 
 		long start = System.nanoTime();
+		final int n = 20000000 + (int)(start & 7);
 		for (int i = 0; i < n; i++) {
 			int size = o.unmarshal(serials[i % serials.length], 0, 200);
 			if (size < Colfer.MARSHAL_MIN) {

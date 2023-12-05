@@ -375,7 +375,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 1)
 			throw new java.nio.BufferOverflowException();
 		for (short b : this.{{.NameNative}}) {
-			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
+			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_SHORT_BASE_OFFSET, b);
 			w += 2;
 		}
 
@@ -383,7 +383,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
 			throw new java.nio.BufferOverflowException();
 		for (int b : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
+			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_INT_BASE_OFFSET, b);
 			w += 4;
 		}
 
@@ -391,7 +391,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (long b : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, b);
 			w += 8;
 		}
 
@@ -399,7 +399,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
 			throw new java.nio.BufferOverflowException();
 		for (float f : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Float.floatToRawIntBits(f));
+			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_INT_BASE_OFFSET, Float.floatToRawIntBits(f));
 			w += 4;
 		}
 
@@ -407,7 +407,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (double d : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Double.doubleToRawLongBits(d));
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, Double.doubleToRawLongBits(d));
 			w += 8;
 		}
 
@@ -415,7 +415,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (java.time.Instant t : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
 			w += 8;
 		}
 
@@ -434,33 +434,31 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		for (int i = 0, end = this.{{.NameNative}}.length(); i < end; i++) {
 			char c = this.{{.NameNative}}.charAt(i);
 			if (c < '\u0080') {
-				buf[w++] = (byte) c;
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)c);
 			} else if (c < '\u0800') {
 				if (buf.length - w < (end - i) + 1)
 					throw new java.nio.BufferOverflowException();
-				buf[w++] = (byte) (c >> 6 | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0x80);
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 | 0xc0));
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0x80));
 			} else if (! Character.isHighSurrogate(c)) {
 				if (buf.length - w < (end - i) + 2)
 					throw new java.nio.BufferOverflowException();
-				buf[w++] = (byte) (c >> 12 | 0xe0);
-				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0xc0);
-			} else if (i + 1 >= end) {
-				buf[w++] = '?'; // incomplete pair
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 12 | 0xe0));
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 & 0x3f | 0xc0));
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0xc0));
+			} else if (i + 1 >= end) { // incomplete pair
+				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
 			} else {
 				char low = this.{{.NameNative}}.charAt(++i);
-				if (!Character.isLowSurrogate(low)) {
-					buf[w++] = '?'; // broken pair
-					i--;
+				if (!Character.isLowSurrogate(low)) { // broken pair
+					java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
+					i--; // unread
 				} else {
-					int cp = Character.toCodePoint(c, low);
 					if (buf.length - w < (end - i) + 3)
 						throw new java.nio.BufferOverflowException();
-					buf[w++] = (byte) (cp >> 18 | 0xf0);
-					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c & 0x3f | 0xc0);
+					int cp = Character.toCodePoint(c, low);
+					java_unsafe.putInt(buf, w++ + java_unsafe.ARRAY_INT_BASE_OFFSET, 0xc0c0c0f0 &
+						(cp>>>18 | (cp>>>4 & 0x3f00) | (c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
 				}
 			}
 		}
@@ -487,12 +485,12 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 {{- end}}{{/* has payload section */}}
 		word0 |= size;
 {{- range .FixedWordIndices}}
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}} * 8), word{{.}});
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{.}} * 8), word{{.}});
 {{- end}}
 {{- if .FixedWordRemainderSize}}
  {{- $wordIndex := len .FixedWordIndices}}
  {{- range .FixedWordRemainderByteIndices}}
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
  {{- end}}
 {{- end}}
 		return size;
@@ -528,11 +526,11 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (len < 3) return 0;
 
 {{- range .FixedWordIndices}}
-		final long word{{.}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}}L * 8L));
+		final long word{{.}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{.}}L * 8L));
 {{- end}}
 {{- if .FixedWordRemainderSize}}
  {{- $wordIndex := len .FixedWordIndices}}
-		final long word{{$wordIndex}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}}L * 8L));
+		final long word{{$wordIndex}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{$wordIndex}}L * 8L));
 {{- end}}
 
 		final int size = (int)word0 & 0xfff;
