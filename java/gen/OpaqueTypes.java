@@ -187,17 +187,17 @@ implements java.io.Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The output size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Return 0 signals
-	 * that encoding would exceed {@link #MARSHAL_MAX}.
+	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
+	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
+	 * anywhere beyond the offset—not limited to the serial size.
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size or 0.
+	 * @return the encoding size.
 	 * @throws IllegalArgumentException when the buffer capacity since the
 	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException is prevented with a buffer
-	 *         capacity since the offset of at least {@link #MARSHAL_MAX}.
+	 * @throws java.nio.BufferOverflowException when the data exceeds the
+	 *         buffer capacity or {@link #MARSHAL_MAX}.
 	 */
 	public int marshalWithBounds(byte[] buf, int off) {
 		if (off < 0 || buf.length - off < BUF_MIN)
@@ -304,35 +304,35 @@ implements java.io.Serializable {
 			v15 = (v15 | 1L) << tailSize;
 		}
 		word6 |= v15 << 24;
-		long variableSize = 0;
-		variableSize += this.a8l.length;
-		variableSize += this.a16l.length << 1;
-		variableSize += this.a32l.length << 2;
-		variableSize += this.a64l.length << 3;
-		long size = (long)(w - off) + variableSize;
-		// boundary checks
-		if (size > MARSHAL_MAX)
-			return 0;
-		if (buf.length - w < (int)variableSize)
-			throw new java.nio.BufferOverflowException();
 
 		// write payloads
+		if (buf.length - w < this.a64l.length << 3)
+			throw new java.nio.BufferOverflowException();
 		for (long b : this.a64l) {
 			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 8;
 		}
+		if (buf.length - w < this.a32l.length << 2)
+			throw new java.nio.BufferOverflowException();
 		for (int b : this.a32l) {
 			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 4;
 		}
+		if (buf.length - w < this.a16l.length << 1)
+			throw new java.nio.BufferOverflowException();
 		for (short b : this.a16l) {
 			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 2;
 		}
+		if (buf.length - w < this.a8l.length)
+			throw new java.nio.BufferOverflowException();
 		System.arraycopy(this.a8l, 0, buf, w, this.a8l.length);
 		w += this.a8l.length;
 
 		// write fixed positions
+		int size = w - off;
+		if (size > MARSHAL_MAX)
+			throw new java.nio.BufferOverflowException();
 		word0 |= size;
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
@@ -344,8 +344,7 @@ implements java.io.Serializable {
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 1, (byte)(word6 >>> (1 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 2, (byte)(word6 >>> (2 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 3, (byte)(word6 >>> (3 * 8)));
-
-		return (int)size;
+		return size;
 	}
 
 	/**

@@ -192,17 +192,17 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The output size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}.{{if .HasPayloadSection}} Return 0 signals
-	 * that encoding would exceed {@link #MARSHAL_MAX}.{{end}}
+	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
+	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
+	 * anywhere beyond the offset—not limited to the serial size.
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size{{if .HasPayloadSection}} or 0{{end}}.
+	 * @return the encoding size.
 	 * @throws IllegalArgumentException when the buffer capacity since the
 	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException is prevented with a buffer
-	 *         capacity since the offset of at least {@link #MARSHAL_MAX}.
+	 * @throws java.nio.BufferOverflowException when the data exceeds the
+	 *         buffer capacity or {@link #MARSHAL_MAX}.
 	 */
 	public int marshal{{if .HasPayloadSection}}WithBounds{{end}}(byte[] buf, int off) {
 		if (off < 0 || buf.length - off < BUF_MIN)
@@ -210,10 +210,6 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 
 		int w = off + {{.FixedSize}}; // write index
 		long word0 = {{.FixedSize}} << 12;
-
-{{- if .HasText}}
-		long variableSize = 0;
-{{- end}}
 
 {{- range .Fields}}
 
@@ -354,65 +350,15 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 {{template "marshal64" .}}
   {{- end}}{{end}}{{end}}{{/* is array */}}
 
+
  {{- else if eq .Type "text"}}
-  {{- if not .ElementCount}}
-		long v{{.Index}} = this.{{.NameNative}}.length();
-		for (int i = 0, end = (int) v{{.Index}}; i < end; i++) {
-			char c = this.{{.NameNative}}.charAt(i);
-			if (c < '\u0080') continue; // 1 char to 1 UTF-8 byte
-			if (c < '\u0800') v{{.Index}}++; // 1 char to 2 UTF-8 bytes
-			else if (! Character.isHighSurrogate(c)) v{{.Index}} += 2; // 1 char to 3 UTF-8 bytes
-			else if (i + 1 < end && Character.isLowSurrogate(this.{{.NameNative}}.charAt(i + 1))) {
-				v{{.Index}} += 2; // 2 chars to 4 UTF-8 bytes
-				i++;
-			} // else broken surrogate replaced with '?'
-		}
-		variableSize += v{{.Index}};
-{{template "marshal-integer" .}}
-  {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-		long v{{.Index}} = this.{{.NameNative}}[{{$arrayIndex}}].length();
-		for (int i = 0, end = (int) v{{.Index}}; i < end; i++) {
-			char c = this.{{.NameNative}}[{{$arrayIndex}}].charAt(i);
-			if (c < '\u0080') continue; // 1 char to 1 UTF-8 byte
-			if (c < '\u0800') v{{.Index}}++; // 1 char to 2 UTF-8 bytes
-			else if (! Character.isHighSurrogate(c)) v{{.Index}} += 2; // 1 char to 3 UTF-8 bytes
-			else if (i + 1 < end && Character.isLowSurrogate(this.{{.NameNative}}[{{$arrayIndex}}].charAt(i + 1))) {
-				v{{.Index}} += 2; // 2 chars to 4 UTF-8 bytes
-				i++;
-			} // else broken surrogate replaced with '?'
-		}
-		variableSize += v{{.Index}};
-{{template "marshal-integer" .}}
-  {{- end}}{{end}}{{end}}{{/* is array */}}
+  {{- if not .WordShift}}
+		long word{{.WordIndex}} = 0;
+  {{- end}}
+  {{- /* payload plus size declaration done below */}}
 
  {{- end}}{{/* type match */}}
 {{- end}}{{/* field range */}}
-
-{{- if .HasPayloadSection}}
- {{- if not .HasText}}
-		long variableSize = 0;
- {{- end}}
- {{- range .Fields}}
-  {{- if .TypeList}}
-   {{- if eq .Type "opaque8" "uint8" "int8"}}
-		variableSize += this.{{.NameNative}}.length;
-   {{- else if eq .Type "opaque16"}}
-		variableSize += this.{{.NameNative}}.length << 1;
-   {{- else if eq .Type "opaque32" "float32"}}
-		variableSize += this.{{.NameNative}}.length << 2;
-   {{- else if eq .Type "opaque64" "float64" "timestamp"}}
-		variableSize += this.{{.NameNative}}.length << 3;
-   {{- /* text counted already */}}
-   {{- end}}{{/* type match */}}
-  {{- end}}{{/* is list */}}
- {{- end}}{{/* field range */}}
-{{- end}}{{/* has payload section */}}
-		long size = (long)(w - off){{if .HasPayloadSection}} + variableSize;
-		// boundary checks
-		if (size > MARSHAL_MAX)
-			return 0;
-		if (buf.length - w < (int)variableSize)
-			throw new java.nio.BufferOverflowException(){{end}};
 
 {{- if .HasPayloadSection}}
 
@@ -420,42 +366,57 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
  {{- range .FieldsReversed}}
   {{- if .TypeList}}
    {{- if eq .Type "opaque8" "uint8" "int8"}}
+		if (buf.length - w < this.{{.NameNative}}.length)
+			throw new java.nio.BufferOverflowException();
 		System.arraycopy(this.{{.NameNative}}, 0, buf, w, this.{{.NameNative}}.length);
 		w += this.{{.NameNative}}.length;
 
    {{- else if eq .Type "opaque16"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 1)
+			throw new java.nio.BufferOverflowException();
 		for (short b : this.{{.NameNative}}) {
 			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 2;
 		}
 
    {{- else if eq .Type "opaque32"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 2)
+			throw new java.nio.BufferOverflowException();
 		for (int b : this.{{.NameNative}}) {
 			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 4;
 		}
 
    {{- else if eq .Type "opaque64"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 3)
+			throw new java.nio.BufferOverflowException();
 		for (long b : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 8;
 		}
 
    {{- else if eq .Type "float32"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 2)
+			throw new java.nio.BufferOverflowException();
 		for (float f : this.{{.NameNative}}) {
 			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Float.floatToRawIntBits(f));
 			w += 4;
 		}
 
    {{- else if eq .Type "float64"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 3)
+			throw new java.nio.BufferOverflowException();
 		for (double d : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Double.doubleToRawLongBits(d));
 			w += 8;
 		}
 
    {{- else if eq .Type "timestamp"}}
+		if (buf.length - w < this.{{.NameNative}}.length << 3)
+			throw new java.nio.BufferOverflowException();
 		for (java.time.Instant t : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
+			w += 8;
 		}
 
    {{- else if eq .Type "text"}}
@@ -466,14 +427,22 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
   {{- else}}{{/* not list */}}
    {{- if eq .Type "text"}}
     {{- if not .ElementCount}}
+		// size check is lazily redone on multi-byte encodings
+		if (buf.length - w < this.{{.NameNative}}.length())
+			throw new java.nio.BufferOverflowException();
+		int {{.NameNative}}_offset = w;
 		for (int i = 0, end = this.{{.NameNative}}.length(); i < end; i++) {
 			char c = this.{{.NameNative}}.charAt(i);
 			if (c < '\u0080') {
 				buf[w++] = (byte) c;
 			} else if (c < '\u0800') {
+				if (buf.length - w < (end - i) + 1)
+					throw new java.nio.BufferOverflowException();
 				buf[w++] = (byte) (c >> 6 | 0xc0);
 				buf[w++] = (byte) (c & 0x3f | 0x80);
 			} else if (! Character.isHighSurrogate(c)) {
+				if (buf.length - w < (end - i) + 2)
+					throw new java.nio.BufferOverflowException();
 				buf[w++] = (byte) (c >> 12 | 0xe0);
 				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
 				buf[w++] = (byte) (c & 0x3f | 0xc0);
@@ -486,6 +455,8 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 					i--;
 				} else {
 					int cp = Character.toCodePoint(c, low);
+					if (buf.length - w < (end - i) + 3)
+						throw new java.nio.BufferOverflowException();
 					buf[w++] = (byte) (cp >> 18 | 0xf0);
 					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
 					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
@@ -493,45 +464,27 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 				}
 			}
 		}
+		// size declaration in fixed section
+		if (w - {{.NameNative}}_offset > 127)
+			throw new java.nio.BufferOverflowException();
+		word{{.WordIndex}} |= (long)((w - {{.NameNative}}_offset) << 1 | 1) << {{.WordShift}};
 
     {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-		for (int i = 0, end = this.{{.NameNative}}[{{$arrayIndex}}].length(); i < end; i++) {
-			char c = this.{{.NameNative}}[{{$arrayIndex}}].charAt(i);
-			if (c < '\u0080') {
-				buf[w++] = (byte) c;
-			} else if (c < '\u0800') {
-				buf[w++] = (byte) (c >> 6 | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0x80);
-			} else if (! Character.isHighSurrogate(c)) {
-				buf[w++] = (byte) (c >> 12 | 0xe0);
-				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0xc0);
-			} else if (i + 1 >= end) {
-				buf[w++] = '?'; // incomplete pair
-			} else {
-				char low = this.{{.NameNative}}[{{$arrayIndex}}].charAt(++i);
-				if (!Character.isLowSurrogate(low)) {
-					buf[w++] = '?'; // broken pair
-					i--;
-				} else {
-					int cp = Character.toCodePoint(c, low);
-					buf[w++] = (byte) (cp >> 18 | 0xf0);
-					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c & 0x3f | 0xc0);
-				}
-			}
-		}
+		// TODO: size plus payload encoding
 
     {{- end}}{{end}}{{end}}{{/* is array */}}
 
    {{- end}}{{/* type select */}}
   {{- end}}{{/* not list */}}
  {{- end}}{{/* field range */}}
-
-{{- end}}{{/* has payloads */}}
+{{- end}}{{/* has payload section */}}
 
 		// write fixed positions
+		int size = w - off;
+{{- if .HasPayloadSection}}
+		if (size > MARSHAL_MAX)
+			throw new java.nio.BufferOverflowException();
+{{- end}}{{/* has payload section */}}
 		word0 |= size;
 {{- range .FixedWordIndices}}
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}} * 8), word{{.}});
@@ -542,8 +495,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
  {{- end}}
 {{- end}}
-
-		return (int)size;
+		return size;
 	}
 
 	/**

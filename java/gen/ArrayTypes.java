@@ -185,17 +185,17 @@ implements java.io.Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The output size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Return 0 signals
-	 * that encoding would exceed {@link #MARSHAL_MAX}.
+	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
+	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
+	 * anywhere beyond the offset—not limited to the serial size.
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size or 0.
+	 * @return the encoding size.
 	 * @throws IllegalArgumentException when the buffer capacity since the
 	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException is prevented with a buffer
-	 *         capacity since the offset of at least {@link #MARSHAL_MAX}.
+	 * @throws java.nio.BufferOverflowException when the data exceeds the
+	 *         buffer capacity or {@link #MARSHAL_MAX}.
 	 */
 	public int marshalWithBounds(byte[] buf, int off) {
 		if (off < 0 || buf.length - off < BUF_MIN)
@@ -203,7 +203,6 @@ implements java.io.Serializable {
 
 		int w = off + 61; // write index
 		long word0 = 61 << 12;
-		long variableSize = 0;
 
 		// pack .u8n2 uint8
 		word0 |= Byte.toUnsignedLong(this.u8n2[0]) << 24;
@@ -393,116 +392,15 @@ implements java.io.Serializable {
 		long word7 = v21 >> (64-24);
 
 		// pack .sn2 text
-		long v22 = this.sn2[0].length();
-		for (int i = 0, end = (int) v22; i < end; i++) {
-			char c = this.sn2[0].charAt(i);
-			if (c < '\u0080') continue; // 1 char to 1 UTF-8 byte
-			if (c < '\u0800') v22++; // 1 char to 2 UTF-8 bytes
-			else if (! Character.isHighSurrogate(c)) v22 += 2; // 1 char to 3 UTF-8 bytes
-			else if (i + 1 < end && Character.isLowSurrogate(this.sn2[0].charAt(i + 1))) {
-				v22 += 2; // 2 chars to 4 UTF-8 bytes
-				i++;
-			} // else broken surrogate replaced with '?'
-		}
-		variableSize += v22;
-		if (v22 < 128) {
-			v22 = v22 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, v22);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v22);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v22 >>>= (tailSize << 3) - 1;
-			v22 = (v22 | 1L) << tailSize;
-		}
-		word7 |= v22 << 24;
-		long v23 = this.sn2[1].length();
-		for (int i = 0, end = (int) v23; i < end; i++) {
-			char c = this.sn2[1].charAt(i);
-			if (c < '\u0080') continue; // 1 char to 1 UTF-8 byte
-			if (c < '\u0800') v23++; // 1 char to 2 UTF-8 bytes
-			else if (! Character.isHighSurrogate(c)) v23 += 2; // 1 char to 3 UTF-8 bytes
-			else if (i + 1 < end && Character.isLowSurrogate(this.sn2[1].charAt(i + 1))) {
-				v23 += 2; // 2 chars to 4 UTF-8 bytes
-				i++;
-			} // else broken surrogate replaced with '?'
-		}
-		variableSize += v23;
-		if (v23 < 128) {
-			v23 = v23 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, v23);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v23);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v23 >>>= (tailSize << 3) - 1;
-			v23 = (v23 | 1L) << tailSize;
-		}
-		word7 |= v23 << 32;
-		long size = (long)(w - off) + variableSize;
-		// boundary checks
-		if (size > MARSHAL_MAX)
-			return 0;
-		if (buf.length - w < (int)variableSize)
-			throw new java.nio.BufferOverflowException();
 
 		// write payloads
-		for (int i = 0, end = this.sn2[0].length(); i < end; i++) {
-			char c = this.sn2[0].charAt(i);
-			if (c < '\u0080') {
-				buf[w++] = (byte) c;
-			} else if (c < '\u0800') {
-				buf[w++] = (byte) (c >> 6 | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0x80);
-			} else if (! Character.isHighSurrogate(c)) {
-				buf[w++] = (byte) (c >> 12 | 0xe0);
-				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0xc0);
-			} else if (i + 1 >= end) {
-				buf[w++] = '?'; // incomplete pair
-			} else {
-				char low = this.sn2[0].charAt(++i);
-				if (!Character.isLowSurrogate(low)) {
-					buf[w++] = '?'; // broken pair
-					i--;
-				} else {
-					int cp = Character.toCodePoint(c, low);
-					buf[w++] = (byte) (cp >> 18 | 0xf0);
-					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c & 0x3f | 0xc0);
-				}
-			}
-		}
-		for (int i = 0, end = this.sn2[1].length(); i < end; i++) {
-			char c = this.sn2[1].charAt(i);
-			if (c < '\u0080') {
-				buf[w++] = (byte) c;
-			} else if (c < '\u0800') {
-				buf[w++] = (byte) (c >> 6 | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0x80);
-			} else if (! Character.isHighSurrogate(c)) {
-				buf[w++] = (byte) (c >> 12 | 0xe0);
-				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-				buf[w++] = (byte) (c & 0x3f | 0xc0);
-			} else if (i + 1 >= end) {
-				buf[w++] = '?'; // incomplete pair
-			} else {
-				char low = this.sn2[1].charAt(++i);
-				if (!Character.isLowSurrogate(low)) {
-					buf[w++] = '?'; // broken pair
-					i--;
-				} else {
-					int cp = Character.toCodePoint(c, low);
-					buf[w++] = (byte) (cp >> 18 | 0xf0);
-					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
-					buf[w++] = (byte) (c & 0x3f | 0xc0);
-				}
-			}
-		}
+		// TODO: size plus payload encoding
+		// TODO: size plus payload encoding
 
 		// write fixed positions
+		int size = w - off;
+		if (size > MARSHAL_MAX)
+			throw new java.nio.BufferOverflowException();
 		word0 |= size;
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
@@ -516,8 +414,7 @@ implements java.io.Serializable {
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (7 * 8) + 2, (byte)(word7 >>> (2 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (7 * 8) + 3, (byte)(word7 >>> (3 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (7 * 8) + 4, (byte)(word7 >>> (4 * 8)));
-
-		return (int)size;
+		return size;
 	}
 
 	/**

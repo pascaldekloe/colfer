@@ -196,17 +196,17 @@ implements java.io.Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The output size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Return 0 signals
-	 * that encoding would exceed {@link #MARSHAL_MAX}.
+	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
+	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
+	 * anywhere beyond the offset—not limited to the serial size.
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size or 0.
+	 * @return the encoding size.
 	 * @throws IllegalArgumentException when the buffer capacity since the
 	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException is prevented with a buffer
-	 *         capacity since the offset of at least {@link #MARSHAL_MAX}.
+	 * @throws java.nio.BufferOverflowException when the data exceeds the
+	 *         buffer capacity or {@link #MARSHAL_MAX}.
 	 */
 	public int marshalWithBounds(byte[] buf, int off) {
 		if (off < 0 || buf.length - off < BUF_MIN)
@@ -214,7 +214,6 @@ implements java.io.Serializable {
 
 		int w = off + 33; // write index
 		long word0 = 33 << 12;
-		long variableSize = 0;
 
 		// pack .u8 uint8
 		word0 |= Byte.toUnsignedLong(this.u8) << 24;
@@ -321,48 +320,27 @@ implements java.io.Serializable {
 		long word3 = v10 >> (64-56);
 
 		// pack .s text
-		long v11 = this.s.length();
-		for (int i = 0, end = (int) v11; i < end; i++) {
-			char c = this.s.charAt(i);
-			if (c < '\u0080') continue; // 1 char to 1 UTF-8 byte
-			if (c < '\u0800') v11++; // 1 char to 2 UTF-8 bytes
-			else if (! Character.isHighSurrogate(c)) v11 += 2; // 1 char to 3 UTF-8 bytes
-			else if (i + 1 < end && Character.isLowSurrogate(this.s.charAt(i + 1))) {
-				v11 += 2; // 2 chars to 4 UTF-8 bytes
-				i++;
-			} // else broken surrogate replaced with '?'
-		}
-		variableSize += v11;
-		if (v11 < 128) {
-			v11 = v11 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, v11);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v11);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v11 >>>= (tailSize << 3) - 1;
-			v11 = (v11 | 1L) << tailSize;
-		}
-		word3 |= v11 << 56;
 
 		// pack .b bool
 		long word4 = this.bools>>0 & 255L;
-		long size = (long)(w - off) + variableSize;
-		// boundary checks
-		if (size > MARSHAL_MAX)
-			return 0;
-		if (buf.length - w < (int)variableSize)
-			throw new java.nio.BufferOverflowException();
 
 		// write payloads
+		// size check is lazily redone on multi-byte encodings
+		if (buf.length - w < this.s.length())
+			throw new java.nio.BufferOverflowException();
+		int s_offset = w;
 		for (int i = 0, end = this.s.length(); i < end; i++) {
 			char c = this.s.charAt(i);
 			if (c < '\u0080') {
 				buf[w++] = (byte) c;
 			} else if (c < '\u0800') {
+				if (buf.length - w < (end - i) + 1)
+					throw new java.nio.BufferOverflowException();
 				buf[w++] = (byte) (c >> 6 | 0xc0);
 				buf[w++] = (byte) (c & 0x3f | 0x80);
 			} else if (! Character.isHighSurrogate(c)) {
+				if (buf.length - w < (end - i) + 2)
+					throw new java.nio.BufferOverflowException();
 				buf[w++] = (byte) (c >> 12 | 0xe0);
 				buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
 				buf[w++] = (byte) (c & 0x3f | 0xc0);
@@ -375,6 +353,8 @@ implements java.io.Serializable {
 					i--;
 				} else {
 					int cp = Character.toCodePoint(c, low);
+					if (buf.length - w < (end - i) + 3)
+						throw new java.nio.BufferOverflowException();
 					buf[w++] = (byte) (cp >> 18 | 0xf0);
 					buf[w++] = (byte) (c >> 12 & 0x3f | 0xc0);
 					buf[w++] = (byte) (c >> 6 & 0x3f | 0xc0);
@@ -382,16 +362,22 @@ implements java.io.Serializable {
 				}
 			}
 		}
+		// size declaration in fixed section
+		if (w - s_offset > 127)
+			throw new java.nio.BufferOverflowException();
+		word3 |= (long)((w - s_offset) << 1 | 1) << 56;
 
 		// write fixed positions
+		int size = w - off;
+		if (size > MARSHAL_MAX)
+			throw new java.nio.BufferOverflowException();
 		word0 |= size;
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (2 * 8), word2);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (3 * 8), word3);
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (4 * 8) + 0, (byte)(word4 >>> (0 * 8)));
-
-		return (int)size;
+		return size;
 	}
 
 	/**

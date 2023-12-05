@@ -139,16 +139,17 @@ implements java.io.Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The output size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}.
+	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
+	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
+	 * anywhere beyond the offset—not limited to the serial size.
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
 	 * @return the encoding size.
 	 * @throws IllegalArgumentException when the buffer capacity since the
 	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException is prevented with a buffer
-	 *         capacity since the offset of at least {@link #MARSHAL_MAX}.
+	 * @throws java.nio.BufferOverflowException when the data exceeds the
+	 *         buffer capacity or {@link #MARSHAL_MAX}.
 	 */
 	public int marshal(byte[] buf, int off) {
 		if (off < 0 || buf.length - off < BUF_MIN)
@@ -173,17 +174,16 @@ implements java.io.Serializable {
 
 		// pack .with_snake opaque8
 		word0 |= Byte.toUnsignedLong(this.withSnake) << 32;
-		long size = (long)(w - off);
 
 		// write fixed positions
+		int size = w - off;
 		word0 |= size;
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 0, (byte)(word0 >>> (0 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 1, (byte)(word0 >>> (1 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 2, (byte)(word0 >>> (2 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 3, (byte)(word0 >>> (3 * 8)));
 		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 4, (byte)(word0 >>> (4 * 8)));
-
-		return (int)size;
+		return size;
 	}
 
 	/**

@@ -220,25 +220,26 @@ public class test {
 	}
 
 	static void marshalMax() {
-		int n;
-
-		n = new OpaqueTypes()
-			.withA16l(new short[OpaqueTypes.MARSHAL_MAX / 2])
-			.marshalWithBounds(new byte[OpaqueTypes.BUF_MIN], 0);
-		if (n != 0)
+		try {
+			int n = new OpaqueTypes()
+				.withA16l(new short[OpaqueTypes.MARSHAL_MAX / 2])
+				.marshalWithBounds(new byte[OpaqueTypes.BUF_MIN], 0);
 			failf("marshal max: marshaled an oversized opaque16 binary into %d bytes", n);
+		} catch (BufferOverflowException ok) {}
 
-		n = new BaseTypes()
-			.withS(new String(new char[BaseTypes.MARSHAL_MAX]))
-			.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 1], 1);
-		if (n != 0)
+		try {
+			int n = new BaseTypes()
+				.withS(new String(new char[BaseTypes.MARSHAL_MAX]))
+				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 1], 1);
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
+		} catch (BufferOverflowException ok) {}
 
-		n = new ListTypes()
-			.withF32l(new float[ListTypes.MARSHAL_MAX / 4])
-			.marshalWithBounds(new byte[ListTypes.BUF_MIN + 2], 2);
-		if (n != 0)
+		try {
+			int n = new ListTypes()
+				.withF32l(new float[ListTypes.MARSHAL_MAX / 4])
+				.marshalWithBounds(new byte[ListTypes.BUF_MIN + 2], 2);
 			failf("marshal max: marshaled an oversized float32-list into %d bytes", n);
+		} catch (BufferOverflowException ok) {}
 	}
 
 	static void bufferOverflow() {
@@ -247,7 +248,7 @@ public class test {
 				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
 				.marshalWithBounds(new byte[BaseTypes.BUF_MIN], 0);
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
-		} catch (BufferOverflowException ignored) {}
+		} catch (BufferOverflowException ok) {}
 
 		// again with offset
 		try {
@@ -255,7 +256,7 @@ public class test {
 				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
 				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 99], 99);
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
-		} catch (BufferOverflowException ignored) {}
+		} catch (BufferOverflowException ok) {}
 	}
 
 	private static void fromHex(byte[] buf, String s) {
