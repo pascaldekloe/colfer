@@ -95,14 +95,13 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		0xffffffffffffffffL,
 	};
 
-	private static final sun.misc.Unsafe java_unsafe = resolve_unsafe();
-	private static final long JAVA_ARRAY_OFFSET = java_unsafe.ARRAY_BYTE_BASE_OFFSET;
+	private static final sun.misc.Unsafe java_unsafe;
 
-	private static sun.misc.Unsafe resolve_unsafe() {
+	static {
 		try {
-			java.lang.reflect.Field f = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+			java.lang.reflect.Field f = Class.class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
 			f.setAccessible(true);
-			return (sun.misc.Unsafe) f.get(null);
+			java_unsafe = (sun.misc.Unsafe) f.get(null);
 		} catch (Exception e) {
 			throw new Error("Java unsafe API required", e);
 		}
@@ -426,37 +425,37 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 
    {{- else if eq .Type "opaque16"}}
 		for (short b : this.{{.NameNative}}) {
-			java_unsafe.putShort(buf, w + JAVA_ARRAY_OFFSET, b);
+			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 2;
 		}
 
    {{- else if eq .Type "opaque32"}}
 		for (int b : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + JAVA_ARRAY_OFFSET, b);
+			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 4;
 		}
 
    {{- else if eq .Type "opaque64"}}
 		for (long b : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + JAVA_ARRAY_OFFSET, b);
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, b);
 			w += 8;
 		}
 
    {{- else if eq .Type "float32"}}
 		for (float f : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + JAVA_ARRAY_OFFSET, Float.floatToRawIntBits(f));
+			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Float.floatToRawIntBits(f));
 			w += 4;
 		}
 
    {{- else if eq .Type "float64"}}
 		for (double d : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + JAVA_ARRAY_OFFSET, Double.doubleToRawLongBits(d));
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, Double.doubleToRawLongBits(d));
 			w += 8;
 		}
 
    {{- else if eq .Type "timestamp"}}
 		for (java.time.Instant t : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + JAVA_ARRAY_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
 		}
 
    {{- else if eq .Type "text"}}
@@ -535,12 +534,12 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		// write fixed positions
 		word0 |= size;
 {{- range .FixedWordIndices}}
-		java_unsafe.putLong(buf, off + JAVA_ARRAY_OFFSET + ({{.}} * 8), word{{.}});
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}} * 8), word{{.}});
 {{- end}}
 {{- if .FixedWordRemainderSize}}
  {{- $wordIndex := len .FixedWordIndices}}
  {{- range .FixedWordRemainderByteIndices}}
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
  {{- end}}
 {{- end}}
 
@@ -577,11 +576,11 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (len < 3) return 0;
 
 {{- range .FixedWordIndices}}
-		final long word{{.}} = java_unsafe.getLong(buf, (long)off + JAVA_ARRAY_OFFSET + ({{.}}L * 8L));
+		final long word{{.}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}}L * 8L));
 {{- end}}
 {{- if .FixedWordRemainderSize}}
  {{- $wordIndex := len .FixedWordIndices}}
-		final long word{{$wordIndex}} = java_unsafe.getLong(buf, (long)off + JAVA_ARRAY_OFFSET + ({{$wordIndex}}L * 8L));
+		final long word{{$wordIndex}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}}L * 8L));
 {{- end}}
 
 		final int size = (int)word0 & 0xfff;

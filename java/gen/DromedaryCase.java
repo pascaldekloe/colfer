@@ -51,14 +51,13 @@ implements java.io.Serializable {
 		0xffffffffffffffffL,
 	};
 
-	private static final sun.misc.Unsafe java_unsafe = resolve_unsafe();
-	private static final long JAVA_ARRAY_OFFSET = java_unsafe.ARRAY_BYTE_BASE_OFFSET;
+	private static final sun.misc.Unsafe java_unsafe;
 
-	private static sun.misc.Unsafe resolve_unsafe() {
+	static {
 		try {
-			java.lang.reflect.Field f = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+			java.lang.reflect.Field f = Class.class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
 			f.setAccessible(true);
-			return (sun.misc.Unsafe) f.get(null);
+			java_unsafe = (sun.misc.Unsafe) f.get(null);
 		} catch (Exception e) {
 			throw new Error("Java unsafe API required", e);
 		}
@@ -163,7 +162,7 @@ implements java.io.Serializable {
 		if (v0 < 128) {
 			v0 = v0 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + JAVA_ARRAY_OFFSET, w);
+			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_BYTE_BASE_OFFSET, v0);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v0);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -178,11 +177,11 @@ implements java.io.Serializable {
 
 		// write fixed positions
 		word0 |= size;
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + (0 * 8) + 0, (byte)(word0 >>> (0 * 8)));
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + (0 * 8) + 1, (byte)(word0 >>> (1 * 8)));
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + (0 * 8) + 2, (byte)(word0 >>> (2 * 8)));
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + (0 * 8) + 3, (byte)(word0 >>> (3 * 8)));
-		java_unsafe.putByte(buf, off + JAVA_ARRAY_OFFSET + (0 * 8) + 4, (byte)(word0 >>> (4 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 0, (byte)(word0 >>> (0 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 1, (byte)(word0 >>> (1 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 2, (byte)(word0 >>> (2 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 3, (byte)(word0 >>> (3 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 4, (byte)(word0 >>> (4 * 8)));
 
 		return (int)size;
 	}
@@ -215,7 +214,7 @@ implements java.io.Serializable {
 		if (buf.length - off < BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
 		if (len < 3) return 0;
-		final long word0 = java_unsafe.getLong(buf, (long)off + JAVA_ARRAY_OFFSET + (0L * 8L));
+		final long word0 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0L * 8L));
 
 		final int size = (int)word0 & 0xfff;
 		final int fixedSize = (int)(word0 >> 12) & 0xfff;
@@ -227,7 +226,7 @@ implements java.io.Serializable {
 		// unpack .PascalCase int32
 		long v0 = word0 >> (24 + 1) & 0x7f;
 		if ((1L << 24 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + JAVA_ARRAY_OFFSET);
+			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_BYTE_BASE_OFFSET);
 			int tailSize = Long.numberOfTrailingZeros(v0 | 0x80) + 1;
 			r += tailSize;
 			v0 <<= (tailSize << 3) - tailSize;
