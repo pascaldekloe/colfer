@@ -214,18 +214,9 @@ implements java.io.Serializable {
 		word0 |= Byte.toUnsignedLong(this.a8n2[1]) << 40;
 
 		// pack .a8l []opaque8
-		long v3 = Integer.toUnsignedLong(this.a8l.length);
-		if (v3 < 128) {
-			v3 = v3 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v3);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v3);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v3 >>>= (tailSize << 3) - 1;
-			v3 = (v3 | 1L) << tailSize;
-		}
-		word0 |= v3 << 48;
+		if (this.a8l.length > 0xff)
+			throw new java.nio.BufferOverflowException();
+		word0 |= (long)this.a8l.length << 48;
 
 		// pack .a16 opaque16
 		long v4 = Short.toUnsignedLong(this.a16);
@@ -239,18 +230,9 @@ implements java.io.Serializable {
 		word1 |= v6 << 24;
 
 		// pack .a16l []opaque16
-		long v7 = Integer.toUnsignedLong(this.a16l.length);
-		if (v7 < 128) {
-			v7 = v7 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v7);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v7);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v7 >>>= (tailSize << 3) - 1;
-			v7 = (v7 | 1L) << tailSize;
-		}
-		word1 |= v7 << 40;
+		if (this.a16l.length > 0xff)
+			throw new java.nio.BufferOverflowException();
+		word1 |= (long)this.a16l.length << 40;
 
 		// pack .a32 opaque32
 		long v8 = Integer.toUnsignedLong(this.a32);
@@ -265,18 +247,9 @@ implements java.io.Serializable {
 		long word3 = v10 >> (64-48);
 
 		// pack .a32l []opaque32
-		long v11 = Integer.toUnsignedLong(this.a32l.length);
-		if (v11 < 128) {
-			v11 = v11 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v11);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v11);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v11 >>>= (tailSize << 3) - 1;
-			v11 = (v11 | 1L) << tailSize;
-		}
-		word3 |= v11 << 16;
+		if (this.a32l.length > 0xff)
+			throw new java.nio.BufferOverflowException();
+		word3 |= (long)this.a32l.length << 16;
 
 		// pack .a64 opaque64
 		long v12 = this.a64;
@@ -292,41 +265,33 @@ implements java.io.Serializable {
 		long word6 = v14 >> (64-24);
 
 		// pack .a64l []opaque64
-		long v15 = Integer.toUnsignedLong(this.a64l.length);
-		if (v15 < 128) {
-			v15 = v15 << 1 | 1L;
-		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v15);
-			int bitCount = 64 - Long.numberOfLeadingZeros(v15);
-			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
-			w += tailSize;
-			v15 >>>= (tailSize << 3) - 1;
-			v15 = (v15 | 1L) << tailSize;
-		}
-		word6 |= v15 << 24;
+		if (this.a64l.length > 0xff)
+			throw new java.nio.BufferOverflowException();
+		word6 |= (long)this.a64l.length << 24;
 
 		// write payloads
 		if (buf.length - w < this.a64l.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (long b : this.a64l) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, b);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 8;
 		}
 		if (buf.length - w < this.a32l.length << 2)
 			throw new java.nio.BufferOverflowException();
 		for (int b : this.a32l) {
-			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_INT_BASE_OFFSET, b);
+			java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 4;
 		}
 		if (buf.length - w < this.a16l.length << 1)
 			throw new java.nio.BufferOverflowException();
 		for (short b : this.a16l) {
-			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_SHORT_BASE_OFFSET, b);
+			java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 2;
 		}
 		if (buf.length - w < this.a8l.length)
 			throw new java.nio.BufferOverflowException();
-		System.arraycopy(this.a8l, 0, buf, w, this.a8l.length);
+		java_unsafe.copyMemory(this.a8l, java_unsafe.ARRAY_BYTE_BASE_OFFSET,
+			buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, this.a8l.length);
 		w += this.a8l.length;
 
 		// write fixed positions
@@ -334,16 +299,20 @@ implements java.io.Serializable {
 		if (size > MARSHAL_MAX)
 			throw new java.nio.BufferOverflowException();
 		word0 |= size;
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8), word0);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (1 * 8), word1);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (2 * 8), word2);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (3 * 8), word3);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (4 * 8), word4);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (5 * 8), word5);
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (6 * 8) + 0, (byte)(word6 >>> (0 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (6 * 8) + 1, (byte)(word6 >>> (1 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (6 * 8) + 2, (byte)(word6 >>> (2 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (6 * 8) + 3, (byte)(word6 >>> (3 * 8)));
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (2 * 8), word2);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (3 * 8), word3);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (4 * 8), word4);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (5 * 8), word5);
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 0,
+			(byte)(word6 >>> (0 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 1,
+			(byte)(word6 >>> (1 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 2,
+			(byte)(word6 >>> (2 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (6 * 8) + 3,
+			(byte)(word6 >>> (3 * 8)));
 		return size;
 	}
 
@@ -384,34 +353,29 @@ implements java.io.Serializable {
 		final long word6 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (6L * 8L));
 
 		final int size = (int)word0 & 0xfff;
-		final int fixedSize = (int)(word0 >> 12) & 0xfff;
-		if (size < fixedSize || fixedSize < 4) return 1;
+		final int fixed_size = (int)(word0 >> 12) & 0xfff;
+		if (size < fixed_size || fixed_size < 4) return 1;
 		if (size > len) return 0;
-		// payloads read backwards
-		int end = off + size;
 
 		// read index at variable section
-		int r = off + fixedSize;
+		int r = off + fixed_size;
+		int payload_offset = off + size; // packed in reverse order
 		// unpack .a8 opaque8
 		this.a8 = (byte)(word0 >> 24);
 		// unpack .a8n2 opaque8
 		this.a8n2[0] = (byte)(word0 >> 32);
 		this.a8n2[1] = (byte)(word0 >> 40);
 		// unpack .a8l []opaque8
-		long v3 = word0 >> (48 + 1) & 0x7f;
-		if ((1L << 48 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
-			int tailSize = Long.numberOfTrailingZeros(v3 | 0x80) + 1;
-			r += tailSize;
-			v3 <<= (tailSize << 3) - tailSize;
-			v3 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+		if (fixed_size <= 6) {
+			this.a8l = this.zero_a8l;
+		} else {
+			this.a8l = new byte[(int)(word0 >> 48) & 0xff];
+			payload_offset -= this.a8l.length;
+			if (payload_offset < r) return 1;
+			java_unsafe.copyMemory(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset,
+				this.a8l, java_unsafe.ARRAY_BYTE_BASE_OFFSET,
+				this.a8l.length);
 		}
-		final long v3Size = v3 * 1;
-		if ((long)(end - r) < v3Size)
-			return 1;
-		this.a8l = new byte[(int) v3];
-		end -= this.a8l.length;
-		System.arraycopy(buf, end, this.a8l, 0, this.a8l.length);
 		// unpack .a16 opaque16
 		short v4 = (short)(word0>>>56 | word1<<8);
 		this.a16 = v4;
@@ -421,18 +385,16 @@ implements java.io.Serializable {
 		short v6 = (short)(word1 >>> 24);
 		this.a16n2[1] = v6;
 		// unpack .a16l []opaque16
-		long v7 = word1 >> (40 + 1) & 0x7f;
-		if ((1L << 40 & word1) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
-			int tailSize = Long.numberOfTrailingZeros(v7 | 0x80) + 1;
-			r += tailSize;
-			v7 <<= (tailSize << 3) - tailSize;
-			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+		if (fixed_size <= 13) {
+			this.a16l = this.zero_a16l;
+		} else {
+			this.a16l = new short[(int)(word1 >> 40) & 0xff];
+			payload_offset -= this.a16l.length;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.a16l.length; i++)
+				this.a16l[i] = java_unsafe.getShort(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<2);
 		}
-		final long v7Size = v7 * 1;
-		if ((long)(end - r) < v7Size)
-			return 1;
-		this.a16l = new short[(int) v7];
 		// unpack .a32 opaque32
 		int v8 = (int)(word1>>>48 | word2<<(64-48));
 		this.a32 = v8;
@@ -442,18 +404,16 @@ implements java.io.Serializable {
 		int v10 = (int)(word2>>>48 | word3<<(64-48));
 		this.a32n2[1] = v10;
 		// unpack .a32l []opaque32
-		long v11 = word3 >> (16 + 1) & 0x7f;
-		if ((1L << 16 & word3) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
-			int tailSize = Long.numberOfTrailingZeros(v11 | 0x80) + 1;
-			r += tailSize;
-			v11 <<= (tailSize << 3) - tailSize;
-			v11 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+		if (fixed_size <= 26) {
+			this.a32l = this.zero_a32l;
+		} else {
+			this.a32l = new int[(int)(word3 >> 16) & 0xff];
+			payload_offset -= this.a32l.length << 2;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.a32l.length; i++)
+				this.a32l[i] = java_unsafe.getInt(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<2);
 		}
-		final long v11Size = v11 * 1;
-		if ((long)(end - r) < v11Size)
-			return 1;
-		this.a32l = new int[(int) v11];
 		// unpack .a64 opaque64
 		long v12 = word3>>>24 | word4<<(64-24);
 		this.a64 = v12;
@@ -463,20 +423,54 @@ implements java.io.Serializable {
 		long v14 = word5>>>24 | word6<<(64-24);
 		this.a64n2[1] = v14;
 		// unpack .a64l []opaque64
-		long v15 = word6 >> (24 + 1) & 0x7f;
-		if ((1L << 24 & word6) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
-			int tailSize = Long.numberOfTrailingZeros(v15 | 0x80) + 1;
-			r += tailSize;
-			v15 <<= (tailSize << 3) - tailSize;
-			v15 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+		if (fixed_size <= 51) {
+			this.a64l = this.zero_a64l;
+		} else {
+			this.a64l = new long[(int)(word6 >> 24) & 0xff];
+			payload_offset -= this.a64l.length << 3;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.a64l.length; i++)
+				this.a64l[i] = java_unsafe.getLong(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<3);
 		}
-		final long v15Size = v15 * 1;
-		if ((long)(end - r) < v15Size)
-			return 1;
-		this.a64l = new long[(int) v15];
 
-		// TODO: clear/undo absent fields
+
+		if (payload_offset < r) return 1;
+		// clear/undo absent fields
+		if (fixed_size < 52) switch (fixed_size) {
+			default:
+				return 1;
+			case 51:
+			case 35:
+				this.a64n2[0] = 0;
+  
+				this.a64n2[1] = 0;
+  
+			case 27:
+				this.a64 = 0;
+			case 26:
+			case 18:
+				this.a32n2[0] = 0;
+  
+				this.a32n2[1] = 0;
+  
+			case 14:
+				this.a32 = 0;
+			case 13:
+			case 9:
+				this.a16n2[0] = 0;
+  
+				this.a16n2[1] = 0;
+  
+			case 7:
+				this.a16 = 0;
+			case 6:
+			case 4:
+				this.a8n2[0] = 0;
+  
+				this.a8n2[1] = 0;
+  
+		}
 
 		return size;
 	}

@@ -163,7 +163,7 @@ implements java.io.Serializable {
 		if (v0 < 128) {
 			v0 = v0 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v0);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v0);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v0);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -178,11 +178,16 @@ implements java.io.Serializable {
 		// write fixed positions
 		int size = w - off;
 		word0 |= size;
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8) + 0, (byte)(word0 >>> (0 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8) + 1, (byte)(word0 >>> (1 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8) + 2, (byte)(word0 >>> (2 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8) + 3, (byte)(word0 >>> (3 * 8)));
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8) + 4, (byte)(word0 >>> (4 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 0,
+			(byte)(word0 >>> (0 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 1,
+			(byte)(word0 >>> (1 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 2,
+			(byte)(word0 >>> (2 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 3,
+			(byte)(word0 >>> (3 * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8) + 4,
+			(byte)(word0 >>> (4 * 8)));
 		return size;
 	}
 
@@ -217,26 +222,36 @@ implements java.io.Serializable {
 		final long word0 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0L * 8L));
 
 		final int size = (int)word0 & 0xfff;
-		final int fixedSize = (int)(word0 >> 12) & 0xfff;
-		if (size < fixedSize || fixedSize < 4) return 1;
+		final int fixed_size = (int)(word0 >> 12) & 0xfff;
+		if (size < fixed_size || fixed_size < 4) return 1;
 		if (size > len) return 0;
 
 		// read index at variable section
-		int r = off + fixedSize;
+		int r = off + fixed_size;
 		// unpack .PascalCase int32
 		long v0 = word0 >> (24 + 1) & 0x7f;
 		if ((1L << 24 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v0 | 0x80) + 1;
 			r += tailSize;
 			v0 <<= (tailSize << 3) - tailSize;
-			v0 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v0 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.pascalCase = (int)(v0 >>> 1) ^ -(int)(v0 & 1L);
 		// unpack .with_snake opaque8
 		this.withSnake = (byte)(word0 >> 32);
 
-		// TODO: clear/undo absent fields
+
+		// clear/undo absent fields
+		if (fixed_size < 5) switch (fixed_size) {
+			default:
+				return 1;
+			case 4:
+				this.withSnake = 0;
+		}
 
 		return size;
 	}

@@ -1,7 +1,7 @@
 		if (v{{.Index}} < 128) {
 			v{{.Index}} = v{{.Index}} << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v{{.Index}});
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v{{.Index}});
 			int bitCount = 64 - Long.numberOfLeadingZeros(v{{.Index}});
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;

@@ -226,7 +226,7 @@ implements java.io.Serializable {
 		if (v2 < 128) {
 			v2 = v2 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v2);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v2);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v2);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -240,7 +240,7 @@ implements java.io.Serializable {
 		if (v3 < 128) {
 			v3 = v3 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v3);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v3);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v3);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -254,7 +254,7 @@ implements java.io.Serializable {
 		if (v4 < 128) {
 			v4 = v4 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v4);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v4);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v4);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -268,7 +268,7 @@ implements java.io.Serializable {
 		if (v5 < 128) {
 			v5 = v5 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v5);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v5);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v5);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -282,7 +282,7 @@ implements java.io.Serializable {
 		if (v6 < 128) {
 			v6 = v6 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v6);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v6);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v6);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -296,7 +296,7 @@ implements java.io.Serializable {
 		if (v7 < 128) {
 			v7 = v7 << 1 | 1L;
 		} else {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, v7);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v7);
 			int bitCount = 64 - Long.numberOfLeadingZeros(v7);
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
@@ -328,38 +328,42 @@ implements java.io.Serializable {
 		// size check is lazily redone on multi-byte encodings
 		if (buf.length - w < this.s.length())
 			throw new java.nio.BufferOverflowException();
-		int s_offset = w;
+		final int s_offset = w;
 		for (int i = 0, end = this.s.length(); i < end; i++) {
 			char c = this.s.charAt(i);
 			if (c < '\u0080') {
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)c);
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 			} else if (c < '\u0800') {
 				if (buf.length - w < (end - i) + 1)
 					throw new java.nio.BufferOverflowException();
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 | 0xc0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0x80));
+				java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+					((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+				w += 2;
 			} else if (! Character.isHighSurrogate(c)) {
 				if (buf.length - w < (end - i) + 2)
 					throw new java.nio.BufferOverflowException();
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 12 | 0xe0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 & 0x3f | 0xc0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0xc0));
+				java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+					((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+				w += 3;
 			} else if (i + 1 >= end) { // incomplete pair
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 			} else {
 				char low = this.s.charAt(++i);
 				if (!Character.isLowSurrogate(low)) { // broken pair
-					java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 					i--; // unread
 				} else {
 					if (buf.length - w < (end - i) + 3)
 						throw new java.nio.BufferOverflowException();
 					int cp = Character.toCodePoint(c, low);
-					java_unsafe.putInt(buf, w++ + java_unsafe.ARRAY_INT_BASE_OFFSET, 0xc0c0c0f0 &
-						(cp>>>18 | (cp>>>4 & 0x3f00) | (c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+						0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+						(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+					w += 4;
 				}
 			}
 		}
+
 		// size declaration in fixed section
 		if (w - s_offset > 255)
 			throw new java.nio.BufferOverflowException();
@@ -370,11 +374,12 @@ implements java.io.Serializable {
 		if (size > MARSHAL_MAX)
 			throw new java.nio.BufferOverflowException();
 		word0 |= size;
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0 * 8), word0);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (1 * 8), word1);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (2 * 8), word2);
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (3 * 8), word3);
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (4 * 8) + 0, (byte)(word4 >>> (0 * 8)));
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (2 * 8), word2);
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (3 * 8), word3);
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (4 * 8) + 0,
+			(byte)(word4 >>> (0 * 8)));
 		return size;
 	}
 
@@ -413,14 +418,13 @@ implements java.io.Serializable {
 		final long word4 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (4L * 8L));
 
 		final int size = (int)word0 & 0xfff;
-		final int fixedSize = (int)(word0 >> 12) & 0xfff;
-		if (size < fixedSize || fixedSize < 4) return 1;
+		final int fixed_size = (int)(word0 >> 12) & 0xfff;
+		if (size < fixed_size || fixed_size < 4) return 1;
 		if (size > len) return 0;
-		// payloads read backwards
-		int end = off + size;
 
 		// read index at variable section
-		int r = off + fixedSize;
+		int r = off + fixed_size;
+		int payload_offset = off + size; // packed in reverse order
 		// unpack .u8 uint8
 		this.u8 = (byte)(word0 >> 24);
 		// unpack .i8 int8
@@ -428,61 +432,79 @@ implements java.io.Serializable {
 		// unpack .u16 uint16
 		long v2 = word0 >> (40 + 1) & 0x7f;
 		if ((1L << 40 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v2 | 0x80) + 1;
 			r += tailSize;
 			v2 <<= (tailSize << 3) - tailSize;
-			v2 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v2 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.u16 = (short)v2;
 		// unpack .i16 int16
 		long v3 = word0 >> (48 + 1) & 0x7f;
 		if ((1L << 48 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v3 | 0x80) + 1;
 			r += tailSize;
 			v3 <<= (tailSize << 3) - tailSize;
-			v3 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v3 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.i16 = (short)((short)(v3 >>> 1) ^ -(short)(v3 & 1L));
 		// unpack .u32 uint32
 		long v4 = word0 >> (56 + 1) & 0x7f;
 		if ((1L << 56 & word0) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v4 | 0x80) + 1;
 			r += tailSize;
 			v4 <<= (tailSize << 3) - tailSize;
-			v4 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v4 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.u32 = (int)v4;
 		// unpack .i32 int32
 		long v5 = word1 >> (0 + 1) & 0x7f;
 		if ((1L << 0 & word1) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v5 | 0x80) + 1;
 			r += tailSize;
 			v5 <<= (tailSize << 3) - tailSize;
-			v5 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v5 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.i32 = (int)(v5 >>> 1) ^ -(int)(v5 & 1L);
 		// unpack .u64 uint64
 		long v6 = word1 >> (8 + 1) & 0x7f;
 		if ((1L << 8 & word1) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v6 | 0x80) + 1;
 			r += tailSize;
 			v6 <<= (tailSize << 3) - tailSize;
-			v6 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v6 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.u64 = v6;
 		// unpack .i64 int64
 		long v7 = word1 >> (16 + 1) & 0x7f;
 		if ((1L << 16 & word1) == 0) {
-			long tail = java_unsafe.getLong(buf, r + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			long tail = java_unsafe.getLong(buf, (long)(
+				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
 			int tailSize = Long.numberOfTrailingZeros(v7 | 0x80) + 1;
 			r += tailSize;
 			v7 <<= (tailSize << 3) - tailSize;
-			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, tailSize + java_unsafe.ARRAY_LONG_BASE_OFFSET);
+			v7 |= tail & java_unsafe.getLong(COLFER_MASKS, (long)(
+				java_unsafe.ARRAY_LONG_BASE_OFFSET +
+				tailSize * java_unsafe.ARRAY_LONG_INDEX_SCALE));
 		}
 		this.i64 = v7 >>> 1 ^ -(v7 & 1L);
 		// unpack .f32 float32
@@ -493,19 +515,49 @@ implements java.io.Serializable {
 		this.f64 = Double.longBitsToDouble(v9);
 		// unpack .t timestamp
 		long v10 = word2>>>56 | word3<<(64-56);
-		this.t = java.time.Instant.ofEpochSecond(v10 >>> 30, (int) v10 & (1 << 30) - 1);
+		this.t = java.time.Instant.ofEpochSecond(v10 >>> 30, (int)v10 & (1 << 30) - 1);
 		// unpack .s text
-		int v11 = (int)(word3 >> 56) & 0xff;
-		if ((end - r) < v11)
-			return 1;
-		end -= v11;
-		this.s = new String(buf, end, (int)v11, java.nio.charset.StandardCharsets.UTF_8);
-
-  
+		if (fixed_size <= 31) {
+			this.s = "";
+		} else {
+			int utf8_length = (int)(word3 >> 56) & 0xff;
+			payload_offset -= utf8_length;
+			if (payload_offset < r) return 1;
+			this.s = new String(buf, payload_offset, utf8_length, java.nio.charset.StandardCharsets.UTF_8);
+		}
 		// unpack .b bool
 		this.bools = (int)(word4 >>> 0 & 0xff);
 
-		// TODO: clear/undo absent fields
+
+		if (payload_offset < r) return 1;
+		// clear/undo absent fields
+		if (fixed_size < 33) switch (fixed_size) {
+			default:
+				return 1;
+			case 32:
+				this.bools &= (1 << 0) - 1;
+			case 31:
+			case 23:
+				this.t = java.time.Instant.EPOCH;
+			case 15:
+				this.f64 = 0;
+			case 11:
+				this.f32 = 0;
+			case 10:
+				this.i64 = 0;
+			case 9:
+				this.u64 = 0;
+			case 8:
+				this.i32 = 0;
+			case 7:
+				this.u32 = 0;
+			case 6:
+				this.i16 = 0;
+			case 5:
+				this.u16 = 0;
+			case 4:
+				this.i8 = 0;
+		}
 
 		return size;
 	}

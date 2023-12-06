@@ -217,8 +217,13 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 
 		// pack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
-		long v{{.Index}} = Integer.toUnsignedLong(this.{{.NameNative}}.length);
-{{template "marshal-integer" .}}
+		if (this.{{.NameNative}}.length > 0xff)
+			throw new java.nio.BufferOverflowException();
+  {{- if not .WordShift}}
+		long word{{.WordIndex}} = (long)this.{{.NameNative}}.length;
+  {{- else}}
+		word{{.WordIndex}} |= (long)this.{{.NameNative}}.length << {{.WordShift}};
+  {{- end}}
 
  {{- else if eq .Type "bool"}}
   {{- if eq .WordShift 0}}
@@ -370,14 +375,15 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
    {{- if eq .Type "opaque8" "uint8" "int8"}}
 		if (buf.length - w < this.{{.NameNative}}.length)
 			throw new java.nio.BufferOverflowException();
-		System.arraycopy(this.{{.NameNative}}, 0, buf, w, this.{{.NameNative}}.length);
+		java_unsafe.copyMemory(this.{{.NameNative}}, java_unsafe.ARRAY_BYTE_BASE_OFFSET,
+			buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, this.{{.NameNative}}.length);
 		w += this.{{.NameNative}}.length;
 
    {{- else if eq .Type "opaque16"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 1)
 			throw new java.nio.BufferOverflowException();
 		for (short b : this.{{.NameNative}}) {
-			java_unsafe.putShort(buf, w + java_unsafe.ARRAY_SHORT_BASE_OFFSET, b);
+			java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 2;
 		}
 
@@ -385,7 +391,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
 			throw new java.nio.BufferOverflowException();
 		for (int b : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_INT_BASE_OFFSET, b);
+			java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 4;
 		}
 
@@ -393,7 +399,7 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (long b : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, b);
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 8;
 		}
 
@@ -401,7 +407,8 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
 			throw new java.nio.BufferOverflowException();
 		for (float f : this.{{.NameNative}}) {
-			java_unsafe.putInt(buf, w + java_unsafe.ARRAY_INT_BASE_OFFSET, Float.floatToRawIntBits(f));
+			java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+				Float.floatToRawIntBits(f));
 			w += 4;
 		}
 
@@ -409,7 +416,8 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (double d : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, Double.doubleToRawLongBits(d));
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+				Double.doubleToRawLongBits(d));
 			w += 8;
 		}
 
@@ -417,7 +425,8 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (java.time.Instant t : this.{{.NameNative}}) {
-			java_unsafe.putLong(buf, w + java_unsafe.ARRAY_LONG_BASE_OFFSET, t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
+			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+				t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
 			w += 8;
 		}
 
@@ -432,45 +441,91 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 		// size check is lazily redone on multi-byte encodings
 		if (buf.length - w < this.{{.NameNative}}.length())
 			throw new java.nio.BufferOverflowException();
-		int {{.NameNative}}_offset = w;
+		final int {{.NameNative}}_offset = w;
 		for (int i = 0, end = this.{{.NameNative}}.length(); i < end; i++) {
 			char c = this.{{.NameNative}}.charAt(i);
 			if (c < '\u0080') {
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)c);
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 			} else if (c < '\u0800') {
 				if (buf.length - w < (end - i) + 1)
 					throw new java.nio.BufferOverflowException();
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 | 0xc0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0x80));
+				java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+					((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+				w += 2;
 			} else if (! Character.isHighSurrogate(c)) {
 				if (buf.length - w < (end - i) + 2)
 					throw new java.nio.BufferOverflowException();
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 12 | 0xe0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c >> 6 & 0x3f | 0xc0));
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)(c & 0x3f | 0xc0));
+				java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+					((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+				w += 3;
 			} else if (i + 1 >= end) { // incomplete pair
-				java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 			} else {
 				char low = this.{{.NameNative}}.charAt(++i);
 				if (!Character.isLowSurrogate(low)) { // broken pair
-					java_unsafe.putByte(buf, w++ + java_unsafe.ARRAY_BYTE_BASE_OFFSET, (byte)'?');
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 					i--; // unread
 				} else {
 					if (buf.length - w < (end - i) + 3)
 						throw new java.nio.BufferOverflowException();
 					int cp = Character.toCodePoint(c, low);
-					java_unsafe.putInt(buf, w++ + java_unsafe.ARRAY_INT_BASE_OFFSET, 0xc0c0c0f0 &
-						(cp>>>18 | (cp>>>4 & 0x3f00) | (c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+						0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+						(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+					w += 4;
 				}
 			}
 		}
+
 		// size declaration in fixed section
 		if (w - {{.NameNative}}_offset > 255)
 			throw new java.nio.BufferOverflowException();
 		word{{.WordIndex}} |= (long)(w - {{.NameNative}}_offset) << {{.WordShift}};
 
     {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-		// TODO: size plus payload encoding
+		// size check is lazily redone on multi-byte encodings
+		if (buf.length - w < this.{{.NameNative}}[{{$arrayIndex}}].length())
+			throw new java.nio.BufferOverflowException();
+		final int {{.NameNative}}_offset{{$arrayIndex}} = w;
+		for (int i = 0, end = this.{{.NameNative}}[{{$arrayIndex}}].length(); i < end; i++) {
+			char c = this.{{.NameNative}}[{{$arrayIndex}}].charAt(i);
+			if (c < '\u0080') {
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
+			} else if (c < '\u0800') {
+				if (buf.length - w < (end - i) + 1)
+					throw new java.nio.BufferOverflowException();
+				java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+					((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+				w += 2;
+			} else if (! Character.isHighSurrogate(c)) {
+				if (buf.length - w < (end - i) + 2)
+					throw new java.nio.BufferOverflowException();
+				java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+					((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+				w += 3;
+			} else if (i + 1 >= end) { // incomplete pair
+				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+			} else {
+				char low = this.{{.NameNative}}[{{$arrayIndex}}].charAt(++i);
+				if (!Character.isLowSurrogate(low)) { // broken pair
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+					i--; // unread
+				} else {
+					if (buf.length - w < (end - i) + 3)
+						throw new java.nio.BufferOverflowException();
+					int cp = Character.toCodePoint(c, low);
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+						0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+						(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+					w += 4;
+				}
+			}
+		}
+
+		// size declaration in fixed section
+		if (w - {{.NameNative}}_offset{{$arrayIndex}} > 255)
+			throw new java.nio.BufferOverflowException();
+		word{{.WordIndex}} |= (long)(w - {{.NameNative}}_offset{{$arrayIndex}}) << {{.WordShift}};
 
     {{- end}}{{end}}{{end}}{{/* is array */}}
 
@@ -487,12 +542,13 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 {{- end}}{{/* has payload section */}}
 		word0 |= size;
 {{- range .FixedWordIndices}}
-		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{.}} * 8), word{{.}});
+		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{.}} * 8), word{{.}});
 {{- end}}
 {{- if .FixedWordRemainderSize}}
  {{- $wordIndex := len .FixedWordIndices}}
  {{- range .FixedWordRemainderByteIndices}}
-		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}}, (byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
+		java_unsafe.putByte(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + ({{$wordIndex}} * 8) + {{.}},
+			(byte)(word{{$wordIndex}} >>> ({{.}} * 8)));
  {{- end}}
 {{- end}}
 		return size;
@@ -536,28 +592,76 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
 {{- end}}
 
 		final int size = (int)word0 & 0xfff;
-		final int fixedSize = (int)(word0 >> 12) & 0xfff;
-		if (size < fixedSize || fixedSize < 4) return 1;
+		final int fixed_size = (int)(word0 >> 12) & 0xfff;
+		if (size < fixed_size || fixed_size < 4) return 1;
 		if (size > len) return 0;
-{{- if .HasPayloadSection}}
-		// payloads read backwards
-		int end = off + size;
-{{- end}}
 
 		// read index at variable section
-		int r = off + fixedSize;
+		int r = off + fixed_size;
+{{- if .HasPayloadSection}}
+		int payload_offset = off + size; // packed in reverse order
+{{- end}}
 {{- range .Fields}}
 		// unpack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
-{{template "unmarshal-integer" .}}
-		final long v{{.Index}}Size = v{{.Index}} * {{.TypeFixedSize}};
-		if ((long)(end - r) < v{{.Index}}Size)
-			return 1;
-		this.{{.NameNative}} = new {{.TypeNative}}[(int) v{{.Index}}];
+		if (fixed_size <= {{.FixedIndex}}) {
+			this.{{.NameNative}} = this.zero_{{.NameNative}};
+		} else {
+			this.{{.NameNative}} = new {{.TypeNative}}[(int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff];
+
   {{- if eq .Type "opaque8" "uint8" "int8"}}
-		end -= this.{{.NameNative}}.length;
-		System.arraycopy(buf, end, this.{{.NameNative}}, 0, this.{{.NameNative}}.length);
+			payload_offset -= this.{{.NameNative}}.length;
+			if (payload_offset < r) return 1;
+			java_unsafe.copyMemory(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset,
+				this.{{.NameNative}}, java_unsafe.ARRAY_BYTE_BASE_OFFSET,
+				this.{{.NameNative}}.length);
+
+  {{- else if eq .Type "opaque16"}}
+			payload_offset -= this.{{.NameNative}}.length;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++)
+				this.{{.NameNative}}[i] = java_unsafe.getShort(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<2);
+
+  {{- else if eq .Type "opaque32"}}
+			payload_offset -= this.{{.NameNative}}.length << 2;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++)
+				this.{{.NameNative}}[i] = java_unsafe.getInt(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<2);
+
+  {{- else if eq .Type "opaque64"}}
+			payload_offset -= this.{{.NameNative}}.length << 3;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++)
+				this.{{.NameNative}}[i] = java_unsafe.getLong(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<3);
+
+  {{- else if eq .Type "float32"}}
+			payload_offset -= this.{{.NameNative}}.length << 2;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++)
+				this.{{.NameNative}}[i] = Float.intBitsToFloat(java_unsafe.getInt(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<2));
+
+  {{- else if eq .Type "float64"}}
+			payload_offset -= this.{{.NameNative}}.length << 3;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++)
+				this.{{.NameNative}}[i] = Double.longBitsToDouble(java_unsafe.getLong(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<3));
+
+  {{- else if eq .Type "timestamp"}}
+			payload_offset -= this.{{.NameNative}}.length << 3;
+			if (payload_offset < r) return 1;
+			for (int i = 0; i < this.{{.NameNative}}.length; i++) {
+				long v = java_unsafe.getLong(buf,
+					java_unsafe.ARRAY_BYTE_BASE_OFFSET + payload_offset + i<<3);
+				this.{{.NameNative}}[i] = java.time.Instant.ofEpochSecond(v >>> 30, (int)v & (1 << 30) - 1);
+			}
+
   {{- end}}{{/* list type selection */}}
+		}
 
  {{- else if eq .Type "opaque8" "uint8" "int8"}}
   {{- if eq .ElementCount 0}}
@@ -668,28 +772,33 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
  {{- else if eq .Type "timestamp"}}
   {{- if eq .ElementCount 0}}
 {{template "unmarshal64" .}}
-		this.{{.NameNative}} = java.time.Instant.ofEpochSecond(v{{.Index}} >>> 30, (int) v{{.Index}} & (1 << 30) - 1);
+		this.{{.NameNative}} = java.time.Instant.ofEpochSecond(v{{.Index}} >>> 30, (int)v{{.Index}} & (1 << 30) - 1);
   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
 {{template "unmarshal64" .}}
 		this.{{.NameNative}}[{{$arrayIndex}}] = java.time.Instant.ofEpochSecond(v{{.Index}} >>> 30, (int) v{{.Index}} & (1 << 30) - 1);
   {{- end}}{{end}}{{end}}
 
  {{- else if eq .Type "text"}}
+		if (fixed_size <= {{.FixedIndex}}) {
   {{- if not .ElementCount}}
-		int v{{.Index}} = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
-		if ((end - r) < v{{.Index}})
-			return 1;
-		end -= v{{.Index}};
-		this.{{.NameNative}} = new String(buf, end, (int)v{{.Index}}, java.nio.charset.StandardCharsets.UTF_8);
+			this.{{.NameNative}} = "";
+  {{- else}}{{range $arrayIndex, $element := .Elements}}
+			this.{{.NameNative}}[{{$arrayIndex}}] = "";
+  {{- end}}{{end}}{{/* is text array */}}
+		} else {
+  {{- if not .ElementCount}}
+			int utf8_length = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+			payload_offset -= utf8_length;
+			if (payload_offset < r) return 1;
+			this.{{.NameNative}} = new String(buf, payload_offset, utf8_length, java.nio.charset.StandardCharsets.UTF_8);
 
-  {{else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal-integer" .}}
-		if ((long)(end - r) < v{{.Index}})
-			return 1;
-		end -= (int)v{{.Index}};
-		this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, end, (int)v{{.Index}}, java.nio.charset.StandardCharsets.UTF_8);
-
-  {{- end}}{{end}}{{end}}{{/* is array */}}
+  {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+			int utf8_length{{$arrayIndex}} = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+			payload_offset -= utf8_length{{$arrayIndex}};
+			if (payload_offset < r) return 1;
+			this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, payload_offset, utf8_length{{$arrayIndex}}, java.nio.charset.StandardCharsets.UTF_8);
+  {{- end}}{{end}}{{end}}{{/* is text array */}}
+		}
 
  {{- else if eq .Type "bool"}}
   {{- if eq .BoolIndex 0}}
@@ -701,7 +810,45 @@ implements java.io.Serializable{{range .Pkg.InterfaceNatives}}, {{.}}{{end}} {
  {{- end}}{{/* type select */}}
 {{- end}}{{/* field range */}}
 
-		// TODO: clear/undo absent fields
+{{/* line break */}}
+
+{{- if .HasPayloadSection}}
+		if (payload_offset < r) return 1;
+{{- end}}
+		// clear/undo absent fields
+		if (fixed_size < {{.FixedSize}}) switch (fixed_size) {
+			default:
+				return 1;
+{{- range .FieldsReversed}}
+ {{- if eq .Index 0}}{{continue}}{{/* one field required */}}{{end}}
+ {{- if eq .Type "bool"}}{{- if not .FirstInBitField}}{{continue}}{{/* packed per eight */}}{{end}}{{end}}
+			case {{.FixedIndex}}:
+ {{- if .TypeList}}
+  {{- /* checked during parse */}}
+
+ {{- else if eq .Type "text"}}
+  {{- /* checked during parse */}}
+
+ {{- else if eq .Type "timestamp"}}
+  {{- if not .ElementCount}}
+				this.{{.NameNative}} = java.time.Instant.EPOCH;
+  {{- else}}{{range $arrayIndex, $element := .Elements}}
+				this.{{.NameNative}}[{{$arrayIndex}}] = java.time.Instant.EPOCH;
+  {{end}}{{end}}{{/* is array */}}
+
+ {{- else if eq .Type "bool"}}
+				this.bools &= (1 << {{.BoolIndex}}) - 1;
+
+ {{- else}}
+  {{- if not .ElementCount}}
+				this.{{.NameNative}} = 0;
+  {{- else}}{{range $arrayIndex, $element := .Elements}}
+				this.{{.NameNative}}[{{$arrayIndex}}] = 0;
+  {{end}}{{end}}{{/* is array */}}
+
+ {{- end}}{{/* type match */}}
+{{- end}}{{/* reverse field range */}}
+		}
 
 		return size;
 	}
