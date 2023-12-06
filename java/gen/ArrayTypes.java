@@ -394,92 +394,100 @@ implements java.io.Serializable {
 		// pack .sn2 text
 
 		// write payloads
-		// size check is lazily redone on multi-byte encodings
-		if (buf.length - w < this.sn2[0].length())
-			throw new java.nio.BufferOverflowException();
-		final int sn2_offset0 = w;
-		for (int i = 0, end = this.sn2[0].length(); i < end; i++) {
-			char c = this.sn2[0].charAt(i);
-			if (c < '\u0080') {
-				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
-			} else if (c < '\u0800') {
-				if (buf.length - w < (end - i) + 1)
-					throw new java.nio.BufferOverflowException();
-				java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
-					((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
-				w += 2;
-			} else if (! Character.isHighSurrogate(c)) {
-				if (buf.length - w < (end - i) + 2)
-					throw new java.nio.BufferOverflowException();
-				java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
-					((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
-				w += 3;
-			} else if (i + 1 >= end) { // incomplete pair
-				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
-			} else {
-				char low = this.sn2[0].charAt(++i);
-				if (!Character.isLowSurrogate(low)) { // broken pair
-					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
-					i--; // unread
-				} else {
-					if (buf.length - w < (end - i) + 3)
+		{
+			final int utf8_off = w;
+			final int utf16_len = this.sn2[0].length();
+			// size check is lazily redone on multi-byte encodings
+			if (buf.length - w < utf16_len)
+				throw new java.nio.BufferOverflowException();
+			for (int i = 0; i < utf16_len; i++) {
+				char c = this.sn2[0].charAt(i);
+				if (c < '\u0080') {
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
+				} else if (c < '\u0800') {
+					if (buf.length - w < (utf16_len - i) + 1)
 						throw new java.nio.BufferOverflowException();
-					int cp = Character.toCodePoint(c, low);
-					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
-						0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
-						(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
-					w += 4;
+					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+						((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+					w += 2;
+				} else if (! Character.isHighSurrogate(c)) {
+					if (buf.length - w < (utf16_len - i) + 2)
+						throw new java.nio.BufferOverflowException();
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+						((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+					w += 3;
+				} else if (i + 1 >= utf16_len) { // incomplete pair
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+				} else {
+					char low = this.sn2[0].charAt(++i);
+					if (!Character.isLowSurrogate(low)) { // broken pair
+						java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+						i--; // unread
+					} else {
+						if (buf.length - w < (utf16_len - i) + 3)
+							throw new java.nio.BufferOverflowException();
+						int cp = Character.toCodePoint(c, low);
+						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+							0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+							(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+						w += 4;
+					}
 				}
 			}
-		}
 
-		// size declaration in fixed section
-		if (w - sn2_offset0 > 255)
-			throw new java.nio.BufferOverflowException();
-		word7 |= (long)(w - sn2_offset0) << 24;
-		// size check is lazily redone on multi-byte encodings
-		if (buf.length - w < this.sn2[1].length())
-			throw new java.nio.BufferOverflowException();
-		final int sn2_offset1 = w;
-		for (int i = 0, end = this.sn2[1].length(); i < end; i++) {
-			char c = this.sn2[1].charAt(i);
-			if (c < '\u0080') {
-				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
-			} else if (c < '\u0800') {
-				if (buf.length - w < (end - i) + 1)
-					throw new java.nio.BufferOverflowException();
-				java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
-					((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
-				w += 2;
-			} else if (! Character.isHighSurrogate(c)) {
-				if (buf.length - w < (end - i) + 2)
-					throw new java.nio.BufferOverflowException();
-				java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
-					((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
-				w += 3;
-			} else if (i + 1 >= end) { // incomplete pair
-				java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
-			} else {
-				char low = this.sn2[1].charAt(++i);
-				if (!Character.isLowSurrogate(low)) { // broken pair
-					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
-					i--; // unread
-				} else {
-					if (buf.length - w < (end - i) + 3)
+			// write size declaration
+			int utf8_len = w - utf8_off;
+			if (utf8_len > 255)
+				throw new java.nio.BufferOverflowException();
+			word7 |= (long)utf8_len << 24;
+		}
+		{
+			final int utf8_off = w;
+			final int utf16_len = this.sn2[1].length();
+			// size check is lazily redone on multi-byte encodings
+			if (buf.length - w < utf16_len)
+				throw new java.nio.BufferOverflowException();
+			for (int i = 0; i < utf16_len; i++) {
+				char c = this.sn2[1].charAt(i);
+				if (c < '\u0080') {
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
+				} else if (c < '\u0800') {
+					if (buf.length - w < (utf16_len - i) + 1)
 						throw new java.nio.BufferOverflowException();
-					int cp = Character.toCodePoint(c, low);
-					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
-						0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
-						(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
-					w += 4;
+					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+						((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+					w += 2;
+				} else if (! Character.isHighSurrogate(c)) {
+					if (buf.length - w < (utf16_len - i) + 2)
+						throw new java.nio.BufferOverflowException();
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+						((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+					w += 3;
+				} else if (i + 1 >= utf16_len) { // incomplete pair
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+				} else {
+					char low = this.sn2[1].charAt(++i);
+					if (!Character.isLowSurrogate(low)) { // broken pair
+						java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+						i--; // unread
+					} else {
+						if (buf.length - w < (utf16_len - i) + 3)
+							throw new java.nio.BufferOverflowException();
+						int cp = Character.toCodePoint(c, low);
+						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+							0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+							(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+						w += 4;
+					}
 				}
 			}
-		}
 
-		// size declaration in fixed section
-		if (w - sn2_offset1 > 255)
-			throw new java.nio.BufferOverflowException();
-		word7 |= (long)(w - sn2_offset1) << 32;
+			// write size declaration
+			int utf8_len = w - utf8_off;
+			if (utf8_len > 255)
+				throw new java.nio.BufferOverflowException();
+			word7 |= (long)utf8_len << 32;
+		}
 
 		// write fixed positions
 		int size = w - off;

@@ -231,7 +231,56 @@ implements java.io.Serializable {
 		word1 |= (long)this.sl.length << 16;
 
 		// write payloads
-		// TODO: implement text list
+		int field7_size_index = w; // size table pointer
+		w += this.sl.length; // jump to payloads
+		for (String s : this.sl) {
+			final int utf8_off = w;
+			final int utf16_len = s.length();
+			// size check is lazily redone on multi-byte encodings
+			if (buf.length - w < utf16_len)
+				throw new java.nio.BufferOverflowException();
+			for (int i = 0; i < utf16_len; i++) {
+				char c = s.charAt(i);
+				if (c < '\u0080') {
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
+				} else if (c < '\u0800') {
+					if (buf.length - w < (utf16_len - i) + 1)
+						throw new java.nio.BufferOverflowException();
+					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
+						((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+					w += 2;
+				} else if (! Character.isHighSurrogate(c)) {
+					if (buf.length - w < (utf16_len - i) + 2)
+						throw new java.nio.BufferOverflowException();
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
+						((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+					w += 3;
+				} else if (i + 1 >= utf16_len) { // incomplete pair
+					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+				} else {
+					char low = s.charAt(++i);
+					if (!Character.isLowSurrogate(low)) { // broken pair
+						java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
+						i--; // unread
+					} else {
+						if (buf.length - w < (utf16_len - i) + 3)
+							throw new java.nio.BufferOverflowException();
+						int cp = Character.toCodePoint(c, low);
+						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+							0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
+							(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+						w += 4;
+					}
+				}
+			}
+
+			// write size declaration
+			int utf8_len = w - utf8_off;
+			if (utf8_len > 255)
+				throw new java.nio.BufferOverflowException();
+			java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET +
+				field7_size_index++, (byte)utf8_len);
+		}
 		if (buf.length - w < this.tl.length << 3)
 			throw new java.nio.BufferOverflowException();
 		for (java.time.Instant t : this.tl) {
