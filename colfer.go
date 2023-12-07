@@ -80,13 +80,10 @@ type Package struct {
 	SchemaFiles []string
 	// SuperClass is the fully qualified path.
 	SuperClass string
-	// SuperClassNative is the language specific SuperClass.
-	SuperClassNative string
 	// Interfaces are the fully qualified paths.
 	Interfaces []string
-	// InterfaceNatives are the language specific Interfaces.
-	InterfaceNatives []string
-	// CodeSnippet is helpful in book-keeping functionality.
+
+	// CodeSnippet is a custom insertion.
 	CodeSnippet string
 }
 
@@ -351,7 +348,11 @@ func (f *Field) WordShift() int {
 // TypeFixedSize returns its space in the fixed section.
 func (f *Field) TypeFixedSize() (octets int) {
 	if f.TypeList {
-		return 1
+		_, ok := datatypes[f.Type]
+		if ok {
+			return 1
+		}
+		return 4 // struct list
 	}
 
 	switch f.Type {
@@ -375,9 +376,8 @@ func (f *Field) TypeFixedSize() (octets int) {
 // TypeOverflowMax returns the upper boundary for its space in the overflow
 // section.
 func (f *Field) TypeOverflowMax() (octets int) {
-	if f.Type == "text" || f.TypeList {
-		// This limit would be an error though.
-		return 8
+	if f.TypeList {
+		return 0
 	}
 
 	switch f.Type {

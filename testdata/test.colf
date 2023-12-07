@@ -118,6 +118,12 @@ type ListTypes struct {
 	sl []text
 }
 
+// NestedTypes contains other data structures.
+type NestedTypes struct {
+	// variable size
+	list []BaseTypes
+}
+
 // DromedaryCase mixes name conventions.
 // Its serial size has a natural limit.
 type dromedaryCase struct {

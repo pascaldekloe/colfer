@@ -403,15 +403,9 @@ func GenerateJava(basedir string, packages Packages) error {
 	template.Must(classTemplate.New("unmarshal32").Parse(javaUnmarshal32Template))
 	template.Must(classTemplate.New("unmarshal64").Parse(javaUnmarshal64Template))
 
-	// set native names and types
+	// set Java names
 	for _, p := range packages {
 		p.NameNative = toJavaName(p.Name)
-		p.SuperClassNative = toJavaName(p.SuperClass)
-
-		p.InterfaceNatives = make([]string, len(p.Interfaces))
-		for i, s := range p.Interfaces {
-			p.InterfaceNatives[i] = toJavaName(s)
-		}
 
 		for _, t := range p.Structs {
 			t.NameNative = name.CamelCase(t.Name, true)
@@ -424,6 +418,44 @@ func GenerateJava(basedir string, packages Packages) error {
 		}
 	}
 
+	// set Type names (needs Java names for TypeRef)
+	for _, p := range packages {
+		for _, t := range p.Structs {
+			for _, f := range t.Fields {
+				if f.TypeRef != nil {
+					// fully qualified names prevent java.lang collisions
+					f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeRef.NameNative
+
+					continue
+				}
+
+				switch f.Type {
+				case "opaque8", "uint8", "int8":
+					f.TypeNative = "byte"
+				case "opaque16", "uint16", "int16":
+					f.TypeNative = "short"
+				case "opaque32", "uint32", "int32":
+					f.TypeNative = "int"
+				case "opaque64", "uint64", "int64":
+					f.TypeNative = "long"
+
+				case "float32":
+					f.TypeNative = "float"
+				case "float64":
+					f.TypeNative = "double"
+
+				case "timestamp":
+					f.TypeNative = "Instant"
+				case "text":
+					f.TypeNative = "String"
+				case "bool":
+					f.TypeNative = "int"
+				}
+			}
+		}
+	}
+
+	// construct files
 	for _, p := range packages {
 		pkgdir := filepath.Join(basedir, strings.Replace(p.NameNative, ".", string([]rune{filepath.Separator}), -1))
 		if err := os.MkdirAll(pkgdir, os.ModeDir|os.ModePerm); err != nil {
@@ -443,41 +475,6 @@ func GenerateJava(basedir string, packages Packages) error {
 		}
 
 		for _, t := range p.Structs {
-			for _, f := range t.Fields {
-				switch f.Type {
-				default:
-					if f.TypeRef == nil {
-						f.TypeNative = f.Type
-					} else {
-						f.TypeNative = f.TypeRef.NameNative
-						if f.TypeRef.Pkg != p {
-							f.TypeNative = f.TypeRef.Pkg.NameNative + "." + f.TypeNative
-						}
-					}
-
-				case "opaque8", "uint8", "int8":
-					f.TypeNative = "byte"
-				case "opaque16", "uint16", "int16":
-					f.TypeNative = "short"
-				case "opaque32", "uint32", "int32":
-					f.TypeNative = "int"
-				case "opaque64", "uint64", "int64":
-					f.TypeNative = "long"
-
-				case "float32":
-					f.TypeNative = "float"
-				case "float64":
-					f.TypeNative = "double"
-
-				case "timestamp":
-					f.TypeNative = "java.time.Instant"
-				case "text":
-					f.TypeNative = "String"
-				case "bool":
-					f.TypeNative = "int"
-				}
-			}
-
 			f, err := os.Create(filepath.Join(pkgdir, t.NameNative+".java"))
 			if err != nil {
 				return err
@@ -489,6 +486,7 @@ func GenerateJava(basedir string, packages Packages) error {
 			}
 		}
 	}
+
 	return nil
 }
 

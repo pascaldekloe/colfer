@@ -9,7 +9,7 @@ test: test.class breaktest
 	$(JAVA) test
 
 breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
-	$(COLF) -b $@ -x java/util/ArrayList Java ../testdata/break*.colf
+	$(COLF) -b $@ -x java.util.ArrayList Java ../testdata/break*.colf
 	$(JAVAC) $@/*/*.java
 	$(JAVADOC) -d $@ $@/*/*.java
 	touch $@
