@@ -251,9 +251,9 @@ implements Serializable {
 		for (String s : this.sl) {
 			final int utf8_off = w;
 			final int utf16_len = s.length();
-			// size check is lazily redone on multi-byte encodings
 			if (buf.length - w < utf16_len)
 				throw new BufferOverflowException();
+			// size check is lazily redone on multi-byte encodings
 			for (int i = 0; i < utf16_len; i++) {
 				char c = s.charAt(i);
 				if (c < '\u0080') {
@@ -261,19 +261,18 @@ implements Serializable {
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
 						throw new BufferOverflowException();
-					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
-						((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
 						throw new BufferOverflowException();
-					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
-						((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
+						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
-				} else if (i + 1 >= utf16_len) { // incomplete pair
-					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 				} else {
-					char low = s.charAt(++i);
+					char low = 0;
+					if (i + 1 < utf16_len) low = s.charAt(++i);
 					if (!Character.isLowSurrogate(low)) { // broken pair
 						java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 						i--; // unread
@@ -282,8 +281,8 @@ implements Serializable {
 							throw new BufferOverflowException();
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
-							0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
-							(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
+							(cp<<10 & 0x3f0000) | (cp<<24 & 0x3f000000));
 						w += 4;
 					}
 				}

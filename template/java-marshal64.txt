@@ -2,5 +2,5 @@
 		long word{{.WordIndex}} = v{{.Index}};
 		{{- else -}}
 		word{{.WordIndex}} |= v{{.Index}} << {{.WordShift}};
-		long word{{.NextWordIndex}} = v{{.Index}} >> (64-{{.WordShift}});
+		long word{{.NextWordIndex}} = v{{.Index}} >>> (64-{{.WordShift}});
 		{{- end -}}

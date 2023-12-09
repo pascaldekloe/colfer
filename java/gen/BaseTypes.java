@@ -238,7 +238,7 @@ implements Serializable {
 
 		// pack .u16 uint16
 		long v2 = Short.toUnsignedLong(this.u16);
-		if (v2 < 128) {
+		if ((v2 & ~127L) == 0) {
 			v2 = v2 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v2);
@@ -246,13 +246,13 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v2 >>>= (tailSize << 3) - 1;
-			v2 = (v2 | 1L) << tailSize;
+			v2 = (v2 | 1L) << tailSize & 0xff;
 		}
 		word0 |= v2 << 40;
 
 		// pack .i16 int16
 		long v3 = Integer.toUnsignedLong(this.i16>>15 ^ this.i16<<1);
-		if (v3 < 128) {
+		if ((v3 & ~127L) == 0) {
 			v3 = v3 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v3);
@@ -260,13 +260,13 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v3 >>>= (tailSize << 3) - 1;
-			v3 = (v3 | 1L) << tailSize;
+			v3 = (v3 | 1L) << tailSize & 0xff;
 		}
 		word0 |= v3 << 48;
 
 		// pack .u32 uint32
 		long v4 = Integer.toUnsignedLong(this.u32);
-		if (v4 < 128) {
+		if ((v4 & ~127L) == 0) {
 			v4 = v4 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v4);
@@ -274,13 +274,13 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v4 >>>= (tailSize << 3) - 1;
-			v4 = (v4 | 1L) << tailSize;
+			v4 = (v4 | 1L) << tailSize & 0xff;
 		}
 		word0 |= v4 << 56;
 
 		// pack .i32 int32
 		long v5 = Integer.toUnsignedLong(this.i32>>31 ^ this.i32<<1);
-		if (v5 < 128) {
+		if ((v5 & ~127L) == 0) {
 			v5 = v5 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v5);
@@ -288,13 +288,13 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v5 >>>= (tailSize << 3) - 1;
-			v5 = (v5 | 1L) << tailSize;
+			v5 = (v5 | 1L) << tailSize & 0xff;
 		}
 		long word1 = v5;
 
 		// pack .u64 uint64
 		long v6 = this.u64;
-		if (v6 < 128) {
+		if ((v6 & ~127L) == 0) {
 			v6 = v6 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v6);
@@ -302,13 +302,13 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v6 >>>= (tailSize << 3) - 1;
-			v6 = (v6 | 1L) << tailSize;
+			v6 = (v6 | 1L) << tailSize & 0xff;
 		}
 		word1 |= v6 << 8;
 
 		// pack .i64 int64
 		long v7 = this.i64>>63 ^ this.i64<<1;
-		if (v7 < 128) {
+		if ((v7 & ~127L) == 0) {
 			v7 = v7 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v7);
@@ -316,7 +316,7 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v7 >>>= (tailSize << 3) - 1;
-			v7 = (v7 | 1L) << tailSize;
+			v7 = (v7 | 1L) << tailSize & 0xff;
 		}
 		word1 |= v7 << 16;
 
@@ -327,25 +327,25 @@ implements Serializable {
 		// pack .f64 float64
 		long v9 = Double.doubleToRawLongBits(this.f64);
 		word1 |= v9 << 56;
-		long word2 = v9 >> (64-56);
+		long word2 = v9 >>> (64-56);
 
 		// pack .t timestamp
 		long v10 = this.t.getEpochSecond() << 30 | Integer.toUnsignedLong(this.t.getNano());
 		word2 |= v10 << 56;
-		long word3 = v10 >> (64-56);
+		long word3 = v10 >>> (64-56);
 
 		// pack .s text
 
 		// pack .b bool
-		long word4 = this.bools>>0 & 255L;
+		long word4 = this.bools>>>0 & 255L;
 
 		// write payloads
 		{
 			final int utf8_off = w;
 			final int utf16_len = this.s.length();
-			// size check is lazily redone on multi-byte encodings
 			if (buf.length - w < utf16_len)
 				throw new BufferOverflowException();
+			// size check is lazily redone on multi-byte encodings
 			for (int i = 0; i < utf16_len; i++) {
 				char c = this.s.charAt(i);
 				if (c < '\u0080') {
@@ -353,19 +353,18 @@ implements Serializable {
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
 						throw new BufferOverflowException();
-					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, (short)(
-						((int)c >> 6 | (int)c << 8) & 0x03fff | 0x80c0));
+					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
+						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
 						throw new BufferOverflowException();
-					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0xc0c0e0 |
-						((int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 24) & 0x3f0000));
+					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
+						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
-				} else if (i + 1 >= utf16_len) { // incomplete pair
-					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 				} else {
-					char low = this.s.charAt(++i);
+					char low = 0;
+					if (i + 1 < utf16_len) low = this.s.charAt(++i);
 					if (!Character.isLowSurrogate(low)) { // broken pair
 						java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)'?');
 						i--; // unread
@@ -374,8 +373,8 @@ implements Serializable {
 							throw new BufferOverflowException();
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
-							0xc0c0c0f0 & (cp>>>18 | (cp>>>4 & 0x3f00) |
-							(c<<10 & 0x3f0000) | (c<<24 & 0x3f000000)));
+							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
+							(cp<<10 & 0x3f0000) | (cp<<24 & 0x3f000000));
 						w += 4;
 					}
 				}
@@ -449,7 +448,7 @@ implements Serializable {
 		// unpack .i8 int8
 		this.i8 = (byte)(word0 >> 32);
 		// unpack .u16 uint16
-		long v2 = word0 >> (40 + 1) & 0x7f;
+		long v2 = word0 >>> (40 + 1) & 0x7f;
 		if ((1L << 40 & word0) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
@@ -462,7 +461,7 @@ implements Serializable {
 		}
 		this.u16 = (short)v2;
 		// unpack .i16 int16
-		long v3 = word0 >> (48 + 1) & 0x7f;
+		long v3 = word0 >>> (48 + 1) & 0x7f;
 		if ((1L << 48 & word0) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
@@ -475,7 +474,7 @@ implements Serializable {
 		}
 		this.i16 = (short)((short)(v3 >>> 1) ^ -(short)(v3 & 1L));
 		// unpack .u32 uint32
-		long v4 = word0 >> (56 + 1) & 0x7f;
+		long v4 = word0 >>> (56 + 1) & 0x7f;
 		if ((1L << 56 & word0) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
@@ -488,7 +487,7 @@ implements Serializable {
 		}
 		this.u32 = (int)v4;
 		// unpack .i32 int32
-		long v5 = word1 >> (0 + 1) & 0x7f;
+		long v5 = word1 >>> (0 + 1) & 0x7f;
 		if ((1L << 0 & word1) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
@@ -501,7 +500,7 @@ implements Serializable {
 		}
 		this.i32 = (int)(v5 >>> 1) ^ -(int)(v5 & 1L);
 		// unpack .u64 uint64
-		long v6 = word1 >> (8 + 1) & 0x7f;
+		long v6 = word1 >>> (8 + 1) & 0x7f;
 		if ((1L << 8 & word1) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));
@@ -514,7 +513,7 @@ implements Serializable {
 		}
 		this.u64 = v6;
 		// unpack .i64 int64
-		long v7 = word1 >> (16 + 1) & 0x7f;
+		long v7 = word1 >>> (16 + 1) & 0x7f;
 		if ((1L << 16 & word1) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));

@@ -1,4 +1,4 @@
-		long v{{.Index}} = word{{.WordIndex}} >> ({{.WordShift}} + 1) & 0x7f;
+		long v{{.Index}} = word{{.WordIndex}} >>> ({{.WordShift}} + 1) & 0x7f;
 		if ((1L << {{.WordShift}} & word{{.WordIndex}}) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));

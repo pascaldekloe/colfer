@@ -174,7 +174,7 @@ implements Serializable {
 
 		// pack .PascalCase int32
 		long v0 = Integer.toUnsignedLong(this.pascalCase>>31 ^ this.pascalCase<<1);
-		if (v0 < 128) {
+		if ((v0 & ~127L) == 0) {
 			v0 = v0 << 1 | 1L;
 		} else {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, v0);
@@ -182,7 +182,7 @@ implements Serializable {
 			int tailSize = (((bitCount - 1) >>> 3) + bitCount) >>> 3;
 			w += tailSize;
 			v0 >>>= (tailSize << 3) - 1;
-			v0 = (v0 | 1L) << tailSize;
+			v0 = (v0 | 1L) << tailSize & 0xff;
 		}
 		word0 |= v0 << 24;
 
@@ -243,7 +243,7 @@ implements Serializable {
 		// read index at variable section
 		int r = off + fixed_size;
 		// unpack .PascalCase int32
-		long v0 = word0 >> (24 + 1) & 0x7f;
+		long v0 = word0 >>> (24 + 1) & 0x7f;
 		if ((1L << 24 & word0) == 0) {
 			long tail = java_unsafe.getLong(buf, (long)(
 				java_unsafe.ARRAY_BYTE_BASE_OFFSET + r));

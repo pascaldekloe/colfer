@@ -77,10 +77,11 @@ public class test {
 				+ "0000000000000000" // timestamp
 				+ "00" // text size
 				+ "00", // bool
-				new BaseTypes());
+				new BaseTypes()
+			);
 
 			// small values
-			put("221002"
+			put("2a1002"
 				+ "01" // uint8
 				+ "02" // int8
 				+ "07" // uint16
@@ -92,9 +93,11 @@ public class test {
 				+ "00002041" // float32
 				+ "0000000000002640" // float64
 				+ "0d00000003000000" // timestamp
-				+ "01" // text size
+				+ "09" // text size
 				+ "01" // bool
-				+ "63", // text payload
+				+ "c280" // payload U+0080
+				+ "e0a080" // payload U+0800
+				+ "f0908080", // payload U+10000
 				new BaseTypes()
 					.withU8((byte)1)
 					.withI8((byte)2)
@@ -107,8 +110,50 @@ public class test {
 					.withF32(10)
 					.withF64(11)
 					.withT(Instant.ofEpochSecond(12L, 13L))
-					.withS("c")
-					.withBools(1));
+					.withS("\u0080\u0800\ud800\udc00")
+					.withBools(1)
+			);
+
+			// large values
+			put("471002"
+				+ "ff" // uint8
+				+ "7f" // int8
+				+ "04" // uint16
+				+ "04" // int16
+				+ "10" // uint32
+				+ "10" // int32
+				+ "00" // uint64
+				+ "00" // int64
+				+ "ffff7f7f" // float32
+				+ "ffffffffffffef7f" // float64
+				+ "ffc99afbffffffff" // timestamp
+				+ "0a" // text size
+				+ "00" // bool (has no large value)
+				+ "ffff" // overflow 65535
+				+ "feff" // overflow 32767
+				+ "ffffffff" // overflow 4294967295
+				+ "feffffff" // overflow 2147483647
+				+ "ffffffffffffffff" // overflow 18446744073709551615
+				+ "feffffffffffffff" // overflow 9223372036854775807
+				+ "7f" // payload U+007F
+				+ "dfbf" // payload U+07FF
+				+ "efbfbf" // payload U+FFFF
+				+ "f48fbfbf", // payload U+10FFFF
+				new BaseTypes()
+					.withU8((byte)-1)
+					.withI8((byte)127)
+					.withU16((short)-1)
+					.withI16((short)32767)
+					.withU32(-1)
+					.withI32(2147483647)
+					.withU64(-1L)
+					.withI64(9223372036854775807L)
+					.withF32(Float.MAX_VALUE)
+					.withF64(Double.MAX_VALUE)
+					.withT(Instant.ofEpochSecond((1L << 34) - 1L, 999999999L))
+					.withS("\u007f\u07ff\uffff\udbff\udfff")
+			);
+
 		}};
 	}
 

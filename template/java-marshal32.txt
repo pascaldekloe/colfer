@@ -3,5 +3,5 @@
 		{{- else -}}
 		word{{.WordIndex}} |= v{{.Index}} << {{.WordShift}};
 		{{- if gt .WordShift 32}}
-		long word{{.NextWordIndex}} = v{{.Index}} >> (64-{{.WordShift}});
+		long word{{.NextWordIndex}} = v{{.Index}} >>> (64-{{.WordShift}});
 		{{- end}}{{end -}}

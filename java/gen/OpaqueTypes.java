@@ -235,7 +235,7 @@ implements Serializable {
 		// pack .a16 opaque16
 		long v4 = Short.toUnsignedLong(this.a16);
 		word0 |= v4 << 56;
-		long word1 = v4 >> 8;
+		long word1 = v4 >>> 8;
 
 		// pack .a16n2 opaque16
 		long v5 = Short.toUnsignedLong(this.a16n2[0]);
@@ -251,14 +251,14 @@ implements Serializable {
 		// pack .a32 opaque32
 		long v8 = Integer.toUnsignedLong(this.a32);
 		word1 |= v8 << 48;
-		long word2 = v8 >> (64-48);
+		long word2 = v8 >>> (64-48);
 
 		// pack .a32n2 opaque32
 		long v9 = Integer.toUnsignedLong(this.a32n2[0]);
 		word2 |= v9 << 16;
 		long v10 = Integer.toUnsignedLong(this.a32n2[1]);
 		word2 |= v10 << 48;
-		long word3 = v10 >> (64-48);
+		long word3 = v10 >>> (64-48);
 
 		// pack .a32l []opaque32
 		if (this.a32l.length > 0xff)
@@ -268,15 +268,15 @@ implements Serializable {
 		// pack .a64 opaque64
 		long v12 = this.a64;
 		word3 |= v12 << 24;
-		long word4 = v12 >> (64-24);
+		long word4 = v12 >>> (64-24);
 
 		// pack .a64n2 opaque64
 		long v13 = this.a64n2[0];
 		word4 |= v13 << 24;
-		long word5 = v13 >> (64-24);
+		long word5 = v13 >>> (64-24);
 		long v14 = this.a64n2[1];
 		word5 |= v14 << 24;
-		long word6 = v14 >> (64-24);
+		long word6 = v14 >>> (64-24);
 
 		// pack .a64l []opaque64
 		if (this.a64l.length > 0xff)
