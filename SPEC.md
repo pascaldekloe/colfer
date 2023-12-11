@@ -56,6 +56,79 @@ ones) follow the size flag in the header, denoted by `x` in the following table.
 Signed integers pack their bits conform the ZigZag[^1] algorithm first.
 
 
+## Size Profile
+
+Colfer encoding starts with a header. The three least-significant bits from the
+first octet select a size profile. Numeric value 0 selects *compact*, 1 selects
+*wide*, and 2 selects *large*.
+
+```bnf
+encoding-head :≡ compact-header | wide-header | large-header
+compact-head  :≡ octet octet octet ; 24 bits
+wide-head     :≡ octet octet octet octet octet ; 40 bits
+large-head    :≡ octet octet octet octet octet octet octet ; 56 bits
+```
+
+Each profile has its own limits on the overall size, the UTF-8 size per `text`
+field, the element count per list field, and the `fixed` size (explained in the
+following section).
+
+| Profile | Encoding Limit | Fixed Data Limit | UTF-8 Limit  | List Limit |
+|:--------|:---------------|:-----------------|:-------------|:-----------|
+| compact | 4 KiB          | 512 B            | 255 B        | 255        |
+| wide    | 2 MiB          | 64 KiB           | 64 KiB − 1 B | 65535      |
+| large   | 521 MiB        | 64 KiB           | 16 MiB − 1 B | 16777215   |
+
+Headers with the compact profile have 12 bits for the total size, and 9 bits for
+the fixed data size. The numeric value of a `compact-header` equals the index of
+the last octet in the encoding multiplied by 8, plus the index of the last octet
+in the fixed section multiplied by 32768.
+
+     0                   1                   2
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+    ┌─────┬───────────────────────┬─────────────────┐
+    │0 0 0│ total size − 1        │ fixed size − 1  │
+    └─────┴───────────────────────┴─────────────────┘
+
+Headers with the wide profile have 21 bits for the total size, and 16 bits for
+the fixed data size. The numeric value of a `wide-header` equals 1, plus the
+index of the last octet in the encoding multiplied by 8, plus the index of the
+last octet in the fixed section multiplied by 16777216.
+
+     0                   1                   2
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+    ┌─────┬─────────────────────────────────────────┐
+    │1 0 0│ total size − 1                          │
+    └─────┴─────────────────────────────────────────┘
+
+               3
+     4 5 6 7 9 0 1 2 3 4 5 6 7 8 9
+    ┌─────────────────────────────┐
+    │ fixed size − 1              │
+    └─────────────────────────────┘
+
+Headers with the large profile have 29 bits for the total size, and 16 bits for
+the fixed data size. The numeric value of a `large-header` equals 2, plus the
+index of the last octet in the encoding multiplied by 8, plus the index of the
+last octet in the fixed section multiplied by 536870912.
+
+     0                   1                   2                 3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 9 0 1
+    ┌─────┬───────────────────────────────────────────────────────┐
+    │0 1 0│ total size − 1                                        │
+    └─────┴───────────────────────────────────────────────────────┘
+
+                     4
+     2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+    ┌───────────────────────────────┐
+    │ fixed size − 1                │
+    └───────────────────────────────┘
+
+ℹ Note that logically the total size is greater than or equal to the fixed size,
+and that the fixed size greater than the header size. As such, every encoding is
+at least 4 octets in length, and with 4 octets read the total size is known.
+
+
 ## Data Structure Encoding
 
 Data is split in two sections, namely `fixed` and `variable`. Data types with a
@@ -66,21 +139,14 @@ has its `integer-head` octet (at a known location) in `fixed`. When the head
 value calls for more data, then its `integer-tail` appends to `variable`.
 
 ```bnf
-serial        :≡ fixed variable ; packs one data structure
-
-fixed         :≡ fixed-size variable-size field-fixes
-fixed-size    :≡ octet octet ; 16-bit address space, little-endian order
-variable-size :≡ integer-head ; 64-bit address space, integer-tail in overflow
+encoding      :≡ fixed variable ; packs one data structure
+fixed         :≡ header field-fixes ;
 field-fixes   :≡ fix field-fixes | fix ;
 
 variable      :≡ overflow payloads ;
-overflow      :≡ integer-tail overflow | integer-tail ;
+overflow      :≡ integer-tail overflow | ε ;
 payloads      :≡ payload payloads | ε ;
 ```
-
-As such, fields start at octet count 4 (in the `fixed` section). The `variable`
-section starts at octet count of `fixed-size` plus (the minimum of) 5. Note how
-the `variable` section starts with the `integer-tail` of `variable-size`.
 
 Fields append in sequential order to `fixed`. However, booleans group by 8 in
 the form of little-endian *bit fields*. Thus, the first 8 boolean fields reside
@@ -88,7 +154,7 @@ at the position of the first field, and the next 8 booleans at the position of
 the ninth field, and so forth.
 
 Single and double-precision floating-points[^2] encode without compression, in
-big-endian byte-order. Nested data structures encode their fields inline, as if
+big-endian octet-order. Nested data structures encode their fields inline, as if
 they were part of the hosting data structure.
 
 Arrays with a fixed size encode their elements just as separate fields would do.
@@ -150,7 +216,7 @@ opaque8-list   :≡ opaque8 opaque8-list | ε ;
 opaque16-list  :≡ opaque16 opaque8-list | ε ;
 opaque24-list  :≡ opaque24 opaque8-list | ε ;
 …
-structure-list :≡ serial structure-list | ε ;
+structure-list :≡ encoding structure-list | ε ;
 ```
 
 
