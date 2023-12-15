@@ -46,7 +46,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	/** The upper boundary on input bytes. */
 	public static int UNMARSHAL_MAX = 4096;
 	/** The lower boundary for byte capacity on in and output buffers. */
-	public static int BUF_MIN = ({{.FixedSize}} + {{.OverflowMax}} + 7) & ~7;
+	public static int BUF_MIN = (512 + {{.OverflowMax}} + 7) & ~7;
 
 {{- if .HasBool}}
  {{- range .Fields}}
@@ -227,7 +227,8 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		if (off < 0 || buf.length - off < BUF_MIN)
 			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
 
-		int w = off + {{.FixedSize}}; // write index
+		// write index at variable section
+		int w = off + {{.FixedSize}};
 		long word0 = {{.FixedSize}} << 15;
 
 {{- range .Fields}}
@@ -676,7 +677,6 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			throw new IndexOutOfBoundsException("range beyond buffer dimensions");
 		if (buf.length - off < BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
-		if (len < 3) return 0;
 
 {{- range .FixedWordIndices}}
 		final long word{{.}} = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + ({{.}}L * 8L));
@@ -688,8 +688,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 		final int size = (int)word0>>>3 & 0xfff;
 		final int fixed_size = (int)word0>>>15 & 0x1ff;
-		if (size < fixed_size || fixed_size < 4) return 1;
-		if (size > len) return 0;
+		if (len < 3 || size > len) return 0;
 
 		// read index at variable section
 		int r = off + fixed_size;
@@ -712,7 +711,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 				this.{{.NameNative}}.length);
 
   {{- else if eq .Type "opaque16"}}
-			payload_offset -= this.{{.NameNative}}.length;
+			payload_offset -= this.{{.NameNative}}.length << 1;
 			if (payload_offset < r) return 1;
 			for (int i = 0; i < this.{{.NameNative}}.length; i++)
 				this.{{.NameNative}}[i] = java_unsafe.getShort(buf,
@@ -882,13 +881,13 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
   {{- end}}{{end}}{{/* is text array */}}
 		} else {
   {{- if not .ElementCount}}
-			int utf8_length = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+			int utf8_length = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & 0xff;
 			payload_offset -= utf8_length;
 			if (payload_offset < r) return 1;
 			this.{{.NameNative}} = new String(buf, payload_offset, utf8_length, UTF_8);
 
   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-			int utf8_length{{$arrayIndex}} = (int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+			int utf8_length{{$arrayIndex}} = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & 0xff;
 			payload_offset -= utf8_length{{$arrayIndex}};
 			if (payload_offset < r) return 1;
 			this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, payload_offset, utf8_length{{$arrayIndex}}, UTF_8);
@@ -907,9 +906,6 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 {{/* line break */}}
 
-{{- if .HasPayloadSection}}
-		if (payload_offset < r) return 1;
-{{- end}}
 		// clear/undo absent fields
 		if (fixed_size < {{.FixedSize}}) switch (fixed_size) {
 			default:

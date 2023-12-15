@@ -36,7 +36,7 @@ implements Serializable {
 	/** The upper boundary on input bytes. */
 	public static int UNMARSHAL_MAX = 4096;
 	/** The lower boundary for byte capacity on in and output buffers. */
-	public static int BUF_MIN = (11 + 0 + 7) & ~7;
+	public static int BUF_MIN = (512 + 0 + 7) & ~7;
 
 	/**
 	 * Test 8-bit values.
@@ -202,7 +202,8 @@ implements Serializable {
 		if (off < 0 || buf.length - off < BUF_MIN)
 			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
 
-		int w = off + 11; // write index
+		// write index at variable section
+		int w = off + 11;
 		long word0 = 11 << 15;
 
 		// pack .a8l []opaque8
@@ -382,14 +383,12 @@ implements Serializable {
 			throw new IndexOutOfBoundsException("range beyond buffer dimensions");
 		if (buf.length - off < BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
-		if (len < 3) return 0;
 		final long word0 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0L * 8L));
 		final long word1 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (1L * 8L));
 
-		final int size = (int)word0>>3 & 0xfff;
-		final int fixed_size = (int)word0>>15 & 0x1ff;
-		if (size < fixed_size || fixed_size < 4) return 1;
-		if (size > len) return 0;
+		final int size = (int)word0>>>3 & 0xfff;
+		final int fixed_size = (int)word0>>>15 & 0x1ff;
+		if (len < 3 || size > len) return 0;
 
 		// read index at variable section
 		int r = off + fixed_size;
@@ -410,7 +409,7 @@ implements Serializable {
 			this.a16l = this.zero_a16l;
 		} else {
 			this.a16l = new short[(int)(word0 >> 32) & 0xff];
-			payload_offset -= this.a16l.length;
+			payload_offset -= this.a16l.length << 1;
 			if (payload_offset < r) return 1;
 			for (int i = 0; i < this.a16l.length; i++)
 				this.a16l[i] = java_unsafe.getShort(buf,
@@ -481,7 +480,7 @@ implements Serializable {
 		}
 
 
-		if (payload_offset < r) return 1;
+
 		// clear/undo absent fields
 		if (fixed_size < 11) switch (fixed_size) {
 			default:
@@ -533,8 +532,8 @@ implements Serializable {
 	throws ClassNotFoundException, IOException {
 		byte[] buf = new byte[UNMARSHAL_MAX];
 		in.readFully(buf, 0, 4);
-		short head = java_unsafe.getShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
-		int size = head >>> 3 & 0xfff;
+		int head = java_unsafe.getInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
+		int size = head>>>3 & 0xfff;
 		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
 		if (unmarshal(buf, 0, size) != size)
 			throw new StreamCorruptedException("not a ListTypes Colfer encoding");
