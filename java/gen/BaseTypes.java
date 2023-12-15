@@ -41,15 +41,12 @@ implements Serializable {
 	/**
 	 * Test binary flags.
 	 */
-	public static int B_FLAG = 1 << 0;
+	public static final int B_FLAG = 1 << 0;
 
 	/**
-	 * Bit field for boolean flags.
-	 * <ul>
-	 * <li>{@link #B_FLAG}
-	 * </ul>
+	 * Bit field for the booleans defined as *{@code _FLAG} constants above.
 	 */
-	public int bools;
+	public int _flags;
 
 	/**
 	 * Test 8 bit–unsigned integers.
@@ -338,7 +335,7 @@ implements Serializable {
 		// pack .s text
 
 		// pack .b bool
-		long word4 = this.bools>>>0 & 255L;
+		long word4 = this._flags>>>0 & 0xff;
 
 		// write payloads
 		{
@@ -543,7 +540,7 @@ implements Serializable {
 			this.s = new String(buf, payload_offset, utf8_length, UTF_8);
 		}
 		// unpack .b bool
-		this.bools = (int)(word4 >>> 0 & 0xff);
+		this._flags = (int)(word4 >>> 0) & 0xff;
 
 
 
@@ -552,7 +549,7 @@ implements Serializable {
 			default:
 				return 1;
 			case 32:
-				this.bools &= (1 << 0) - 1;
+				this._flags &= (1 << 0) - 1;
 			case 31:
 			case 23:
 				this.t = Instant.EPOCH;
@@ -619,32 +616,6 @@ implements Serializable {
 		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
 		if (unmarshal(buf, 0, size) != size)
 			throw new StreamCorruptedException("not a BaseTypes Colfer encoding");
-	}
-
-	/**
-	 * Gets the boolean flags.
-	 * @return the value.
-	 */
-	public int getBools() {
-		return this.bools;
-	}
-
-	/**
-	 * Sets the boolean flags.
-	 * @param value the replacement.
-	 */
-	public void setBools(int value) {
-		this.bools = value;
-	}
-
-	/**
-	 * Sets the boolean flags.
-	 * @param value the replacement.
-	 * @return {@code this}.
-	 */
-	public BaseTypes withBools(int value) {
-		this.bools = value;
-		return this;
 	}
 
 	/**
@@ -952,7 +923,7 @@ implements Serializable {
 	 * @return the value.
 	 */
 	public boolean getB() {
-		return (this.bools & B_FLAG) != 0;
+		return (this._flags & B_FLAG) != 0;
 	}
 
 	/**
@@ -961,9 +932,9 @@ implements Serializable {
 	 */
 	public void setB(boolean value) {
 		if (value) {
-			this.bools |= B_FLAG;
+			this._flags |= B_FLAG;
 		} else {
-			this.bools &= ~B_FLAG;
+			this._flags &= ~B_FLAG;
 		}
 	}
 
@@ -996,7 +967,7 @@ implements Serializable {
 		h = h * 31 + Double.hashCode(this.f64);
 		h = h * 31 + this.t.hashCode();
 		h = h * 31 + this.s.hashCode();
-		h = h * 31 + this.bools;
+		h = h * 31 + this._flags;
 		return h;
 	}
 
@@ -1032,6 +1003,6 @@ implements Serializable {
 			&& (this.f64 == o.f64 || (this.f64 != this.f64 && o.f64 != o.f64))
 			&& this.t.equals(o.t)
 			&& this.s.equals(o.s)
-			&& this.bools == o.bools;
+			&& this._flags == o._flags;
 	}
 }

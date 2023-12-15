@@ -118,6 +118,36 @@ type ListTypes struct {
 	sl []text
 }
 
+// ManyFlags encodes over multiple bit-fields.
+type ManyFlags struct {
+	b1 bool
+	b2 bool
+	b3 bool
+	b4 bool
+	b5 bool
+	b6 bool
+	b7 bool
+	// last in bit field
+	b8 bool
+
+	// second bit-field
+	b9 bool
+	b10 bool
+	// because we can
+	shift opaque32
+	b11 bool
+	b12 bool
+	b13 bool
+	b14 bool
+	b15 bool
+	b16 bool
+
+	// third bit-field
+	b17 bool
+
+	end opaque8
+}
+
 // NestedTypes contains other data structures.
 type NestedTypes struct {
 	// variable size

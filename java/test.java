@@ -1,5 +1,6 @@
 import gen.BaseTypes;
 import gen.ListTypes;
+import gen.ManyFlags;
 import gen.OpaqueTypes;
 
 import java.io.ByteArrayOutputStream;
@@ -30,6 +31,7 @@ public class test {
 			identity();
 			marshaling();
 			unmarshaling();
+			bitFields();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -111,7 +113,7 @@ public class test {
 					.withF64(11)
 					.withT(Instant.ofEpochSecond(12L, 13L))
 					.withS("\u0080\u0800\ud800\udc00")
-					.withBools(1)
+					.withB(true)
 			);
 
 			// large values
@@ -202,6 +204,28 @@ public class test {
 				failf("want:");
 				dumpBaseTypes(want);
 			}
+		}
+	}
+
+	static void bitFields() {
+		ManyFlags a = new ManyFlags();
+		ManyFlags b = new ManyFlags();
+		byte[] buf = new byte[ManyFlags.UNMARSHAL_MAX];
+
+		// tests all possible boolean combinations
+		for (int i = 0; i < ManyFlags.B17_FLAG; i++) {
+			a._flags = i;
+
+			int writen = a.marshal(buf, 0);
+			if (writen < 4) {
+				failf("bit fields: test abort on marshal error");
+				return;
+			}
+			int readn = b.unmarshal(buf, 0, writen);
+			if (readn != writen)
+				failf("bit fields: marshal wrote %d bytes, unmarshal read %d bytes", writen, readn);
+			if (b._flags != i)
+				failf("bit fields: unmarshalled flags %x, marshalled %x", b._flags, i);
 		}
 	}
 

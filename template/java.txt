@@ -51,27 +51,20 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 {{- if .HasBool}}
  {{- range .Fields}}
   {{- if eq .Type "bool"}}
+{{/* new line */}}
    {{- if .Docs}}
-
 	/**
 {{.DocText "\t * "}}
 	 */
    {{- end}}{{/* has docs */}}
-	public static int {{upperSnake .NameNative}}_FLAG = 1 << {{.BoolIndex}};
+	public static final int {{upperSnake .NameNative}}_FLAG = 1 << {{.BoolIndex}};
   {{- end}}{{/* is boolean */}}
  {{- end}}{{/* field range */}}
 
 	/**
-	 * Bit field for boolean flags.
-	 * <ul>
- {{- range .Fields}}
-  {{- if eq .Type "bool"}}
-	 * <li>{@link #{{upperSnake .NameNative}}_FLAG}
-  {{- end}}{{/* is boolean */}}
- {{- end}}{{/* field range */}}
-	 * </ul>
+	 * Bit field for the booleans defined as *{@code _FLAG} constants above.
 	 */
-	public int bools;
+	public int _flags;
 {{- end}}{{/* has boolean */}}
 
 
@@ -245,15 +238,6 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
    {{- end}}
   {{- end}}{{/* not struct list */}}
 
- {{- else if eq .Type "bool"}}
-  {{- if eq .WordShift 0}}
-		long word{{.WordIndex}} = this.bools>>>{{.BoolIndex}} & 255L;
-  {{- else if le .BoolIndex .WordShift}}
-		word{{.WordIndex}} |= (long)this.bools<<({{.WordShift}}-{{.BoolIndex}}) & 255L<<{{.WordShift}};
-  {{- else}}
-		word{{.WordIndex}} |= (long)this.bools>>({{.BoolIndex}}-{{.WordShift}}) & 255L<<{{.WordShift}};
-  {{- end}}
-
  {{- else if eq .Type "opaque8" "uint8" "int8"}}
   {{- if not .ElementCount}}
    {{- if not .WordShift}}
@@ -389,6 +373,17 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
    {{- end}}
   {{end}}{{end}}{{/* is array */}}
   {{- /* payload plus size declaration done below */}}
+
+ {{- else if eq .Type "bool"}}
+  {{- if not .FirstInBitField}}
+		// travels for free
+  {{- else if not .WordShift}}
+		long word{{.WordIndex}} = this._flags>>>{{.BoolIndex}} & 0xff;
+  {{- else if le .BoolIndex .WordShift}}
+		word{{.WordIndex}} |= (long)this._flags << {{.WordShift}}-{{.BoolIndex}} & 0xffl<<{{.WordShift}};
+  {{- else}}
+		word{{.WordIndex}} |= (long)this._flags >>> {{.BoolIndex}}-{{.WordShift}} & 0xffl<<{{.WordShift}};
+  {{- end}}
 
  {{- else if .TypeRef}}
 		// TODO: embedded structures
@@ -895,10 +890,14 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		}
 
  {{- else if eq .Type "bool"}}
-  {{- if eq .BoolIndex 0}}
-		this.bools = (int)(word{{.WordIndex}} >>> {{.WordShift}} & 0xff);
-  {{- else if .FirstInBitField}}
-		this.bools |= (int)(word{{.WordIndex}} >>> {{.WordShift}} & 0xff) << {{.BoolIndex}};
+  {{- if not .FirstInBitField}}
+		// travels for free
+  {{- else if eq .BoolIndex 0}}
+		this._flags = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & 0xff;
+  {{- else if le .BoolIndex .WordShift}}
+		this._flags |= (int)(word{{.WordIndex}} >>> {{.WordShift}}-{{.BoolIndex}}) & 0xff<<{{.BoolIndex}};
+  {{- else}}
+		this._flags |= (int)(word{{.WordIndex}} << {{.BoolIndex}}-{{.WordShift}}) & 0xff<<{{.BoolIndex}};
   {{- end}}
 
  {{- end}}{{/* type select */}}
@@ -928,7 +927,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
   {{end}}{{end}}{{/* is array */}}
 
  {{- else if eq .Type "bool"}}
-				this.bools &= (1 << {{.BoolIndex}}) - 1;
+				this._flags &= (1 << {{.BoolIndex}}) - 1;
 
  {{- else}}
   {{- if not .ElementCount}}
@@ -988,36 +987,6 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			throw new StreamCorruptedException("not a {{.Name}} Colfer encoding");
 	}
 
-{{- if .HasBool}}
-
-	/**
-	 * Gets the boolean flags.
-	 * @return the value.
-	 */
-	public int getBools() {
-		return this.bools;
-	}
-
-	/**
-	 * Sets the boolean flags.
-	 * @param value the replacement.
-	 */
-	public void setBools(int value) {
-		this.bools = value;
-	}
-
-	/**
-	 * Sets the boolean flags.
-	 * @param value the replacement.
-	 * @return {@code this}.
-	 */
-	public {{$class}} withBools(int value) {
-		this.bools = value;
-		return this;
-	}
-
-{{- end}}{{/* has boolean */}}
-
 {{- range .Fields}}
  {{- if ne .Type "bool"}}
 
@@ -1055,7 +1024,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 * @return the value.
 	 */
 	public boolean get{{title .NameNative}}() {
-		return (this.bools & {{upperSnake .NameNative}}_FLAG) != 0;
+		return (this._flags & {{upperSnake .NameNative}}_FLAG) != 0;
 	}
 
 	/**
@@ -1064,9 +1033,9 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 */
 	public void set{{title .NameNative}}(boolean value) {
 		if (value) {
-			this.bools |= {{upperSnake .NameNative}}_FLAG;
+			this._flags |= {{upperSnake .NameNative}}_FLAG;
 		} else {
-			this.bools &= ~{{upperSnake .NameNative}}_FLAG;
+			this._flags &= ~{{upperSnake .NameNative}}_FLAG;
 		}
 	}
 
@@ -1124,7 +1093,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
  {{- end}}{{/* is array */}}
 {{- end}}{{/* field range */}}
   {{- if .HasBool}}
-		h = h * 31 + this.bools;
+		h = h * 31 + this._flags;
   {{- end}}
 		return h;
 	}
@@ -1162,7 +1131,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
  {{- end}}
 
  {{- if .TypeList}} Arrays.equals(this.{{.NameNative}}, o.{{.NameNative}})
- {{- else if eq .Type "bool"}}{{if eq .BoolIndex 0}} this.bools == o.bools{{end}}
+ {{- else if eq .Type "bool"}}{{if eq .BoolIndex 0}} this._flags == o._flags{{end}}
  {{- else if not .ElementCount}}
 
   {{- if eq .Type "float32" "float64"}} (this.{{.NameNative}} == o.{{.NameNative}} || (this.{{.NameNative}} != this.{{.NameNative}} && o.{{.NameNative}} != o.{{.NameNative}}))
