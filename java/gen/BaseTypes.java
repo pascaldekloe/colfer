@@ -228,7 +228,7 @@ implements Serializable {
 			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
 
 		int w = off + 33; // write index
-		long word0 = 33 << 12;
+		long word0 = 33 << 15;
 
 		// pack .u8 uint8
 		word0 |= Byte.toUnsignedLong(this.u8) << 24;
@@ -391,7 +391,7 @@ implements Serializable {
 		int size = w - off;
 		if (size > MARSHAL_MAX)
 			throw new BufferOverflowException();
-		word0 |= size;
+		word0 |= size << 3;
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (2 * 8), word2);
@@ -435,8 +435,8 @@ implements Serializable {
 		final long word3 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (3L * 8L));
 		final long word4 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (4L * 8L));
 
-		final int size = (int)word0 & 0xfff;
-		final int fixed_size = (int)(word0 >> 12) & 0xfff;
+		final int size = (int)word0>>3 & 0xfff;
+		final int fixed_size = (int)word0>>15 & 0x1ff;
 		if (size < fixed_size || fixed_size < 4) return 1;
 		if (size > len) return 0;
 
@@ -614,8 +614,9 @@ implements Serializable {
 	private void readObject(ObjectInputStream in)
 	throws ClassNotFoundException, IOException {
 		byte[] buf = new byte[UNMARSHAL_MAX];
-		in.readFully(buf, 0, UNMARSHAL_MIN);
-		int size = (buf[0] & 0xff) | (buf[1] & 0xf) << 8;
+		in.readFully(buf, 0, 4);
+		short head = java_unsafe.getShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
+		int size = head >>> 3 & 0xfff;
 		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
 		if (unmarshal(buf, 0, size) != size)
 			throw new StreamCorruptedException("not a BaseTypes Colfer encoding");

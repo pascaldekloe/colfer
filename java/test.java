@@ -63,7 +63,7 @@ public class test {
 		return new LinkedHashMap<String, BaseTypes>() {{
 
 			// all zero
-			put("211002"
+			put("088110"
 				+ "00" // uint8
 				+ "00" // int8
 				+ "01" // uint16
@@ -81,7 +81,7 @@ public class test {
 			);
 
 			// small values
-			put("2a1002"
+			put("508110"
 				+ "01" // uint8
 				+ "02" // int8
 				+ "07" // uint16
@@ -115,7 +115,7 @@ public class test {
 			);
 
 			// large values
-			put("471002"
+			put("388210"
 				+ "ff" // uint8
 				+ "7f" // int8
 				+ "04" // uint16
