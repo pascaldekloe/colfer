@@ -4,6 +4,7 @@ package colfer
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -172,13 +173,29 @@ type Struct struct {
 	// FixedSize is the encoding space in the fixed section.
 	FixedSize int
 
-	// OverflowMax is the upper boundary for encoding space in the overflow
-	// section.
+	// OverflowMax is the upper boundary for encoding space
+	// in the overflow section.
 	OverflowMax int
 
-	// SizeMin is the smallest encoding size possible (with only the first
-	// field present).
-	SizeMin int
+	// PayloadMax is the upper boundary for encoding space
+	// in the payload section.
+	PayloadMax int
+
+	// The name can be any of "compact", "wide" or "royal".
+	SizeProfile string
+	// HeaderSize equals the byte offset of the first field.
+	HeaderSize int
+	// The space limit for the fixed section (in bytes) depends on the size
+	// profile.
+	FixedMax int
+	// The space limit (in bytes) depends on the size profile.
+	SizeMax int
+	// Pretty formatting of SizeMax with SI prefixes.
+	SizeMaxSI string
+	// The length limit per text depends on the size profile.
+	UTF8Max int
+	// The length limit per list depends on the size profile.
+	ListMax int
 }
 
 // FieldsReversed returns .Fields in reversed order.
@@ -188,26 +205,69 @@ func (t *Struct) FieldsReversed() []*Field {
 	return fields
 }
 
-func (t *Struct) SetFixedPositions() {
-	t.FixedSize = 3 // header
+// ApplySizeProfile calculates the fixed indices and limits in the Struct and
+// its Fields.
+func (t *Struct) ApplySizeProfile(name string) error {
+	t.SizeProfile = strings.ToLower(name)
+
+	switch t.SizeProfile {
+	default:
+		return fmt.Errorf(`colfer: unkown size profile %q; use "compact", "wide" or "royal"`, name)
+
+	case "compact":
+		t.HeaderSize = 3 // 24 bits
+		t.FixedMax = 1 << 9
+		t.SizeMax = 1 << 12
+		t.SizeMaxSI = "4 KiB"
+		t.UTF8Max = 0xff
+		t.ListMax = 0xff
+
+	case "wide":
+		t.HeaderSize = 5 // 40 bits
+		t.FixedMax = 1 << 16
+		t.SizeMax = 1 << 21
+		t.SizeMaxSI = "2 MiB"
+		t.UTF8Max = 0xffff
+		t.ListMax = 0xffff
+
+	case "royal":
+		t.HeaderSize = 7 // 56 bits
+		t.FixedMax = 1 << 24
+		t.SizeMax = 1 << 29
+		t.SizeMaxSI = "512 MiB"
+		t.UTF8Max = 0xffffff
+		t.ListMax = 0xffffff
+	}
+
+	// double check
+	if len(t.Fields) == 0 {
+		return errors.New("colfer: fields required for fixed-position calculation")
+	}
+
+	// booleans have their own grouping in bit fields
+	var boolCount int
+
+	// field dimensions are added next in line
+	t.FixedSize = t.HeaderSize
 	t.OverflowMax = 0
-	boolCount := 0
+
 	for _, f := range t.Fields {
+		// accumelated size is offset of next field
 		f.FixedIndex = t.FixedSize
 
-		// The boolean index is required before
-		// the following size calculations!
+		// BooIndex is used by TypeFixedSize below
 		if f.Type == "bool" {
 			f.BoolIndex = boolCount
 			boolCount++
 		}
 
+		// apply field dimensions
 		n := max(1, f.ElementCount)
 		t.FixedSize += n * f.TypeFixedSize()
 		t.OverflowMax += n * f.TypeOverflowMax()
 	}
 
-	t.SizeMin = 3 + t.Fields[0].TypeFixedSize()*max(1, t.Fields[0].ElementCount)
+	return nil
 }
 
 // FixedWordIndices returns the index of each 64-bit word filled by the fixed
@@ -241,6 +301,10 @@ func (t *Struct) DocText(indent string) string {
 // String returns the qualified name.
 func (t *Struct) String() string {
 	return fmt.Sprintf("%s.%s", t.Pkg.Name, t.Name)
+}
+
+func (t *Struct) HasVariableSection() bool {
+	return t.OverflowMax != 0 || t.HasPayloadSection()
 }
 
 func (t *Struct) HasPayloadSection() bool {
@@ -346,6 +410,7 @@ func (f *Field) WordShift() int {
 }
 
 // TypeFixedSize returns its space in the fixed section.
+// BoolIndex is required for boolean types.
 func (f *Field) TypeFixedSize() (octets int) {
 	if f.TypeList {
 		_, ok := datatypes[f.Type]

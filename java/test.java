@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.nio.BufferOverflowException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -176,7 +175,7 @@ public class test {
 	static void marshaling() throws Exception {
 		for (Entry<String, BaseTypes> e : newGoldenBaseTypes().entrySet()) {
 			byte[] buf = new byte[BaseTypes.MARSHAL_MAX];
-			int n = e.getValue().marshalWithBounds(buf, 0);
+			int n = e.getValue().marshal(buf, 0);
 			StringBuilder hex = new StringBuilder(n * 2);
 			for (int i = 0; i < n; i++)
 				hex.append(String.format("%02x", buf[i]));
@@ -191,7 +190,7 @@ public class test {
 		for (Entry<String, BaseTypes> golden : newGoldenBaseTypes().entrySet()) {
 			BaseTypes want = golden.getValue();
 			String hex = golden.getKey();
-			byte[] buf = new byte[BaseTypes.UNMARSHAL_MAX];
+			byte[] buf = new byte[BaseTypes.COLFER_MAX];
 			fromHex(buf, hex);
 
 			BaseTypes got = new BaseTypes();
@@ -210,7 +209,7 @@ public class test {
 	static void bitFields() {
 		ManyFlags a = new ManyFlags();
 		ManyFlags b = new ManyFlags();
-		byte[] buf = new byte[ManyFlags.UNMARSHAL_MAX];
+		byte[] buf = new byte[ManyFlags.COLFER_MAX];
 
 		// tests all possible boolean combinations
 		for (int i = 0; i < ManyFlags.B17_FLAG; i++) {
@@ -232,9 +231,9 @@ public class test {
 	static void streaming() throws Exception {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-		byte[] buf = new byte[BaseTypes.MARSHAL_MAX];
+		byte[] buf = new byte[BaseTypes.COLFER_MAX];
 		for (BaseTypes o : newGoldenBaseTypes().values()) {
-			int n = o.marshalWithBounds(buf, 0);
+			int n = o.marshal(buf, 0);
 			if (n == 0) {
 				failf("streaming: test abort on marshal error");
 				return;
@@ -289,43 +288,42 @@ public class test {
 	}
 
 	static void marshalMax() {
-		try {
-			int n = new OpaqueTypes()
-				.withA16l(new short[OpaqueTypes.MARSHAL_MAX / 2])
-				.marshalWithBounds(new byte[OpaqueTypes.BUF_MIN], 0);
-			failf("marshal max: marshaled an oversized opaque16 binary into %d bytes", n);
-		} catch (BufferOverflowException ok) {}
+		int n;
 
-		try {
-			int n = new BaseTypes()
-				.withS(new String(new char[BaseTypes.MARSHAL_MAX]))
-				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 1], 1);
-			failf("marshal max: marshaled an oversized text into %d bytes", n);
-		} catch (BufferOverflowException ok) {}
+		n = new OpaqueTypes()
+			.withA16l(new short[OpaqueTypes.COLFER_MAX / 2])
+			.marshal(new byte[OpaqueTypes.COLFER_MAX], 0);
+		if (n != 0)
+			failf("marshal max: marshalled an oversized opaque16 binary into %d bytes", n);
 
-		try {
-			int n = new ListTypes()
-				.withF32l(new float[ListTypes.MARSHAL_MAX / 4])
-				.marshalWithBounds(new byte[ListTypes.BUF_MIN + 2], 2);
-			failf("marshal max: marshaled an oversized float32-list into %d bytes", n);
-		} catch (BufferOverflowException ok) {}
+		n = new BaseTypes()
+			.withS(new String(new char[BaseTypes.COLFER_MAX]))
+			.marshal(new byte[BaseTypes.COLFER_MAX + 1], 1);
+		if (n != 0)
+			failf("marshal max: marshalled an oversized text into %d bytes", n);
+
+		n = new ListTypes()
+			.withF32l(new float[ListTypes.COLFER_MAX / 4])
+			.marshal(new byte[ListTypes.COLFER_MAX + 2], 2);
+		if (n != 0)
+			failf("marshal max: marshalled an oversized float32-list into %d bytes", n);
 	}
 
 	static void bufferOverflow() {
-		try {
-			int n = new BaseTypes()
-				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
-				.marshalWithBounds(new byte[BaseTypes.BUF_MIN], 0);
+		int n;
+
+		n = new BaseTypes()
+			.withS(new String(new char[BaseTypes.COLFER_MAX / 2]))
+			.marshal(new byte[BaseTypes.MARSHAL_BUF_MIN], 0);
+		if (n != 0)
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
-		} catch (BufferOverflowException ok) {}
 
 		// again with offset
-		try {
-			int n = new BaseTypes()
-				.withS(new String(new char[BaseTypes.MARSHAL_MAX / 2]))
-				.marshalWithBounds(new byte[BaseTypes.BUF_MIN + 99], 99);
+		n = new BaseTypes()
+			.withS(new String(new char[BaseTypes.COLFER_MAX / 2]))
+			.marshal(new byte[BaseTypes.MARSHAL_BUF_MIN + 99], 99);
+		if (n != 0)
 			failf("marshal max: marshaled an oversized text into %d bytes", n);
-		} catch (BufferOverflowException ok) {}
 	}
 
 	private static void fromHex(byte[] buf, String s) {

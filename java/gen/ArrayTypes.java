@@ -13,11 +13,8 @@ import java.io.Serializable;
 import java.io.StreamCorruptedException;
 import java.io.WriteAbortedException;
 import java.lang.reflect.Field;
-import java.nio.BufferOverflowException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * ArrayTypes contains each BaseType supported in array form,
@@ -27,17 +24,6 @@ import java.util.Objects;
  */
 public class ArrayTypes
 implements Serializable {
-
-	/** The lower boundary on output bytes. */
-	public static int MARSHAL_MIN = 61;
-	/** The upper boundary on output bytes. */
-	public static int MARSHAL_MAX = 4096;
-	/** The lower boundary on input bytes. */
-	public static int UNMARSHAL_MIN = 5;
-	/** The upper boundary on input bytes. */
-	public static int UNMARSHAL_MAX = 4096;
-	/** The lower boundary for byte capacity on in and output buffers. */
-	public static int BUF_MIN = (512 + 96 + 7) & ~7;
 
 	/**
 	 * Test 8 bit–unsigned integers. Two elements set the
@@ -100,6 +86,9 @@ implements Serializable {
 	 */
 	public final String[] sn2 = new String[2];
 
+	// Colfer internals
+	private static final int FIXED_SIZE = 61;
+	private static final int OVERFLOW_MAX = 96;
 	private static final long[] COLFER_MASKS = {
 		0,
 		0xffL,
@@ -111,9 +100,7 @@ implements Serializable {
 		0xffffffffffffffL,
 		0xffffffffffffffffL,
 	};
-
 	private static final sun.misc.Unsafe java_unsafe;
-
 	static {
 		try {
 			Field f = Class.class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
@@ -123,6 +110,54 @@ implements Serializable {
 			throw new Error("Java unsafe API required", e);
 		}
 	}
+
+	/**
+	 * Encodings of this data structure have 3 bytes of overhead.
+	 * @see "Colfer's “compact profile” header"
+	 * @see #COLFER_MAX
+	 */
+	public static final int COLFER_MIN = 3;
+
+	/**
+	 * Encodings of this data structure are limited to 4 KiB in size.
+	 * The actual limit for this specific version (as defined by {@link
+	 * #MARSHAL_MAX}) could be less.
+	 * @see "Colfer's “compact profile” limits"
+	 * @see #COLFER_MIN
+	 */
+	public static final int COLFER_MAX = 4096;
+
+	/**
+	 * Encodings of this specific version of the data structure consist of
+	 * at most {@code MARSHAL_MAX} bytes.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_MAX = COLFER_MAX;
+
+	/**
+	 * Output buffers must have a capacity of at least this byte count.
+	 * The threshold can be higher than {@link #MARSHAL_MAX} in some cases.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MIN = (FIXED_SIZE + OVERFLOW_MAX + 7) & ~7;
+
+	/**
+	 * Output buffer capacity beyound this byte count won't affect encoding.
+	 * {@link #MARSHAL_BUF_MIN} ≤ {@code MARSHAL_BUF_MAX}
+	 * @see #MARSHAL_MAX
+	 * @see #MARSHAL_BUF_MIN
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MAX = java.lang.Math.max(MARSHAL_MAX, MARSHAL_BUF_MIN);
+
+	/**
+	 * Unmarshal buffers must have a capacity of at least this byte count.
+	 * {@link #COLFER_MIN} ≤ {@code UNMARSHAL_BUF_MIN} ≤ {@link #COLFER_MAX}
+	 * @see #unmarshal(byte[],int,int)
+	 */
+	public static final int UNMARSHAL_BUF_MIN = (512 + OVERFLOW_MAX + 7) & ~7;
 
 	/** Default constructor. */
 	public ArrayTypes() { }
@@ -150,7 +185,7 @@ implements Serializable {
 		 */
 		public Unmarshaller(InputStream in, int bufn) {
 			this.in = in;
-			this.buf = new byte[bufn < UNMARSHAL_MAX ? UNMARSHAL_MAX : bufn];
+			this.buf = new byte[bufn < COLFER_MAX ? COLFER_MAX : bufn];
 		}
 
 		/**
@@ -164,7 +199,7 @@ implements Serializable {
 			if (len == 0) {
 				off = 0;
 				if (!read()) return null; // EOF
-			} else if (buf.length - off < BUF_MIN) {
+			} else if (buf.length - off < COLFER_MIN) {
 				System.arraycopy(buf, off, buf, 0, len);
 				off = 0;
 			}
@@ -200,25 +235,33 @@ implements Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
-	 * anywhere beyond the offset—not limited to the serial size.
+	 * Writes the Colfer encoding of {@code this} data structure to a buffer
+	 * at an offset. Marshalling requires at least {@link #MARSHAL_BUF_MIN}
+	 * of space since the offset, as in {@code buf.length} − {@code off} ≥
+	 * {@code ArrayTypes.MARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #MARSHAL_BUF_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer overflows from happening.
+	 *
+	 * The return is zero ({@code 0}) on any of the following, exclusively.
+	 * <ul>
+	 * <li>buffer overflow—only possible below {@link #MARSHAL_BUF_MAX}
+	 * <li>{@link #COLFER_MAX} exceeded
+	 * <li>a text exceeds 255 bytes of UTF-8
+	 * <li>a list exceeds 255 entries—none present yet
+	 * </ul>
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size.
-	 * @throws IllegalArgumentException when the buffer capacity since the
-	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException when the data exceeds the
-	 *         buffer capacity or {@link #MARSHAL_MAX}.
+	 * @return either the encoding size or {@code 0}.
+	 * @throws IllegalArgumentException on {@link #MARSHAL_BUF_MIN} breach.
 	 */
-	public int marshalWithBounds(byte[] buf, int off) {
-		if (off < 0 || buf.length - off < BUF_MIN)
-			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
+	public int marshal(byte[] buf, int off) {
+		if (off < 0 || buf.length - off < MARSHAL_BUF_MIN)
+			throw new IllegalArgumentException("insufficient buffer capacity");
 
 		// write index at variable section
-		int w = off + 61;
-		long word0 = 61 << 15;
+		int w = off + FIXED_SIZE;
+		long word0 = FIXED_SIZE << 15;
 
 		// pack .u8n2 uint8
 		word0 |= Byte.toUnsignedLong(this.u8n2[0]) << 24;
@@ -415,20 +458,20 @@ implements Serializable {
 			final int utf16_len = this.sn2[0].length();
 			// size check is lazily redone on multi-byte encodings
 			if (buf.length - w < utf16_len)
-				throw new BufferOverflowException();
+				return 0;
 			for (int i = 0; i < utf16_len; i++) {
 				char c = this.sn2[0].charAt(i);
 				if (c < '\u0080') {
 					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
 						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
@@ -440,7 +483,7 @@ implements Serializable {
 						i--; // unread
 					} else {
 						if (buf.length - w < (utf16_len - i) + 3)
-							throw new BufferOverflowException();
+							return 0;
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
@@ -453,7 +496,7 @@ implements Serializable {
 			// write size declaration
 			int utf8_len = w - utf8_off;
 			if (utf8_len > 255)
-				throw new BufferOverflowException();
+				return 0;
 			word7 |= (long)utf8_len << 24;
 		}
 		{
@@ -461,20 +504,20 @@ implements Serializable {
 			final int utf16_len = this.sn2[1].length();
 			// size check is lazily redone on multi-byte encodings
 			if (buf.length - w < utf16_len)
-				throw new BufferOverflowException();
+				return 0;
 			for (int i = 0; i < utf16_len; i++) {
 				char c = this.sn2[1].charAt(i);
 				if (c < '\u0080') {
 					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
 						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
@@ -486,7 +529,7 @@ implements Serializable {
 						i--; // unread
 					} else {
 						if (buf.length - w < (utf16_len - i) + 3)
-							throw new BufferOverflowException();
+							return 0;
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
@@ -499,14 +542,14 @@ implements Serializable {
 			// write size declaration
 			int utf8_len = w - utf8_off;
 			if (utf8_len > 255)
-				throw new BufferOverflowException();
+				return 0;
 			word7 |= (long)utf8_len << 32;
 		}
 
 		// write fixed positions
 		int size = w - off;
-		if (size > MARSHAL_MAX)
-			throw new BufferOverflowException();
+		if (size > COLFER_MAX)
+			return 0;
 		word0 |= size << 3;
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (0 * 8), word0);
 		java_unsafe.putLong(buf, off + java_unsafe.ARRAY_BYTE_BASE_OFFSET + (1 * 8), word1);
@@ -529,14 +572,17 @@ implements Serializable {
 	}
 
 	/**
-	 * Reads a Colfer encoding from the buffer. Objects can be reused. All
-	 * fields are initialized regardless of their value beforehand.
+	 * Reads a Colfer encoding of {@code this} data strucure from a buffer
+	 * range. All fields are updated, regardless of their value beforehand.
+	 * Unmarshalling requires at least {@link #UNMARSHAL_BUF_MIN} of space
+	 * since the offset, as in {@code buf.length} − {@code off} ≥ {@code
+	 * ArrayTypes.UNMARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #COLFER_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer underflows from happening.
 	 *
-	 * The number of bytes read is guaranteed to lie within in the range of
-	 * [{@link #UNMARSHAL_MIN}..{@link #UNMARSHAL_MAX}]. Return {@code 1}
-	 * signals malformed data. Return {@code 0} signals incomplete data,
-	 * a.k.a. end-of-file.
-	 *
+	 * The return is zero ({@code 0}) on incomplete data, one ({@code 1}) on
+	 * malformed data, or in range {@link #COLFER_MIN}..{@link #COLFER_MAX}
+	 * on valid data. Note that the return may be less than {@code len}.
 	 * Data selection within the buffer, including its exceptions, matches
 	 * Java's standard {@link java.io.InputStream#read(byte[],int,int) read}
 	 * and {@link java.io.OutputStream#write(byte[],int,int) write}.
@@ -544,16 +590,16 @@ implements Serializable {
 	 * @param buf the input buffer.
 	 * @param off the start index [offset] in the buffer.
 	 * @param len the number of bytes available since the offset.
-	 * @return either the encoding size, or 0 for EOF, or 1 for malformed.
+	 * @return either the encoding size, or {@code 0}, or {code 1}.
 	 * @throws IllegalArgumentException when the buffer capacity minus its
-	 *         offset is less than {@link #BUF_MIN}.
+	 *         offset is less than {@link #UNMARSHAL_BUF_MIN}.
 	 * @throws IndexOutOfBoundsException when the buffer capacity does not
 	 *         match the offset–length combination.
 	 */
 	public int unmarshal(byte[] buf, int off, int len) {
 		if ((off | len) < 0 || buf.length - off < len)
 			throw new IndexOutOfBoundsException("range beyond buffer dimensions");
-		if (buf.length - off < BUF_MIN)
+		if (buf.length - off < UNMARSHAL_BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
 		final long word0 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0L * 8L));
 		final long word1 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (1L * 8L));
@@ -566,7 +612,7 @@ implements Serializable {
 
 		final int size = (int)word0>>>3 & 0xfff;
 		final int fixed_size = (int)word0>>>15 & 0x1ff;
-		if (len < 3 || size > len) return 0;
+		if (len < COLFER_MIN || size > len) return 0;
 
 		// read index at variable section
 		int r = off + fixed_size;
@@ -747,11 +793,11 @@ implements Serializable {
 			this.sn2[0] = "";
 			this.sn2[1] = "";
 		} else {
-			int utf8_length0 = (int)(word7 >>> 24) & 0xff;
+			int utf8_length0 = (int)(word7 >>> 24) & 255;
 			payload_offset -= utf8_length0;
 			if (payload_offset < r) return 1;
 			this.sn2[0] = new String(buf, payload_offset, utf8_length0, UTF_8);
-			int utf8_length1 = (int)(word7 >>> 32) & 0xff;
+			int utf8_length1 = (int)(word7 >>> 32) & 255;
 			payload_offset -= utf8_length1;
 			if (payload_offset < r) return 1;
 			this.sn2[1] = new String(buf, payload_offset, utf8_length1, UTF_8);
@@ -760,7 +806,7 @@ implements Serializable {
 
 
 		// clear/undo absent fields
-		if (fixed_size < 61) switch (fixed_size) {
+		if (fixed_size < FIXED_SIZE) switch (fixed_size) {
 			default:
 				return 1;
 			case 59:
@@ -823,7 +869,7 @@ implements Serializable {
 	 * {@link java.io.Serializable} version number reflects the fields present.
 	 * Values in range [0, 127] belong to Colfer version 1.
 	 */
-	private static final long serialVersionUID = 61L << 7;
+	private static final long serialVersionUID = 12L << 7;
 
 	/**
 	 * {@link java.io.Serializable} as Colfer.
@@ -833,9 +879,9 @@ implements Serializable {
 	 *         would exceed {@link #MARSHAL_MAX}.
 	 */
 	private void writeObject(ObjectOutputStream out) throws IOException {
-		byte[] buf = new byte[MARSHAL_MAX];
-		int n = marshalWithBounds(buf, 0);
-		if (n == 0) throw new InvalidObjectException("MARSHAL_MAX reached");
+		byte[] buf = new byte[MARSHAL_BUF_MAX];
+		int n = marshal(buf, 0);
+		if (n == 0) throw new InvalidObjectException("Colfer's compact profile exceeded");
 		try {
 			out.write(buf, 0, n);
 		} catch (IOException e) {
@@ -852,13 +898,13 @@ implements Serializable {
 	 */
 	private void readObject(ObjectInputStream in)
 	throws ClassNotFoundException, IOException {
-		byte[] buf = new byte[UNMARSHAL_MAX];
-		in.readFully(buf, 0, 4);
+		byte[] buf = new byte[COLFER_MAX];
+		in.readFully(buf, 0, COLFER_MIN);
 		int head = java_unsafe.getInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
 		int size = head>>>3 & 0xfff;
-		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
+		in.readFully(buf, COLFER_MIN, size - COLFER_MIN);
 		if (unmarshal(buf, 0, size) != size)
-			throw new StreamCorruptedException("not a ArrayTypes Colfer encoding");
+			throw new StreamCorruptedException("not a Colfer encoding of ArrayTypes");
 	}
 
 	/**

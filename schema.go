@@ -198,9 +198,8 @@ func mapStruct(dst *Struct, src *ast.StructType) error {
 		}
 	}
 
-	dst.SetFixedPositions()
-
-	return nil
+	// TODO(pascaldekloe): Have the size profile part of the struct definition.
+	return dst.ApplySizeProfile("compact")
 }
 
 func docs(g *ast.CommentGroup) []string {

@@ -13,13 +13,15 @@ import java.io.Serializable;
 import java.io.StreamCorruptedException;
 import java.io.WriteAbortedException;
 import java.lang.reflect.Field;
-import java.nio.BufferOverflowException;
+{{- if .HasText}}
 import static java.nio.charset.StandardCharsets.UTF_8;
+{{- end}}
 {{- if .HasTimestamp}}
 import java.time.Instant;
 {{- end}}
+{{- if .HasList}}
 import java.util.Arrays;
-import java.util.Objects;
+{{- end}}
 
 /**
 {{- if .Docs}}
@@ -36,17 +38,6 @@ import java.util.Objects;
 extends {{.Pkg.SuperClass}}
 {{- end}}
 implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
-
-	/** The lower boundary on output bytes. */
-	public static int MARSHAL_MIN = {{.FixedSize}};
-	/** The upper boundary on output bytes. */
-	public static int MARSHAL_MAX = {{if .HasPayloadSection}}4096{{else}}{{.FixedSize}} + {{.OverflowMax}}{{end}};
-	/** The lower boundary on input bytes. */
-	public static int UNMARSHAL_MIN = {{.SizeMin}};
-	/** The upper boundary on input bytes. */
-	public static int UNMARSHAL_MAX = 4096;
-	/** The lower boundary for byte capacity on in and output buffers. */
-	public static int BUF_MIN = (512 + {{.OverflowMax}} + 7) & ~7;
 
 {{- if .HasBool}}
  {{- range .Fields}}
@@ -95,6 +86,9 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
  {{- end}}{{/* field range */}}
 {{- end}}{{/* has list */}}
 
+	// Colfer internals
+	private static final int FIXED_SIZE = {{.FixedSize}};
+	private static final int OVERFLOW_MAX = {{.OverflowMax}};
 	private static final long[] COLFER_MASKS = {
 		0,
 		0xffL,
@@ -106,9 +100,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		0xffffffffffffffL,
 		0xffffffffffffffffL,
 	};
-
 	private static final sun.misc.Unsafe java_unsafe;
-
 	static {
 		try {
 			Field f = Class.class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
@@ -118,6 +110,54 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			throw new Error("Java unsafe API required", e);
 		}
 	}
+
+	/**
+	 * Encodings of this data structure have {{.HeaderSize}} bytes of overhead.
+	 * @see "Colfer's “{{.SizeProfile}} profile” header"
+	 * @see #COLFER_MAX
+	 */
+	public static final int COLFER_MIN = {{.HeaderSize}};
+
+	/**
+	 * Encodings of this data structure are limited to {{.SizeMaxSI}} in size.
+	 * The actual limit for this specific version (as defined by {@link
+	 * #MARSHAL_MAX}) could be less.
+	 * @see "Colfer's “{{.SizeProfile}} profile” limits"
+	 * @see #COLFER_MIN
+	 */
+	public static final int COLFER_MAX = {{.SizeMax}};
+
+	/**
+	 * Encodings of this specific version of the data structure consist of
+	 * {{if .HasVariableSection}}at most{{else}}exactly{{end}} {@code MARSHAL_MAX} bytes.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_MAX = {{if .HasPayloadSection}}COLFER_MAX{{else}}FIXED_SIZE + OVERFLOW_MAX{{end}};
+
+	/**
+	 * Output buffers must have a capacity of at least this byte count.
+	 * The threshold can be higher than {@link #MARSHAL_MAX} in some cases.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MIN = (FIXED_SIZE + OVERFLOW_MAX + 7) & ~7;
+
+	/**
+	 * Output buffer capacity beyound this byte count won't affect encoding.
+	 * {@link #MARSHAL_BUF_MIN} ≤ {@code MARSHAL_BUF_MAX}
+	 * @see #MARSHAL_MAX
+	 * @see #MARSHAL_BUF_MIN
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MAX = java.lang.Math.max(MARSHAL_MAX, MARSHAL_BUF_MIN);
+
+	/**
+	 * Unmarshal buffers must have a capacity of at least this byte count.
+	 * {@link #COLFER_MIN} ≤ {@code UNMARSHAL_BUF_MIN} ≤ {@link #COLFER_MAX}
+	 * @see #unmarshal(byte[],int,int)
+	 */
+	public static final int UNMARSHAL_BUF_MIN = ({{.FixedMax}} + OVERFLOW_MAX + 7) & ~7;
 
 	/** Default constructor. */
 	public {{.NameNative}}() { }
@@ -154,7 +194,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		 */
 		public Unmarshaller(InputStream in, int bufn) {
 			this.in = in;
-			this.buf = new byte[bufn < UNMARSHAL_MAX ? UNMARSHAL_MAX : bufn];
+			this.buf = new byte[bufn < COLFER_MAX ? COLFER_MAX : bufn];
 		}
 
 		/**
@@ -168,7 +208,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			if (len == 0) {
 				off = 0;
 				if (!read()) return null; // EOF
-			} else if (buf.length - off < BUF_MIN) {
+			} else if (buf.length - off < COLFER_MIN) {
 				System.arraycopy(buf, off, buf, 0, len);
 				off = 0;
 			}
@@ -204,33 +244,47 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
-	 * anywhere beyond the offset—not limited to the serial size.
+	 * Writes the Colfer encoding of {@code this} data structure to a buffer
+	 * at an offset. Marshalling requires at least {@link #MARSHAL_BUF_MIN}
+	 * of space since the offset, as in {@code buf.length} − {@code off} ≥
+	 * {@code {{.NameNative}}.MARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #MARSHAL_BUF_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer overflows from happening.
+	 *
+{{- if not .HasVariableSection}}
+	 * Encoding of this specific version of the data structure always
+	 * succeeds with a return of exactly {@link #MARSHAL_MAX}. However,
+	 * future revisions may return zero ({@code 0) on any the following.
+{{- else}}
+	 * The return is zero ({@code 0}) on any of the following, exclusively.
+{{- end}}
+	 * <ul>
+	 * <li>buffer overflow—only possible below {@link #MARSHAL_BUF_MAX}
+	 * <li>{@link #COLFER_MAX} exceeded{{if not .HasVariableSection}}—not possible yet{{end}}
+	 * <li>a text exceeds {{.UTF8Max}} bytes of UTF-8{{if not .HasText}}—none present yet{{end}}
+	 * <li>a list exceeds {{.ListMax}} entries{{if not .HasList}}—none present yet{{end}}
+	 * </ul>
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size.
-	 * @throws IllegalArgumentException when the buffer capacity since the
-	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException when the data exceeds the
-	 *         buffer capacity or {@link #MARSHAL_MAX}.
+	 * @return either the encoding size or {@code 0}.
+	 * @throws IllegalArgumentException on {@link #MARSHAL_BUF_MIN} breach.
 	 */
-	public int marshal{{if .HasPayloadSection}}WithBounds{{end}}(byte[] buf, int off) {
-		if (off < 0 || buf.length - off < BUF_MIN)
-			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
+	public int marshal(byte[] buf, int off) {
+		if (off < 0 || buf.length - off < MARSHAL_BUF_MIN)
+			throw new IllegalArgumentException("insufficient buffer capacity");
 
 		// write index at variable section
-		int w = off + {{.FixedSize}};
-		long word0 = {{.FixedSize}} << 15;
+		int w = off + FIXED_SIZE;
+		long word0 = FIXED_SIZE << 15;
 
 {{- range .Fields}}
 
 		// pack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
   {{- if not .TypeRef}}
-		if (this.{{.NameNative}}.length > 0xff)
-			throw new BufferOverflowException();
+		if (this.{{.NameNative}}.length > {{.Struct.ListMax}})
+			return 0;
    {{- if not .WordShift}}
 		long word{{.WordIndex}} = (long)this.{{.NameNative}}.length;
    {{- else}}
@@ -398,14 +452,14 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
   {{- if .TypeList}}
    {{- if eq .Type "opaque8" "uint8" "int8"}}
 		if (buf.length - w < this.{{.NameNative}}.length)
-			throw new BufferOverflowException();
+			return 0;
 		java_unsafe.copyMemory(this.{{.NameNative}}, java_unsafe.ARRAY_BYTE_BASE_OFFSET,
 			buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, this.{{.NameNative}}.length);
 		w += this.{{.NameNative}}.length;
 
    {{- else if eq .Type "opaque16"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 1)
-			throw new BufferOverflowException();
+			return 0;
 		for (short b : this.{{.NameNative}}) {
 			java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 2;
@@ -413,7 +467,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
    {{- else if eq .Type "opaque32"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
-			throw new BufferOverflowException();
+			return 0;
 		for (int b : this.{{.NameNative}}) {
 			java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 4;
@@ -421,7 +475,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
    {{- else if eq .Type "opaque64"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
-			throw new BufferOverflowException();
+			return 0;
 		for (long b : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, b);
 			w += 8;
@@ -429,7 +483,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
    {{- else if eq .Type "float32"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 2)
-			throw new BufferOverflowException();
+			return 0;
 		for (float f : this.{{.NameNative}}) {
 			java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 				Float.floatToRawIntBits(f));
@@ -438,7 +492,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
    {{- else if eq .Type "float64"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
-			throw new BufferOverflowException();
+			return 0;
 		for (double d : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 				Double.doubleToRawLongBits(d));
@@ -447,7 +501,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
    {{- else if eq .Type "timestamp"}}
 		if (buf.length - w < this.{{.NameNative}}.length << 3)
-			throw new BufferOverflowException();
+			return 0;
 		for (Instant t : this.{{.NameNative}}) {
 			java_unsafe.putLong(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 				t.getEpochSecond() << 30 | Integer.toUnsignedLong(t.getNano()));
@@ -461,7 +515,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			final int utf8_off = w;
 			final int utf16_len = s.length();
 			if (buf.length - w < utf16_len)
-				throw new BufferOverflowException();
+				return 0;
 			// size check is lazily redone on multi-byte encodings
 			for (int i = 0; i < utf16_len; i++) {
 				char c = s.charAt(i);
@@ -469,13 +523,13 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
 						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
@@ -487,7 +541,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 						i--; // unread
 					} else {
 						if (buf.length - w < (utf16_len - i) + 3)
-							throw new BufferOverflowException();
+							return 0;
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
@@ -499,21 +553,21 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 			// write size declaration
 			int utf8_len = w - utf8_off;
-			if (utf8_len > 255)
-				throw new BufferOverflowException();
+			if (utf8_len > {{.Struct.UTF8Max}})
+				 return 0;
 			{{- /* TODO(pascaldekloe): write per word—8 at a time */}}
 			java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET +
 				field{{.Index}}_size_index++, (byte)utf8_len);
 		}
 
    {{- else if .TypeRef}}
-		if (this.{{.NameNative}}.length > 0xff)
-			throw new BufferOverflowException();
+		if (this.{{.NameNative}}.length > {{.Struct.ListMax}})
+			return 0;
 		long v{{.Index}} = w;
 		for ({{.TypeNative}} o : this.{{.NameNative}}) {
-			int n = o.marshal{{if .TypeRef.HasPayloadSection}}WithBounds{{end}}(buf, w);
+			int n = o.marshal(buf, w);
 			if (n < 4)
-				throw new BufferOverflowException();
+				return 0;
 			w += n;
 		}
 		v{{.Index}} = (w - v{{.Index}}) << 8 | this.{{.NameNative}}.length | {{.TypeRef.FixedSize}} << 20;
@@ -527,7 +581,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			final int utf8_off = w;
 			final int utf16_len = this.{{.NameNative}}.length();
 			if (buf.length - w < utf16_len)
-				throw new BufferOverflowException();
+				return 0;
 			// size check is lazily redone on multi-byte encodings
 			for (int i = 0; i < utf16_len; i++) {
 				char c = this.{{.NameNative}}.charAt(i);
@@ -535,13 +589,13 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
 						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
@@ -553,7 +607,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 						i--; // unread
 					} else {
 						if (buf.length - w < (utf16_len - i) + 3)
-							throw new BufferOverflowException();
+							return 0;
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
@@ -565,8 +619,8 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 			// write size declaration
 			int utf8_len = w - utf8_off;
-			if (utf8_len > 255)
-				throw new BufferOverflowException();
+			if (utf8_len > {{.Struct.UTF8Max}})
+				return 0;
 			word{{.WordIndex}} |= (long)utf8_len << {{.WordShift}};
 		}
 
@@ -576,20 +630,20 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 			final int utf16_len = this.{{.NameNative}}[{{$arrayIndex}}].length();
 			// size check is lazily redone on multi-byte encodings
 			if (buf.length - w < utf16_len)
-				throw new BufferOverflowException();
+				return 0;
 			for (int i = 0; i < utf16_len; i++) {
 				char c = this.{{.NameNative}}[{{$arrayIndex}}].charAt(i);
 				if (c < '\u0080') {
 					java_unsafe.putByte(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w++, (byte)c);
 				} else if (c < '\u0800') {
 					if (buf.length - w < (utf16_len - i) + 1)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putShort(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 						(short)(0x80c0 | c >> 6 | (c & 0x3f) << 8));
 					w += 2;
 				} else if (! Character.isHighSurrogate(c)) {
 					if (buf.length - w < (utf16_len - i) + 2)
-						throw new BufferOverflowException();
+						return 0;
 					java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w, 0x8080e0 |
 						(int)c >>> 12 | ((int)c << 2) & 0x3f00 | ((int)c << 16) & 0x3f0000);
 					w += 3;
@@ -601,7 +655,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 						i--; // unread
 					} else {
 						if (buf.length - w < (utf16_len - i) + 3)
-							throw new BufferOverflowException();
+							return 0;
 						int cp = Character.toCodePoint(c, low);
 						java_unsafe.putInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET + w,
 							0x808080f0 | cp>>>18 | (cp>>>4 & 0x3f00) |
@@ -613,8 +667,8 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 			// write size declaration
 			int utf8_len = w - utf8_off;
-			if (utf8_len > 255)
-				throw new BufferOverflowException();
+			if (utf8_len > {{.Struct.UTF8Max}})
+				return 0;
 			word{{.WordIndex}} |= (long)utf8_len << {{.WordShift}};
 		}
 
@@ -628,8 +682,8 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		// write fixed positions
 		int size = w - off;
 {{- if .HasPayloadSection}}
-		if (size > MARSHAL_MAX)
-			throw new BufferOverflowException();
+		if (size > COLFER_MAX)
+			return 0;
 {{- end}}{{/* has payload section */}}
 		word0 |= size << 3;
 {{- range .FixedWordIndices}}
@@ -646,14 +700,17 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	}
 
 	/**
-	 * Reads a Colfer encoding from the buffer. Objects can be reused. All
-	 * fields are initialized regardless of their value beforehand.
+	 * Reads a Colfer encoding of {@code this} data strucure from a buffer
+	 * range. All fields are updated, regardless of their value beforehand.
+	 * Unmarshalling requires at least {@link #UNMARSHAL_BUF_MIN} of space
+	 * since the offset, as in {@code buf.length} − {@code off} ≥ {@code
+	 * {{.NameNative}}.UNMARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #COLFER_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer underflows from happening.
 	 *
-	 * The number of bytes read is guaranteed to lie within in the range of
-	 * [{@link #UNMARSHAL_MIN}..{@link #UNMARSHAL_MAX}]. Return {@code 1}
-	 * signals malformed data. Return {@code 0} signals incomplete data,
-	 * a.k.a. end-of-file.
-	 *
+	 * The return is zero ({@code 0}) on incomplete data, one ({@code 1}) on
+	 * malformed data, or in range {@link #COLFER_MIN}..{@link #COLFER_MAX}
+	 * on valid data. Note that the return may be less than {@code len}.
 	 * Data selection within the buffer, including its exceptions, matches
 	 * Java's standard {@link java.io.InputStream#read(byte[],int,int) read}
 	 * and {@link java.io.OutputStream#write(byte[],int,int) write}.
@@ -661,16 +718,16 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 * @param buf the input buffer.
 	 * @param off the start index [offset] in the buffer.
 	 * @param len the number of bytes available since the offset.
-	 * @return either the encoding size, or 0 for EOF, or 1 for malformed.
+	 * @return either the encoding size, or {@code 0}, or {code 1}.
 	 * @throws IllegalArgumentException when the buffer capacity minus its
-	 *         offset is less than {@link #BUF_MIN}.
+	 *         offset is less than {@link #UNMARSHAL_BUF_MIN}.
 	 * @throws IndexOutOfBoundsException when the buffer capacity does not
 	 *         match the offset–length combination.
 	 */
 	public int unmarshal(byte[] buf, int off, int len) {
 		if ((off | len) < 0 || buf.length - off < len)
 			throw new IndexOutOfBoundsException("range beyond buffer dimensions");
-		if (buf.length - off < BUF_MIN)
+		if (buf.length - off < UNMARSHAL_BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
 
 {{- range .FixedWordIndices}}
@@ -683,7 +740,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 
 		final int size = (int)word0>>>3 & 0xfff;
 		final int fixed_size = (int)word0>>>15 & 0x1ff;
-		if (len < 3 || size > len) return 0;
+		if (len < COLFER_MIN || size > len) return 0;
 
 		// read index at variable section
 		int r = off + fixed_size;
@@ -696,7 +753,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 		if (fixed_size <= {{.FixedIndex}}) {
 			this.{{.NameNative}} = this.zero_{{.NameNative}};
 		} else {
-			this.{{.NameNative}} = new {{.TypeNative}}[(int)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff];
+			this.{{.NameNative}} = new {{.TypeNative}}[(int)(word{{.WordIndex}} >> {{.WordShift}}) & {{.Struct.ListMax}}];
 
   {{- if eq .Type "opaque8" "uint8" "int8"}}
 			payload_offset -= this.{{.NameNative}}.length;
@@ -876,13 +933,13 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
   {{- end}}{{end}}{{/* is text array */}}
 		} else {
   {{- if not .ElementCount}}
-			int utf8_length = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & 0xff;
+			int utf8_length = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & {{.Struct.UTF8Max}};
 			payload_offset -= utf8_length;
 			if (payload_offset < r) return 1;
 			this.{{.NameNative}} = new String(buf, payload_offset, utf8_length, UTF_8);
 
   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-			int utf8_length{{$arrayIndex}} = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & 0xff;
+			int utf8_length{{$arrayIndex}} = (int)(word{{.WordIndex}} >>> {{.WordShift}}) & {{.Struct.UTF8Max}};
 			payload_offset -= utf8_length{{$arrayIndex}};
 			if (payload_offset < r) return 1;
 			this.{{.NameNative}}[{{$arrayIndex}}] = new String(buf, payload_offset, utf8_length{{$arrayIndex}}, UTF_8);
@@ -906,7 +963,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 {{/* line break */}}
 
 		// clear/undo absent fields
-		if (fixed_size < {{.FixedSize}}) switch (fixed_size) {
+		if (fixed_size < FIXED_SIZE) switch (fixed_size) {
 			default:
 				return 1;
 {{- range .FieldsReversed}}
@@ -947,7 +1004,7 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 * {@link java.io.Serializable} version number reflects the fields present.
 	 * Values in range [0, 127] belong to Colfer version 1.
 	 */
-	private static final long serialVersionUID = {{.FixedSize}}L << 7;
+	private static final long serialVersionUID = {{len .Fields}}L << 7;
 
 	/**
 	 * {@link java.io.Serializable} as Colfer.
@@ -957,10 +1014,10 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 *         would exceed {@link #MARSHAL_MAX}.{{end}}
 	 */
 	private void writeObject(ObjectOutputStream out) throws IOException {
-		byte[] buf = new byte[MARSHAL_MAX];
-		int n = marshal{{if .HasPayloadSection}}WithBounds{{end}}(buf, 0);
+		byte[] buf = new byte[MARSHAL_BUF_MAX];
+		int n = marshal(buf, 0);
 {{- if .HasPayloadSection}}
-		if (n == 0) throw new InvalidObjectException("MARSHAL_MAX reached");
+		if (n == 0) throw new InvalidObjectException("Colfer's {{.SizeProfile}} profile exceeded");
 {{- end}}
 		try {
 			out.write(buf, 0, n);
@@ -978,13 +1035,13 @@ implements Serializable{{range .Pkg.Interfaces}}, {{.}}{{end}} {
 	 */
 	private void readObject(ObjectInputStream in)
 	throws ClassNotFoundException, IOException {
-		byte[] buf = new byte[UNMARSHAL_MAX];
-		in.readFully(buf, 0, 4);
+		byte[] buf = new byte[COLFER_MAX];
+		in.readFully(buf, 0, COLFER_MIN);
 		int head = java_unsafe.getInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
 		int size = head>>>3 & 0xfff;
-		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
+		in.readFully(buf, COLFER_MIN, size - COLFER_MIN);
 		if (unmarshal(buf, 0, size) != size)
-			throw new StreamCorruptedException("not a {{.Name}} Colfer encoding");
+			throw new StreamCorruptedException("not a Colfer encoding of {{.Name}}");
 	}
 
 {{- range .Fields}}

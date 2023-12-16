@@ -13,10 +13,6 @@ import java.io.Serializable;
 import java.io.StreamCorruptedException;
 import java.io.WriteAbortedException;
 import java.lang.reflect.Field;
-import java.nio.BufferOverflowException;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * DromedaryCase mixes name conventions.
@@ -30,17 +26,6 @@ value = "fallthrough"
 public class DromedaryCase
 implements Serializable {
 
-	/** The lower boundary on output bytes. */
-	public static int MARSHAL_MIN = 5;
-	/** The upper boundary on output bytes. */
-	public static int MARSHAL_MAX = 5 + 8;
-	/** The lower boundary on input bytes. */
-	public static int UNMARSHAL_MIN = 4;
-	/** The upper boundary on input bytes. */
-	public static int UNMARSHAL_MAX = 4096;
-	/** The lower boundary for byte capacity on in and output buffers. */
-	public static int BUF_MIN = (512 + 8 + 7) & ~7;
-
 	/**
 	 * title-case option
 	 */
@@ -53,6 +38,9 @@ implements Serializable {
 	 */
 	public byte withSnake;
 
+	// Colfer internals
+	private static final int FIXED_SIZE = 5;
+	private static final int OVERFLOW_MAX = 8;
 	private static final long[] COLFER_MASKS = {
 		0,
 		0xffL,
@@ -64,9 +52,7 @@ implements Serializable {
 		0xffffffffffffffL,
 		0xffffffffffffffffL,
 	};
-
 	private static final sun.misc.Unsafe java_unsafe;
-
 	static {
 		try {
 			Field f = Class.class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
@@ -76,6 +62,54 @@ implements Serializable {
 			throw new Error("Java unsafe API required", e);
 		}
 	}
+
+	/**
+	 * Encodings of this data structure have 3 bytes of overhead.
+	 * @see "Colfer's “compact profile” header"
+	 * @see #COLFER_MAX
+	 */
+	public static final int COLFER_MIN = 3;
+
+	/**
+	 * Encodings of this data structure are limited to 4 KiB in size.
+	 * The actual limit for this specific version (as defined by {@link
+	 * #MARSHAL_MAX}) could be less.
+	 * @see "Colfer's “compact profile” limits"
+	 * @see #COLFER_MIN
+	 */
+	public static final int COLFER_MAX = 4096;
+
+	/**
+	 * Encodings of this specific version of the data structure consist of
+	 * at most {@code MARSHAL_MAX} bytes.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_MAX = FIXED_SIZE + OVERFLOW_MAX;
+
+	/**
+	 * Output buffers must have a capacity of at least this byte count.
+	 * The threshold can be higher than {@link #MARSHAL_MAX} in some cases.
+	 * @see #MARSHAL_BUF_MAX
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MIN = (FIXED_SIZE + OVERFLOW_MAX + 7) & ~7;
+
+	/**
+	 * Output buffer capacity beyound this byte count won't affect encoding.
+	 * {@link #MARSHAL_BUF_MIN} ≤ {@code MARSHAL_BUF_MAX}
+	 * @see #MARSHAL_MAX
+	 * @see #MARSHAL_BUF_MIN
+	 * @see #marshal(byte[],int)
+	 */
+	public static final int MARSHAL_BUF_MAX = java.lang.Math.max(MARSHAL_MAX, MARSHAL_BUF_MIN);
+
+	/**
+	 * Unmarshal buffers must have a capacity of at least this byte count.
+	 * {@link #COLFER_MIN} ≤ {@code UNMARSHAL_BUF_MIN} ≤ {@link #COLFER_MAX}
+	 * @see #unmarshal(byte[],int,int)
+	 */
+	public static final int UNMARSHAL_BUF_MIN = (512 + OVERFLOW_MAX + 7) & ~7;
 
 	/** Default constructor. */
 	public DromedaryCase() { }
@@ -103,7 +137,7 @@ implements Serializable {
 		 */
 		public Unmarshaller(InputStream in, int bufn) {
 			this.in = in;
-			this.buf = new byte[bufn < UNMARSHAL_MAX ? UNMARSHAL_MAX : bufn];
+			this.buf = new byte[bufn < COLFER_MAX ? COLFER_MAX : bufn];
 		}
 
 		/**
@@ -117,7 +151,7 @@ implements Serializable {
 			if (len == 0) {
 				off = 0;
 				if (!read()) return null; // EOF
-			} else if (buf.length - off < BUF_MIN) {
+			} else if (buf.length - off < COLFER_MIN) {
 				System.arraycopy(buf, off, buf, 0, len);
 				off = 0;
 			}
@@ -153,25 +187,33 @@ implements Serializable {
 	}
 
 	/**
-	 * Writes a Colfer encoding to the buffer. The serial size is guaranteed
-	 * with {@link #MARSHAL_MIN} and {@link #MARSHAL_MAX}. Marshal may write
-	 * anywhere beyond the offset—not limited to the serial size.
+	 * Writes the Colfer encoding of {@code this} data structure to a buffer
+	 * at an offset. Marshalling requires at least {@link #MARSHAL_BUF_MIN}
+	 * of space since the offset, as in {@code buf.length} − {@code off} ≥
+	 * {@code DromedaryCase.MARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #MARSHAL_BUF_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer overflows from happening.
+	 *
+	 * The return is zero ({@code 0}) on any of the following, exclusively.
+	 * <ul>
+	 * <li>buffer overflow—only possible below {@link #MARSHAL_BUF_MAX}
+	 * <li>{@link #COLFER_MAX} exceeded
+	 * <li>a text exceeds 255 bytes of UTF-8—none present yet
+	 * <li>a list exceeds 255 entries—none present yet
+	 * </ul>
 	 *
 	 * @param buf the output buffer.
 	 * @param off the start index [offset] in the buffer.
-	 * @return the encoding size.
-	 * @throws IllegalArgumentException when the buffer capacity since the
-	 *         offset is less than {@link BUF_MIN}.
-	 * @throws java.nio.BufferOverflowException when the data exceeds the
-	 *         buffer capacity or {@link #MARSHAL_MAX}.
+	 * @return either the encoding size or {@code 0}.
+	 * @throws IllegalArgumentException on {@link #MARSHAL_BUF_MIN} breach.
 	 */
 	public int marshal(byte[] buf, int off) {
-		if (off < 0 || buf.length - off < BUF_MIN)
-			throw new IllegalArgumentException("output buffer space less than BUF_MIN");
+		if (off < 0 || buf.length - off < MARSHAL_BUF_MIN)
+			throw new IllegalArgumentException("insufficient buffer capacity");
 
 		// write index at variable section
-		int w = off + 5;
-		long word0 = 5 << 15;
+		int w = off + FIXED_SIZE;
+		long word0 = FIXED_SIZE << 15;
 
 		// pack .PascalCase int32
 		long v0 = Integer.toUnsignedLong(this.pascalCase>>31 ^ this.pascalCase<<1);
@@ -207,14 +249,17 @@ implements Serializable {
 	}
 
 	/**
-	 * Reads a Colfer encoding from the buffer. Objects can be reused. All
-	 * fields are initialized regardless of their value beforehand.
+	 * Reads a Colfer encoding of {@code this} data strucure from a buffer
+	 * range. All fields are updated, regardless of their value beforehand.
+	 * Unmarshalling requires at least {@link #UNMARSHAL_BUF_MIN} of space
+	 * since the offset, as in {@code buf.length} − {@code off} ≥ {@code
+	 * DromedaryCase.UNMARSHAL_BUF_MIN}.
+	 * Preferably, use {@link #COLFER_MAX}—not {@link #MARSHAL_MAX}—to
+	 * prevent any buffer underflows from happening.
 	 *
-	 * The number of bytes read is guaranteed to lie within in the range of
-	 * [{@link #UNMARSHAL_MIN}..{@link #UNMARSHAL_MAX}]. Return {@code 1}
-	 * signals malformed data. Return {@code 0} signals incomplete data,
-	 * a.k.a. end-of-file.
-	 *
+	 * The return is zero ({@code 0}) on incomplete data, one ({@code 1}) on
+	 * malformed data, or in range {@link #COLFER_MIN}..{@link #COLFER_MAX}
+	 * on valid data. Note that the return may be less than {@code len}.
 	 * Data selection within the buffer, including its exceptions, matches
 	 * Java's standard {@link java.io.InputStream#read(byte[],int,int) read}
 	 * and {@link java.io.OutputStream#write(byte[],int,int) write}.
@@ -222,22 +267,22 @@ implements Serializable {
 	 * @param buf the input buffer.
 	 * @param off the start index [offset] in the buffer.
 	 * @param len the number of bytes available since the offset.
-	 * @return either the encoding size, or 0 for EOF, or 1 for malformed.
+	 * @return either the encoding size, or {@code 0}, or {code 1}.
 	 * @throws IllegalArgumentException when the buffer capacity minus its
-	 *         offset is less than {@link #BUF_MIN}.
+	 *         offset is less than {@link #UNMARSHAL_BUF_MIN}.
 	 * @throws IndexOutOfBoundsException when the buffer capacity does not
 	 *         match the offset–length combination.
 	 */
 	public int unmarshal(byte[] buf, int off, int len) {
 		if ((off | len) < 0 || buf.length - off < len)
 			throw new IndexOutOfBoundsException("range beyond buffer dimensions");
-		if (buf.length - off < BUF_MIN)
+		if (buf.length - off < UNMARSHAL_BUF_MIN)
 			throw new IllegalArgumentException("insufficient buffer capacity");
 		final long word0 = java_unsafe.getLong(buf, (long)off + java_unsafe.ARRAY_LONG_BASE_OFFSET + (0L * 8L));
 
 		final int size = (int)word0>>>3 & 0xfff;
 		final int fixed_size = (int)word0>>>15 & 0x1ff;
-		if (len < 3 || size > len) return 0;
+		if (len < COLFER_MIN || size > len) return 0;
 
 		// read index at variable section
 		int r = off + fixed_size;
@@ -260,7 +305,7 @@ implements Serializable {
 
 
 		// clear/undo absent fields
-		if (fixed_size < 5) switch (fixed_size) {
+		if (fixed_size < FIXED_SIZE) switch (fixed_size) {
 			default:
 				return 1;
 			case 4:
@@ -274,7 +319,7 @@ implements Serializable {
 	 * {@link java.io.Serializable} version number reflects the fields present.
 	 * Values in range [0, 127] belong to Colfer version 1.
 	 */
-	private static final long serialVersionUID = 5L << 7;
+	private static final long serialVersionUID = 2L << 7;
 
 	/**
 	 * {@link java.io.Serializable} as Colfer.
@@ -282,7 +327,7 @@ implements Serializable {
 	 * @throws java.io.IOException a {@link java.io.WriteAbortedException}
 	 */
 	private void writeObject(ObjectOutputStream out) throws IOException {
-		byte[] buf = new byte[MARSHAL_MAX];
+		byte[] buf = new byte[MARSHAL_BUF_MAX];
 		int n = marshal(buf, 0);
 		try {
 			out.write(buf, 0, n);
@@ -300,13 +345,13 @@ implements Serializable {
 	 */
 	private void readObject(ObjectInputStream in)
 	throws ClassNotFoundException, IOException {
-		byte[] buf = new byte[UNMARSHAL_MAX];
-		in.readFully(buf, 0, 4);
+		byte[] buf = new byte[COLFER_MAX];
+		in.readFully(buf, 0, COLFER_MIN);
 		int head = java_unsafe.getInt(buf, java_unsafe.ARRAY_BYTE_BASE_OFFSET);
 		int size = head>>>3 & 0xfff;
-		in.readFully(buf, UNMARSHAL_MIN, size - UNMARSHAL_MIN);
+		in.readFully(buf, COLFER_MIN, size - COLFER_MIN);
 		if (unmarshal(buf, 0, size) != size)
-			throw new StreamCorruptedException("not a dromedaryCase Colfer encoding");
+			throw new StreamCorruptedException("not a Colfer encoding of dromedaryCase");
 	}
 
 	/**
