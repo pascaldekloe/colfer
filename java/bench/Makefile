@@ -13,7 +13,7 @@ bench: ../../testdata/bench/scheme.colf ../../*.go ../../cmd/colf/*.go
 	$(COLF) Java ../../testdata/bench/scheme.colf
 	touch $@
 
-bench.class: bench
+bench.class: bench.java bench
 	$(JAVAC) bench.java
 
 .PHONY: clean
