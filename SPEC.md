@@ -86,7 +86,7 @@ following section).
 |:--------|:---------------|:-----------------|:-------------|:-----------|
 | compact | 4 KiB          | 512 B            | 255 B        | 255        |
 | wide    | 2 MiB          | 64 KiB           | 64 KiB − 1 B | 65 535     |
-| royal   | 521 MiB        | 16 MiB           | 16 MiB − 1 B | 16 777 215 |
+| royal   | 512 MiB        | 16 MiB           | 16 MiB − 1 B | 16 777 215 |
 
 Headers with the compact profile have 12 bits for the total size, and 9 bits for
 the fixed data size. The little-endian value of a `compact-head` equals the
