@@ -14,22 +14,19 @@ breaktest: ../testdata/break*.colf ../*.go ../template/*.txt ../cmd/colf/*.go
 	$(JAVADOC) -d $@ $@/*/*.java
 	touch $@
 
-gen: ../testdata/test.colf ../testdata/test-java.tags ../*.go ../template/*.txt ../cmd/colf/*.go
-	$(COLF) -t ../testdata/test-java.tags Java ../testdata/test.colf
+seal: ../testdata/seal.colf ../testdata/seal-java.tags ../*.go ../template/*.txt ../cmd/colf/*.go
+	$(COLF) -t ../testdata/seal-java.tags Java ../testdata/seal.colf
 	$(JAVAC) $@/*.java
 	touch $@
 
-gen-doc: gen
+seal-doc: seal
 	$(JAVADOC) -d $@ $?/*.java
 
-test.class: test.java gen
+test.class: test.java seal
 	$(JAVAC) test.java
 
 .PHONY: clean
 clean:
-	rm -f *.class gen/*.class
+	rm -f *.class
+	rm -fr seal seal-doc
 	rm -fr breaktest
-
-.PHONY: clean-all
-clean-all: clean
-	rm -fr gen gen-doc

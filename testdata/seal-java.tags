@@ -1,0 +1,5 @@
+seal.dromedaryCase		@SuppressWarnings(
+seal.dromedaryCase			value = "fallthrough"
+seal.dromedaryCase               )
+seal.dromedaryCase.PascalCase    @Deprecated()
+seal.dromedaryCase.PascalCase	// @javax.validation.constraints.NotNull

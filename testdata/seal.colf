@@ -1,7 +1,9 @@
-// Package gen tests all supported data types.
-package gen
+// Package seal tests all supported data types in various combinations.
+// The generated code for each language is committed into the repository
+// to display and seal the effects of each change.
+package seal
 
-// BaseTypes contains all data types understood by Colfer.
+// BaseTypes contains each data type supported by Colfer, including a single-line comment.
 type BaseTypes struct {
 	// Test 8 bit–unsigned integers.
 	u8 uint8
@@ -33,89 +35,78 @@ type BaseTypes struct {
 	b bool
 }
 
-// ArrayTypes contains each BaseType supported in array form,
-// which is all but bool(ean).
+// ArrayTypes contains all BaseTypes in array form, excluding bool(eans).
+//
+// Comments span multiple lines as opposed to BaseTypes.
 type ArrayTypes struct {
-	// Test 8 bit–unsigned integers. Two elements set the
-	// minimium size to 5.
+
+	// Two values for each field break word boundaries in encoding.
+	// 
+	// The minimium size of this data structure is 2 + header = 5.
 	u8n2  [2]uint8
-	// Test 8 bit–signed integers.
+	// empty line
+	//
 	i8n2  [2]int8
-	// Test 16 bit–unsigned integers.
+	// indent space only
+	// 
 	u16n2 [2]uint32
-	// Test 16 bit–signed integers.
+	// blank space
+	//  
 	i16n2 [2]int32
-	// Test 32 bit–unsigned integers.
+	// 	tab
+	//	without indent space
 	u32n2 [2]uint16
-	// Test 32 bit–signed integers.
 	i32n2 [2]int16
-	// Test 64 bit–unsigned integers.
 	u64n2 [2]uint64
-	// Test 64 bit–signed integers.
 	i64n2 [2]int64
 
-	// Test single precision–floating points.
+	// floating points
 	f32n2 [2]float32
-	// Test double precision–floating points.
 	f64n2 [2]float64
 
-	// Test timestamps (with nanosecond precision).
+	// complex types
 	tn2   [2]timestamp
-	// Test Unicode strings of variable size.
 	sn2   [2]text
 }
 
-// OpaqueTypes mixes fixed and variable-sized values.
+// ListTypes contains all list types supported by Colfer.
+type ListTypes struct {
+	// opaque values
+	a8l []opaque8
+	a16l []opaque16
+	a32l []opaque32
+	a64l []opaque64
+
+	// floating points
+	f32l []float32
+	f64l []float64
+
+	// complex types
+	tl []timestamp
+	sl []text
+}
+
+// OpaqueTypes is fixed in size. The variable sized are in ListTypes.
 type OpaqueTypes struct {
 	// Test 8-bit values.
 	a8 opaque8
 	// Test 8-bit arrays.
 	a8n2 [2]opaque8
-	// Test 8-bit lists.
-	a8l []opaque8
 
 	// Test 16-bit values.
 	a16 opaque16
 	// Test 16-bit arrays.
 	a16n2 [2]opaque16
-	// Test 16-bit lists.
-	a16l []opaque16
 
 	// Test 32-bit values.
 	a32 opaque32
 	// Test 32-bit arrays.
 	a32n2 [2]opaque32
-	// Test 32-bit lists.
-	a32l []opaque32
 
 	// Test 64-bit values.
 	a64 opaque64
 	// Test 64-bit arrays.
 	a64n2 [2]opaque64
-	// Test 64-bit lists.
-	a64l []opaque64
-}
-
-// ListTypes contains each type supported in list form.
-type ListTypes struct {
-	// Test 8-bit values.
-	a8l []opaque8
-	// Test 16-bit values.
-	a16l []opaque16
-	// Test 32-bit values.
-	a32l []opaque32
-	// Test 64-bit values.
-	a64l []opaque64
-
-	// Test single precision–floating points.
-	f32l []float32
-	// Test double precision–floating points.
-	f64l []float64
-
-	// Test timestamps (with nanosecond precision).
-	tl []timestamp
-	// Test Unicode strings of variable size.
-	sl []text
 }
 
 // ManyFlags encodes over multiple bit-fields.
@@ -148,7 +139,7 @@ type ManyFlags struct {
 	end opaque8
 }
 
-// NestedTypes contains other data structures.
+// NestedTypes contains embedded data structures.
 type NestedTypes struct {
 	// variable size
 	list []BaseTypes

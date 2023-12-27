@@ -1,7 +1,7 @@
-import gen.BaseTypes;
-import gen.ListTypes;
-import gen.ManyFlags;
-import gen.OpaqueTypes;
+import seal.BaseTypes;
+import seal.ListTypes;
+import seal.ManyFlags;
+import seal.OpaqueTypes;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
@@ -290,9 +290,9 @@ public class test {
 	static void marshalMax() {
 		int n;
 
-		n = new OpaqueTypes()
-			.withA16l(new short[OpaqueTypes.COLFER_MAX / 2])
-			.marshal(new byte[OpaqueTypes.COLFER_MAX], 0);
+		n = new ListTypes()
+			.withA16l(new short[ListTypes.COLFER_MAX / 2])
+			.marshal(new byte[ListTypes.COLFER_MAX], 0);
 		if (n != 0)
 			failf("marshal max: marshalled an oversized opaque16 binary into %d bytes", n);
 

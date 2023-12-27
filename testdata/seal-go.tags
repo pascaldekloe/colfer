@@ -1,0 +1,1 @@
+seal.dromedaryCase.PascalCase	`xml:"pascal-case" json:"pascal_case,omitempty"`
