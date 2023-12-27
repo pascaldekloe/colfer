@@ -498,12 +498,12 @@ func docText(docs []string, indent string) string {
 		if i != 0 {
 			buf.WriteByte('\n')
 		}
-		if !strings.HasPrefix(s, "// ") {
-			continue
-		}
-
 		buf.WriteString(indent)
-		buf.WriteString(s[3:])
+		if strings.HasPrefix(s, "// ") {
+			buf.WriteString(s[3:])
+		} else if strings.HasPrefix(s, "//") {
+			buf.WriteString(s[2:])
+		}
 	}
 
 	return buf.String()
