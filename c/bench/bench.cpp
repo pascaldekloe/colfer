@@ -19,7 +19,7 @@ const size_t test_data_len = sizeof(test_data) / sizeof(struct bench_colfer);
 
 
 static void BM_marshal_colfer(benchmark::State& state) {
-	void* buf = malloc(bench_colfer_marshal_max);
+	void* buf = malloc(BENCH_COLFER_MARSHAL_BUF);
 
 	for (int i = 0; state.KeepRunning(); i++) {
 		auto data = &test_data[i % test_data_len];
@@ -38,7 +38,7 @@ static void BM_marshal_colfer(benchmark::State& state) {
 static void BM_unmarshal_colfer(benchmark::State& state) {
 	void* serials[test_data_len];
 	for (size_t i = 0; i < test_data_len; i++) {
-		serials[i] = malloc(bench_colfer_marshal_max);
+		serials[i] = malloc(BENCH_COLFER_FRAME_CAP);
 		size_t n = bench_colfer_marshal(&test_data[i], serials[i]);
 		if (n == 0) {
 			state.SkipWithError("marshall error");
@@ -50,7 +50,7 @@ static void BM_unmarshal_colfer(benchmark::State& state) {
 
 	for (int i = 0; state.KeepRunning(); i++) {
 		auto serial = serials[i % test_data_len];
-		size_t n = bench_colfer_unmarshal(&o, serial);
+		size_t n = bench_colfer_unmarshal(&o, serial, malloc);
 		if (n == 0) {
 			state.SkipWithError("unmarshal error");
 			return;
@@ -73,7 +73,7 @@ static void BM_marshal_protobuf(benchmark::State& state) {
 		data[i].set_size(test_data[i].size);
 		data[i].set_hash(test_data[i].hash);
 		data[i].set_ratio(test_data[i].ratio);
-		data[i].set_route(test_data[i].bools & BENCH_COLFER_ROUTE_FLAG);
+		data[i].set_route(test_data[i]._flags & BENCH_COLFER_ROUTE_FLAG);
 		if (!data[i].IsInitialized()) {
 			state.SkipWithError("not initialized");
 			return;
@@ -105,7 +105,7 @@ static void BM_unmarshal_protobuf(benchmark::State& state) {
 		data.set_size(test_data[i].size);
 		data.set_hash(test_data[i].hash);
 		data.set_ratio(test_data[i].ratio);
-		data.set_route(test_data[i].bools & BENCH_COLFER_ROUTE_FLAG);
+		data.set_route(test_data[i]._flags & BENCH_COLFER_ROUTE_FLAG);
 		if (!data.IsInitialized()) {
 			state.SkipWithError("not initialized");
 			return;
@@ -133,13 +133,13 @@ static void BM_unmarshal_protobuf(benchmark::State& state) {
 }
 
 static void BM_marshal_flatbuffers(benchmark::State& state) {
-	flatbuffers::FlatBufferBuilder fbb(bench_colfer_marshal_max);
+	flatbuffers::FlatBufferBuilder fbb(BENCH_COLFER_FRAME_CAP);
 
 	for (int i = 0; state.KeepRunning(); i++) {
 		auto data = test_data[i % test_data_len];
 
 		auto host = fbb.CreateString(data.host.utf8, data.host.len);
-		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data.bools & BENCH_COLFER_ROUTE_FLAG);
+		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data._flags & BENCH_COLFER_ROUTE_FLAG);
 		fbb.Finish(o);
 
 		benchmark::DoNotOptimize(fbb.GetBufferPointer());
@@ -151,14 +151,14 @@ static void BM_marshal_flatbuffers(benchmark::State& state) {
 }
 
 static void BM_unmarshal_flatbuffers(benchmark::State& state) {
-	flatbuffers::FlatBufferBuilder fbb(bench_colfer_marshal_max);
+	flatbuffers::FlatBufferBuilder fbb(BENCH_COLFER_FRAME_CAP);
 
 	void* serials[test_data_len];
 	for (size_t i = 0; i < test_data_len; ++i) {
 		auto data = test_data[i % test_data_len];
 
 		auto host = fbb.CreateString(data.host.utf8, data.host.len);
-		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data.bools & BENCH_COLFER_ROUTE_FLAG);
+		auto o = bench::CreateFlatBuffers(fbb, data.key, host, data.port, data.size, data.hash, data.ratio, data._flags & BENCH_COLFER_ROUTE_FLAG);
 		fbb.Finish(o);
 
 		serials[i] = malloc(fbb.GetSize());
@@ -182,7 +182,7 @@ static void BM_unmarshal_flatbuffers(benchmark::State& state) {
 		o.size = view->size();
 		o.hash = view->hash();
 		o.ratio = view->ratio();
-		if (view->route()) o.bools |= BENCH_COLFER_ROUTE_FLAG;
+		if (view->route()) o._flags |= BENCH_COLFER_ROUTE_FLAG;
 
 		benchmark::DoNotOptimize(o);
 		benchmark::ClobberMemory();

@@ -4,12 +4,10 @@
 {{- end}}
 
 #include "Colfer.h"
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-{{- if .HasTimestamp}}
-#include <time.h>
-{{- end}}
+#include <stdint.h> // types with defined width
+#include <string.h> // size_t & memcpy(3)
+
+typedef unsigned long long word_t;
 
 {{- if .HasFloat}}
 
@@ -18,14 +16,14 @@ union f32m {
 	float f;
 	uint32_t u;
 };
-
 union f64m {
 	double f;
 	uint64_t u;
 };
+
 {{- end}}
 
-const uint64_t COLFER_MASKS[9] = {
+const word_t COLFER_MASKS[9] = {
 	0,
 	0xff,
 	0xffff,
@@ -49,7 +47,7 @@ satsub(size_t minuend, size_t subtrahend) {
 
 size_t
 {{.NameNative}}_marshal(const struct {{.NameNative}}* o, void* start) {
-	uint64_t word0 = {{.FixedSize}} << 12;
+	word_t word0 = {{.FixedSize}} << 15;
 
 	// write cursor at variable section
 	uint8_t *p = (uint8_t *)start + {{.FixedSize}};
@@ -57,224 +55,229 @@ size_t
 
 	// pack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}.len;
+	word_t v{{.Index}} = o->{{.NameNative}}.len;
 {{template "marshal-integer" .}}
  {{- else}}{{/* not list */}}
   {{- if eq .Type "bool"}}
    {{- if .FirstInBitField}}
     {{- if eq .WordShift 0}}
-	uint64_t word{{.WordIndex}} = (uint64_t)o->bools>>{{.BoolIndex}} & 0xff;
+	word_t word{{.WordIndex}} = (word_t)o->_flags>>{{.BoolIndex}} & 0xff;
     {{- else if le .BoolIndex .WordShift}}
-	word{{.WordIndex}} |= (uint64_t)o->bools<<({{.WordShift}}-{{.BoolIndex}}) & (uint64_t)0xff<<{{.WordShift}};
+	word{{.WordIndex}} |= (word_t)o->_flags<<({{.WordShift}}-{{.BoolIndex}}) & (word_t)0xff<<{{.WordShift}};
     {{- else}}
-	word{{.WordIndex}} |= (uint64_t)o->bools>>({{.BoolIndex}}-{{.WordShift}}) & (uint64_t)0xff<<{{.WordShift}};
+	word{{.WordIndex}} |= (word_t)o->_flags>>({{.BoolIndex}}-{{.WordShift}}) & (word_t)0xff<<{{.WordShift}};
     {{- end}}
    {{- end}}
 
   {{- else if eq .Type "int8" "uint8" "opaque8"}}
    {{- if eq .ElementCount 0}}
     {{- if eq .WordShift 0}}
-	uint64_t word{{.WordIndex}} = {{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}};
+	word_t word{{.WordIndex}} = {{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}};
     {{- else}}
-	word{{.WordIndex}} |= (uint64_t){{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}} << {{.WordShift}};
+	word{{.WordIndex}} |= (word_t){{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}} << {{.WordShift}};
     {{- end}}
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
     {{- if eq .WordShift 0}}
-	uint64_t word{{.WordIndex}} = {{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}}[{{$arrayIndex}}];
+	word_t word{{.WordIndex}} = {{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}}[{{$arrayIndex}}];
     {{- else}}
-	word{{.WordIndex}} |= (uint64_t){{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}}[{{$arrayIndex}}] << {{.WordShift}};
+	word{{.WordIndex}} |= (word_t){{if eq .Type "int8"}}(uint8_t){{end}}o->{{.NameNative}}[{{$arrayIndex}}] << {{.WordShift}};
     {{- end}}
   {{- end}}{{end}}{{end}}
 
-  {{- else if eq .Type "int16"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = (uint16_t)(o->{{.NameNative}} >> 15) ^ (uint16_t)(o->{{.NameNative}} << 1);
-{{template "marshal-integer" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = (uint16_t)(o->{{.NameNative}}[{{$arrayIndex}}] >> 15) ^ (uint16_t)(o->{{.NameNative}}[{{$arrayIndex}}] << 1);
-{{template "marshal-integer" .}}
-  {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "int32"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = (uint32_t)(o->{{.NameNative}} >> 31) ^ (uint32_t)(o->{{.NameNative}} << 1);
-{{template "marshal-integer" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = (uint32_t)(o->{{.NameNative}}[{{$arrayIndex}}] >> 31) ^ (uint32_t)(o->{{.NameNative}}[{{$arrayIndex}}] << 1);
-{{template "marshal-integer" .}}
-  {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "int64"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = (o->{{.NameNative}} >> 63) ^ (o->{{.NameNative}} << 1);
-{{template "marshal-integer" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = (o->{{.NameNative}}[{{$arrayIndex}}] >> 63) ^ (o->{{.NameNative}}[{{$arrayIndex}}] << 1);
-{{template "marshal-integer" .}}
-  {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "uint16" "uint32" "uint64"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}};
-{{template "marshal-integer" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
-{{template "marshal-integer" .}}
-  {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "float32"}}
-   {{- if eq .ElementCount 0}}
-	union f32m m{{.Index}};
-	m{{.Index}}.f = o->{{.NameNative}};
-	uint64_t v{{.Index}} = m{{.Index}}.u;
-{{template "marshal32" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	union f32m m{{.Index}};
-	m{{.Index}}.f = o->{{.NameNative}}[{{$arrayIndex}}];
-	uint64_t v{{.Index}} = m{{.Index}}.u;
-{{template "marshal32" .}}
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "float64"}}
-   {{- if eq .ElementCount 0}}
-	union f64m m{{.Index}};
-	m{{.Index}}.f = o->{{.NameNative}};
-	uint64_t v{{.Index}} = m{{.Index}}.u;
-{{template "marshal64" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	union f64m m{{.Index}};
-	m{{.Index}}.f = o->{{.NameNative}}[{{$arrayIndex}}];
-	uint64_t v{{.Index}} = m{{.Index}}.u;
-{{template "marshal64" .}}
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "timestamp"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}.tv_sec;
-	v{{.Index}} <<= 30;
-	v{{.Index}} |= o->{{.NameNative}}.tv_nsec;
-{{template "marshal64" .}}
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}].tv_sec;
-	v{{.Index}} <<= 30;
-	v{{.Index}} |= o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec;
-{{template "marshal64" .}}
-   {{- end}}{{end}}{{end}}
-
   {{- else if eq .Type "opaque16"}}
    {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}};
+	word_t v{{.Index}} = o->{{.NameNative}};
 {{template "marshal16" .}}
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
+	word_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
 {{template "marshal16" .}}
    {{- end}}{{end}}{{end}}
 
   {{- else if eq .Type "opaque32"}}
    {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}};
+	word_t v{{.Index}} = o->{{.NameNative}};
 {{template "marshal32" .}}
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
+	word_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
 {{template "marshal32" .}}
    {{- end}}{{end}}{{end}}
 
   {{- else if eq .Type "opaque64"}}
    {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}};
+	word_t v{{.Index}} = o->{{.NameNative}};
 {{template "marshal64" .}}
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
+	word_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
+{{template "marshal64" .}}
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int16"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = (uint16_t)(o->{{.NameNative}} >> 15) ^ (uint16_t)(o->{{.NameNative}} << 1);
+{{template "marshal-integer" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = (uint16_t)(o->{{.NameNative}}[{{$arrayIndex}}] >> 15) ^ (uint16_t)(o->{{.NameNative}}[{{$arrayIndex}}] << 1);
+{{template "marshal-integer" .}}
+  {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int32"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = (uint32_t)(o->{{.NameNative}} >> 31) ^ (uint32_t)(o->{{.NameNative}} << 1);
+{{template "marshal-integer" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = (uint32_t)(o->{{.NameNative}}[{{$arrayIndex}}] >> 31) ^ (uint32_t)(o->{{.NameNative}}[{{$arrayIndex}}] << 1);
+{{template "marshal-integer" .}}
+  {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int64"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = (o->{{.NameNative}} >> 63) ^ (o->{{.NameNative}} << 1);
+{{template "marshal-integer" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = (o->{{.NameNative}}[{{$arrayIndex}}] >> 63) ^ (o->{{.NameNative}}[{{$arrayIndex}}] << 1);
+{{template "marshal-integer" .}}
+  {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "uint16" "uint32" "uint64"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = o->{{.NameNative}};
+{{template "marshal-integer" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}];
+{{template "marshal-integer" .}}
+  {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "float32"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = (union f32m){.f = o->{{.NameNative}}}.u;
+{{template "marshal32" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = (union f32m){.f = o->{{.NameNative}}[{{$arrayIndex}}]}.u;
+{{template "marshal32" .}}
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "float64"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = (union f64m){.f = o->{{.NameNative}}}.u;
+{{template "marshal64" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = (union f64m){.f = o->{{.NameNative}}[{{$arrayIndex}}]}.u;
+{{template "marshal64" .}}
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "timestamp"}}
+   {{- if eq .ElementCount 0}}
+	word_t v{{.Index}} = o->{{.NameNative}}.tv_sec;
+	v{{.Index}} <<= 30;
+	v{{.Index}} |= o->{{.NameNative}}.tv_nsec;
+{{template "marshal64" .}}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	word_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}].tv_sec;
+	v{{.Index}} <<= 30;
+	v{{.Index}} |= o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec;
 {{template "marshal64" .}}
    {{- end}}{{end}}{{end}}
 
   {{- else if eq .Type "text"}}
-   {{- if eq .ElementCount 0}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}.len;
-{{template "marshal-integer" .}}
+   {{- if not .ElementCount}}
+	if (o->{{.NameNative}}.len > {{.Struct.UTF8Max}}) return 0;
+    {{- if eq .WordShift 0}}
+	word_t word{{.WordIndex}} = o->{{.NameNative}}.len;
+    {{- else}}
+	word{{.WordIndex}} |= (word_t)o->{{.NameNative}}.len << {{.WordShift}};
+    {{- end}}
+
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-	uint64_t v{{.Index}} = o->{{.NameNative}}[{{$arrayIndex}}].len;
-{{template "marshal-integer" .}}
-   {{- end}}{{end}}{{end}}
+	if (o->{{.NameNative}}[{{$arrayIndex}}].len > {{.Struct.UTF8Max}}) return 0;
+    {{- if eq .WordShift 0}}
+	word_t word{{.WordIndex}} = o->{{.NameNative}}[{{$arrayIndex}}].len;
+    {{- else}}
+	word{{.WordIndex}} |= (word_t)o->{{.NameNative}}[{{$arrayIndex}}].len << {{.WordShift}};
+    {{- end}}
+
+   {{- end}}{{end}}{{end}}{{/* text array */}}
 
   {{- end}}{{/* type match */}}
  {{- end}}{{/* not list */}}
 {{- end}}{{/* field range */}}
 
-{{- if or .HasText .HasList}}
+{{- if .HasPayloadSection}}
 
 	// copy payloads
 	const uint8_t *max = p + 0xfff;
  {{- range .FieldsReversed}}
-  {{- if eq .Type "uint8" "opaque8"}}
-   {{- if .TypeList}}
+  {{- if .TypeList}}
+   {{- if eq .Type "uint8" "opaque8"}}
 	{
 		size_t size = o->{{.NameNative}}.len * 4;
 		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
-   {{- end}}
 
-  {{- else if eq .Type "float32" "opaque32"}}
-   {{- if .TypeList}}
+   {{- else if eq .Type "float32" "opaque32"}}
 	{
 		size_t size = o->{{.NameNative}}.len * 4;
 		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
-   {{- end}}
 
-  {{- else if eq .Type "float64" "opaque64"}}
-   {{- if .TypeList}}
+   {{- else if eq .Type "float64" "opaque64"}}
 	{
 		size_t size = o->{{.NameNative}}.len * 8;
 		if (max - p < size) return 0;
 		memcpy(p, o->{{.NameNative}}.list, size);
 		p += size;
 	}
-   {{- end}}
 
-  {{- else if eq .Type "timestamp"}}
-   {{- if .TypeList}}
+   {{- else if eq .Type "timestamp"}}
 	{
 		size_t i = o->{{.NameNative}}.len;
-		size_t size = i * 8;
-		if (max - p < size) return 0;
+		if (max - p < i * 8) return 0;
 		while (i--) {
-			uint64_t v = (uint64_t)o->{{.NameNative}}.list[i].tv_sec << 30;
+			word_t v = (word_t)o->{{.NameNative}}.list[i].tv_sec << 30;
 			v |= o->{{.NameNative}}.list[i].tv_nsec;
 			memcpy(p, &v, 8);
 			p += 8;
 		}
 	}
-   {{- end}}
 
+   {{- else if eq .Type "text"}}
+	if (o->{{.NameNative}}.len) {
+		size_t n = o->{{.NameNative}}.len;
+		if (max - p < n) return 0;
+		size_t sum = 0;
+		for (size_t i = 0; i < n; i++) {
+			size_t z = o->{{.NameNative}}.list[i].len;
+			if (z > {{.Struct.UTF8Max}}) return 0;
+			p[i] = z;
+			sum += z;
+		}
+		p += n;
+		if (max - p < sum) return 0;
+		while (n--) {
+			size_t z = o->{{.NameNative}}.list[n].len;
+			memcpy(p, o->{{.NameNative}}.list[n].utf8, z);
+			p += z;
+		}
+	}
+
+   {{- end}}{{/* list type match */}}
   {{- else if eq .Type "text"}}
-   {{- if .TypeList}}
-	for (size_t i = o->{{.NameNative}}.len; i-- != 0; ) {
-		// TODO: encode size
-	}
-	for (size_t i = o->{{.NameNative}}.len; i-- != 0; ) {
-		size_t size = o->{{.NameNative}}.list[i].len;
-		if (max - p < size) return 0;
-		memcpy(p, o->{{.NameNative}}.list[i].utf8, size);
-		p += size;
-	}
-   {{- else if eq .ElementCount 0}}
+   {{- if eq .ElementCount 0}}
 	{
-		size_t size = o->{{.NameNative}}.len;
-		if (max - p < size) return 0;
-		memcpy(p, o->{{.NameNative}}.utf8, size);
-		p += size;
+		size_t z = o->{{.NameNative}}.len;
+		if (max - p < z) return 0;
+		memcpy(p, o->{{.NameNative}}.utf8, z);
+		p += z;
 	}
    {{- else}}{{range $arrayIndex, $element := .Elements}}
 	{
-		size_t size = o->{{.NameNative}}[{{$arrayIndex}}].len;
-		if (max - p < size) return 0;
-		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].utf8, size);
-		p += size;
+		size_t z = o->{{.NameNative}}[{{$arrayIndex}}].len;
+		if (max - p < z) return 0;
+		memcpy(p, o->{{.NameNative}}[{{$arrayIndex}}].utf8, z);
+		p += z;
 	}
    {{- end}}{{end}}
 
@@ -283,7 +286,7 @@ size_t
 {{- end}}{{/* has payloads */}}
 
 	const size_t size = p - (uint8_t *)start;
-	word0 |= size;
+	word0 |= size << 3;
 
 {{- range .FixedWordIndices}}
 	memcpy((uint8_t *)start + ({{.}} * 8), &word{{.}}, 8);
@@ -297,127 +300,143 @@ size_t
 }
 
 size_t
-{{.NameNative}}_unmarshal(struct {{.NameNative}}* o, const void* start) {
+{{.NameNative}}_unmarshal(struct {{.NameNative}}* o, const void* start{{if .HasPayloadSection}}, void* (*malloc)(size_t){{end}}) {
+	const uint8_t* base = (const uint8_t*)start; // address octets
 {{- range .FixedWordIndices}}
-	uint64_t word{{.}};
-	memcpy(&word{{.}}, (uint8_t *)start + ({{.}} * 8), 8);
+	word_t word{{.}};
+	memcpy(&word{{.}}, &base[{{.}} * 8], 8);
 {{- end}}
 {{- if ne .FixedWordRemainderSize 0}}
  {{- $index := len .FixedWordIndices}}
-	uint64_t word{{$index}};
-	memcpy(&word{{$index}}, (uint8_t *)start + ({{$index}} * 8), {{.FixedWordRemainderSize}});
+	word_t word{{$index}};
+	memcpy(&word{{$index}}, &base[{{$index}} * 8], {{.FixedWordRemainderSize}});
 {{- end}}
 
-	const size_t size = word0 & 0xfff;
-	const size_t fixed_size = (word0 >> 12) & 0x7f;
-	if ((word0 & 0xfff) < fixed_size) return 0;
+	const size_t size = (size_t)(word0 >> 3) & 0xfff;
+	const size_t fixed_size = (size_t)(word0 >> 15) & 0x1ff;
+	if (__builtin_expect(size < fixed_size, 0)) {
+		*o = (const struct {{.NameNative}}){ 0 };
+		return 0;
+	}
 
 	// read cursor at variable section
-	const uint8_t *p = (const uint8_t *)start + fixed_size;
+	const uint8_t *p = &base[fixed_size];
+	// payload cursor travels backwards
+	size_t end = size;
 
 {{- range .Fields}}
 
 	// unpack .{{.Name}} {{if .TypeList}}[]{{end}}{{.Type}}
  {{- if .TypeList}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}.len = v{{.Index}};
+  {{- if eq .Type "opaque8" "opaque16" "opaque32" "opaque64" "float32" "float64"}}
+	{
+		size_t n = (size_t)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		size_t offset = satsub(end, n * sizeof({{.TypeNative}}));
+		n = (end - offset) / sizeof({{.TypeNative}});
+		end = offset;
+
+		typeof(o->{{.NameNative}}.list) list = NULL;
+		if (n) {
+			list = malloc(n * sizeof(*list));
+			if (__builtin_expect(list == NULL, 0)) {
+				o->{{.NameNative}}.list = NULL;
+				o->{{.NameNative}}.len = 0;
+{{template "malloc-error" .}}
+			}
+			memcpy(list, &base[offset], n * sizeof(*list));
+		}
+
+		o->{{.NameNative}}.list = list;
+		o->{{.NameNative}}.len = n;
+	}
+
+  {{- else if eq .Type "timestamp"}}
+	{
+		size_t n = (size_t)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		size_t offset = satsub(end, n * 8);
+		n = (end - offset) / 8;
+		end = offset;
+
+		typeof(o->{{.NameNative}}.list) list = NULL;
+		if (n) {
+			list = malloc(n * sizeof(*list));
+			if (__builtin_expect(list == NULL, 0)) {
+				o->{{.NameNative}}.list = NULL;
+				o->{{.NameNative}}.len = 0;
+{{template "malloc-error" .}}
+			}
+			const uint64_t *view = (const uint64_t *)&base[offset];
+			for (size_t i = 0; i < n; i++) {
+				list[i].tv_sec = view[i] >> 30;
+				list[i].tv_nsec = view[i] & (1<<30) - 1;
+			}
+		}
+
+		o->{{.NameNative}}.list = list;
+		o->{{.NameNative}}.len = n;
+	}
+
+  {{- else if eq .Type "text"}}
+	{
+		size_t n = (size_t)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		size_t size_table_offset = satsub(end, n);
+		n = end - size_table_offset;
+		end = size_table_offset;
+
+		typeof(o->{{.NameNative}}.list) list = NULL;
+		if (n) {
+			list = malloc(n * sizeof(*list));
+			if (__builtin_expect(list == NULL, 0)) {
+				o->{{.NameNative}}.list = NULL;
+				o->{{.NameNative}}.len = 0;
+{{template "malloc-error" .}}
+			}
+
+			for (size_t i = 0; i < n; i++) {
+				size_t offset = satsub(end, base[size_table_offset + n]);
+				size_t len = end - offset;
+				end = offset;
+
+				if (!len) {
+					list[i].utf8 = NULL;
+					list[i].len = 0;
+					continue;
+				}
+
+				{{.TypeNative}} utf8 = malloc(len);
+				if (__builtin_expect(utf8 != NULL, 1)) {
+					memcpy(utf8, &base[offset], len);
+					list[i].utf8 = utf8;
+					list[i].len = len;
+					continue;
+				}
+
+				// malloc failed
+				do {
+					list[i].utf8 = NULL;
+					list[i].len = 0;
+				} while (++i > n);
+{{template "malloc-error" .}}
+			}
+		}
+
+		o->{{.NameNative}}.list = list;
+		o->{{.NameNative}}.len = n;
+	}
+
+  {{- end}}{{/* list type match */}}
+
  {{- else}}{{/* not list */}}
-  {{- if eq .Type "bool"}}
 
-   {{- if .FirstInBitField}}
-    {{- if eq .BoolIndex 0}}
-	o->bools = word{{.WordIndex}} >> {{.WordShift}} & 0xff;
-    {{- else}}
-     {{- if le .BoolIndex .WordShift}}
-	o->bools = word{{.WordIndex}} >> {{.WordShift}}-{{.BoolIndex}} & 0xff<<{{.BoolIndex}};
-     {{- else}}
-	o->bools = word{{.WordIndex}} << {{.BoolIndex}}-{{.WordShift}} & 0xff<<{{.BoolIndex}};
-     {{- end}}
-    {{- end}}
-   {{- end}}
-
-  {{- else if eq .Type "int8" "uint8" "opaque8"}}
-   {{- if eq .ElementCount 0}}
+  {{- if eq .Type "opaque8" "uint8" "int8"}}
+   {{- if not .ElementCount}}
 	o->{{.NameNative}} = word{{.WordIndex}} >> {{.WordShift}};
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
 	o->{{.NameNative}}[{{$arrayIndex}}] = word{{.WordIndex}} >> {{.WordShift}};
    {{- end}}{{end}}{{end}}
 
-  {{- else if eq .Type "int16"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}} = (int16_t)(v{{.Index}} >> 1) ^ -(int16_t)(v{{.Index}} & 1);
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}] = (int16_t)(v{{.Index}} >> 1) ^ -(int16_t)(v{{.Index}} & 1);
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "int32"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}} = (int32_t)(v{{.Index}} >> 1) ^ -(int32_t)(v{{.Index}} & 1);
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}] = (int32_t)(v{{.Index}} >> 1) ^ -(int32_t)(v{{.Index}} & 1);
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "int64"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}} = (int64_t)(v{{.Index}} >> 1) ^ -(int64_t)(v{{.Index}} & 1);
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}] = (int64_t)(v{{.Index}} >> 1) ^ -(int64_t)(v{{.Index}} & 1);
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "uint16" "uint32" "uint64"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}} = v{{.Index}};
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal-integer" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}] = v{{.Index}};
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "float32"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal32" .}}
-	union f32m m{{.Index}};
-	m{{.Index}}.u = v{{.Index}};
-	o->{{.NameNative}} = m{{.Index}}.f;
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal32" .}}
-	union f32m m{{.Index}};
-	m{{.Index}}.u = v{{.Index}};
-	o->{{.NameNative}}[{{$arrayIndex}}] = m{{.Index}}.f;
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "float64"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal64" .}}
-	union f64m m{{.Index}};
-	m{{.Index}}.u = v{{.Index}};
-	o->{{.NameNative}} = m{{.Index}}.f;
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal64" .}}
-	union f64m m{{.Index}};
-	m{{.Index}}.u = v{{.Index}};
-	o->{{.NameNative}}[{{$arrayIndex}}] = m{{.Index}}.f;
-   {{- end}}{{end}}{{end}}
-
-  {{- else if eq .Type "timestamp"}}
-   {{- if eq .ElementCount 0}}
-{{template "unmarshal64" .}}
-	o->{{.NameNative}}.tv_sec = v{{.Index}} >> 30;
-	o->{{.NameNative}}.tv_nsec = (1<<30) - 1 & v{{.Index}};
-   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
-{{template "unmarshal64" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}].tv_sec = v{{.Index}} >> 30;
-	o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec = (1<<30) - 1 & v{{.Index}};
-   {{- end}}{{end}}{{end}}
-
   {{- else if eq .Type "opaque16"}}
-   {{- if eq .ElementCount 0}}
+   {{- if not .ElementCount}}
 {{template "unmarshal16" .}}
 	o->{{.NameNative}} = v{{.Index}};
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
@@ -435,7 +454,7 @@ size_t
    {{- end}}{{end}}{{end}}
 
   {{- else if eq .Type "opaque64"}}
-   {{- if eq .ElementCount 0}}
+   {{- if not .ElementCount}}
 {{template "unmarshal64" .}}
 	o->{{.NameNative}} = v{{.Index}};
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
@@ -443,198 +462,172 @@ size_t
 	o->{{.NameNative}}[{{$arrayIndex}}] = v{{.Index}};
    {{- end}}{{end}}{{end}}
 
-  {{- else if eq .Type "text"}}
+  {{- else if eq .Type "uint16" "uint32" "uint64"}}
    {{- if eq .ElementCount 0}}
 {{template "unmarshal-integer" .}}
-	o->{{.NameNative}}.len = v{{.Index}};
+	o->{{.NameNative}} = v{{.Index}};
    {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
 {{template "unmarshal-integer" .}}
-	o->{{.NameNative}}[{{$arrayIndex}}].len = v{{.Index}};
+	o->{{.NameNative}}[{{$arrayIndex}}] = v{{.Index}};
    {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int16"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}} = (int16_t)(v{{.Index}} >> 1) ^ -(int16_t)(v{{.Index}} & 1);
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}] = (int16_t)(v{{.Index}} >> 1) ^ -(int16_t)(v{{.Index}} & 1);
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int32"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}} = (int32_t)(v{{.Index}} >> 1) ^ -(int32_t)(v{{.Index}} & 1);
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}] = (int32_t)(v{{.Index}} >> 1) ^ -(int32_t)(v{{.Index}} & 1);
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "int64"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}} = (int64_t)(v{{.Index}} >> 1) ^ -(int64_t)(v{{.Index}} & 1);
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal-integer" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}] = (int64_t)(v{{.Index}} >> 1) ^ -(int64_t)(v{{.Index}} & 1);
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "float32"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal32" .}}
+	o->{{.NameNative}} = (union f32m){.u = v{{.Index}}}.f;
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal32" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}] = (union f32m){.u = v{{.Index}}}.f;
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "float64"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal64" .}}
+	o->{{.NameNative}} = (union f64m){.u = v{{.Index}}}.f;
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal64" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}] = (union f64m){.u = v{{.Index}}}.f;
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "timestamp"}}
+   {{- if not .ElementCount}}
+{{template "unmarshal64" .}}
+	o->{{.NameNative}}.tv_sec = v{{.Index}} >> 30;
+	o->{{.NameNative}}.tv_nsec = (1<<30) - 1 & v{{.Index}};
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+{{template "unmarshal64" .}}
+	o->{{.NameNative}}[{{$arrayIndex}}].tv_sec = v{{.Index}} >> 30;
+	o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec = (1<<30) - 1 & v{{.Index}};
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "text"}}
+   {{- if not .ElementCount}}
+	{
+		size_t n = (size_t)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		size_t offset = satsub(end, n);
+		n = end - offset;
+		end = offset;
+
+		{{.TypeNative}} utf8 = NULL;
+		if (n && fixed_size > {{.FixedIndex}}) {
+			utf8 = malloc(n);
+			if (__builtin_expect(utf8 == NULL, 0)) {
+				o->{{.NameNative}}.utf8 = NULL;
+				o->{{.NameNative}}.len = 0;
+{{template "malloc-error" .}}
+			}
+			memcpy(utf8, &base[offset], n);
+		}
+
+		o->{{.NameNative}}.utf8 = utf8;
+		o->{{.NameNative}}.len = n;
+	}
+   {{- else}}{{range $arrayIndex, $element := .Elements}}{{with $element}}
+	{
+		size_t n = (size_t)(word{{.WordIndex}} >> {{.WordShift}}) & 0xff;
+		size_t offset = satsub(end, n);
+		n = end - offset;
+		end = offset;
+
+		{{.TypeNative}} utf8 = NULL;
+		if (n && fixed_size > {{.FixedIndex}}) {
+			utf8 = malloc(n);
+			if (__builtin_expect(utf8 == NULL, 0)) {
+				for (int i = {{$arrayIndex}}; i < {{.ElementCount}}; i++) {
+					o->{{.NameNative}}[{{$arrayIndex}}].utf8 = NULL;
+					o->{{.NameNative}}[{{$arrayIndex}}].len = 0;
+				}
+{{template "malloc-error" .}}
+			}
+			memcpy(utf8, &base[offset], n);
+		}
+
+		o->{{.NameNative}}[{{$arrayIndex}}].utf8 = utf8;
+		o->{{.NameNative}}[{{$arrayIndex}}].len = n;
+	}
+   {{- end}}{{end}}{{end}}
+
+  {{- else if eq .Type "bool"}}
+   {{- if not .FirstInBitField}}
+	// travels for free
+   {{- else if eq .BoolIndex 0}}
+	o->_flags = word{{.WordIndex}} >> {{.WordShift}} & 0xff;
+   {{- else if le .BoolIndex .WordShift}}
+	o->_flags = word{{.WordIndex}} >> ({{.WordShift}}-{{.BoolIndex}}) & (0xff<<{{.BoolIndex}});
+   {{- else}}
+	o->_flags = word{{.WordIndex}} << ({{.BoolIndex}}-{{.WordShift}}) & (0xff<<{{.BoolIndex}});
+   {{- end}}
 
   {{- end}}{{/* type match */}}
  {{- end}}{{/* not list */}}
 {{- end}}{{/* field range */}}
 
 	// clear/undo absent fields
-	if (fixed_size < {{.FixedSize}}) {
-		switch (fixed_size) {
-		default:
-			return 0;
+	if (__builtin_expect(fixed_size < {{.FixedSize}}, 0)) switch (fixed_size) {
+	default:
+		*o = (const struct {{.NameNative}}){ 0 };
+		return 0;
 {{- range .Fields}}
- {{- if eq .Index 0}}
-  {{- continue}}{{/* one field required */}}
- {{- end}}
  {{- if eq .Type "bool"}}{{- if not .FirstInBitField}}
   {{- continue}}{{/* packed per eight */}}
  {{- end}}{{end}}
-		case {{.FixedIndex}}:
+	case {{.FixedIndex}}:
 
  {{- if .TypeList}}
-			o->{{.NameNative}}.len = 0;
+		// checked inline allready
 
  {{- else if eq .Type "bool"}}
-			o->bools &= (1 << {{.BoolIndex}}) - 1;
+		o->_flags &= (1 << {{.BoolIndex}}) - 1;
 
  {{- else if eq .Type "timestamp"}}
-  {{- if eq .ElementCount 0}}
-			o->{{.NameNative}}.tv_sec = 0;
-			o->{{.NameNative}}.tv_nsec = 0;
+  {{- if not .ElementCount}}
+		o->{{.NameNative}}.tv_sec = 0;
+		o->{{.NameNative}}.tv_nsec = 0;
   {{- else}}{{range $arrayIndex, $element := .Elements}}
-			o->{{.NameNative}}[{{$arrayIndex}}].tv_sec = 0;
-			o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec = 0;
+		o->{{.NameNative}}[{{$arrayIndex}}].tv_sec = 0;
+		o->{{.NameNative}}[{{$arrayIndex}}].tv_nsec = 0;
   {{- end}}{{end}}
 
  {{- else if eq .Type "text"}}
-  {{- if eq .ElementCount 0}}
-			o->{{.NameNative}}.len = 0;
-			o->{{.NameNative}}.utf8 = 0;
-  {{- else}}{{range $arrayIndex, $element := .Elements}}
-			o->{{.NameNative}}[{{$arrayIndex}}].len = 0;
-			o->{{.NameNative}}[{{$arrayIndex}}].utf8 = 0;
-  {{- end}}{{end}}
+		// checked inline allready
 
- {{- else}}
-  {{- if eq .ElementCount 0}}
-			o->{{.NameNative}} = 0;
-  {{- else}}{{range $arrayIndex, $element := .Elements}}
-			o->{{.NameNative}}[{{$arrayIndex}}] = 0;
-  {{- end}}{{end}}
+ {{- else if not .ElementCount}}
+		o->{{.NameNative}} = 0;
+ {{- else}}{{range $arrayIndex, $element := .Elements}}
+		o->{{.NameNative}}[{{$arrayIndex}}] = 0;
+ {{- end}}{{end}}
 
- {{- end}}{{/* type select */}}
 {{- end}}{{/* field range */}}
-		}{{/* switch */}}
-	}{{/* absent fields */}}
+	}{{/* absent fields switch if */}}
 
-{{- if or .HasText .HasList}}{{/* has payloads */}}
-
-	// copy payloads
-	size_t offset = word0 & 0xfff;
- {{- range .FieldsReversed}}
-  {{- if eq .Type "opaque8" "opaque16" "opaque32" "opaque64" "float32" "float64"}}
-   {{- if .TypeList}}
-	offset = satsub(offset, o->{{.NameNative}}.len * sizeof({{.TypeNative}}));
-   {{- end}}
-
-  {{- else if eq .Type "timestamp"}}
-   {{- if .TypeList}}
-	offset = satsub(offset, o->{{.NameNative}}.len * 8);
-   {{- end}}
-
-  {{- else if eq .Type "text" -}}
-   {{- if .TypeList}}
-	// TODO: unmarshal text list
-   {{- else if eq .ElementCount 0}}
-	offset = satsub(offset, o->{{.NameNative}}.len);
-   {{- else}}
-    {{- range $arrayIndex, $element := .Elements}}
-	offset = satsub(offset, o->{{.NameNative}}[{{$arrayIndex}}].len);
-    {{- end}}
-   {{- end}}
-
-  {{- end}}{{/* type match */}}
- {{- end}}{{/* field range */}}
-	uint8_t *split = (uint8_t *)start + offset;
-	if (split < p) return 0;
-	p = split;
- {{range .FieldsReversed}}
-  {{- if eq .Type "opaque8"}}
-   {{- if .TypeList}}
-	if (o->{{.NameNative}}.len != 0) {
-		size_t len = o->{{.NameNative}}.len;
-		o->{{.NameNative}}.list = malloc(len);
-		memcpy(o->{{.NameNative}}.list, p, len);
-		p += len;
-	}
-   {{- end}}
-
-  {{- else if eq .Type "opaque16"}}
-   {{- if .TypeList}}
-	if (o->{{.NameNative}}.len != 0) {
-		size_t len = o->{{.NameNative}}.len;
-		o->{{.NameNative}}.list = malloc(len * 2);
-		memcpy(o->{{.NameNative}}.list, p, len * 2);
-		p += len * 2;
-	}
-   {{- end}}
-
-  {{- else if eq .Type "float32" "opaque32"}}
-   {{- if .TypeList}}
-	if (o->{{.NameNative}}.len != 0) {
-		size_t len = o->{{.NameNative}}.len;
-		o->{{.NameNative}}.list = malloc(len * 4);
-		memcpy(o->{{.NameNative}}.list, p, len * 4);
-		p += len * 4;
-	}
-   {{- end}}
-
-  {{- else if eq .Type "float64" "opaque64"}}
-   {{- if .TypeList}}
-	if (o->{{.NameNative}}.len != 0) {
-		size_t len = o->{{.NameNative}}.len;
-		o->{{.NameNative}}.list = malloc(len * 8);
-		memcpy(o->{{.NameNative}}.list, p, len * 8);
-		p += len * 8;
-	}
-   {{- end}}
-
-  {{- else if eq .Type "timestamp"}}
-   {{- if .TypeList}}
-	if (o->{{.NameNative}}.len != 0) {
-		size_t len = o->{{.NameNative}}.len;
-		o->{{.NameNative}}.list = malloc(len * sizeof({{.TypeNative}}));
-		const uint64_t *view = (uint64_t *)p;
-		p += len * 8;
-		for (size_t i = o->{{.NameNative}}.len; i--; ) {
-			o->{{.NameNative}}.list[i].tv_sec = view[i] >> 30;
-			o->{{.NameNative}}.list[i].tv_nsec = view[i] & (1<<30) - 1;
-		}
-	}
-   {{- end}}
-
-  {{- else if eq .Type "text"}}
-   {{- if .TypeList}}
-
-	if (o->{{.NameNative}}.len != 0) {
-		o->{{.NameNative}}.list = malloc(o->{{.NameNative}}.len);
-
-		// TODO: parse text sizes
-
-		for (int i = 0; i < o->{{.NameNative}}.len; i++) {
-			char *s = malloc(o->{{.NameNative}}.list[i].len + 1);
-			memcpy(s, p, o->{{.NameNative}}.len);
-			s[o->{{.NameNative}}.list[i].len] = 0; // null terminator
-			o->{{.NameNative}}.list[i].utf8 = s;
-		}
-	}
-   {{- else if eq .ElementCount 0}}
-
-	{
-		size_t len = o->{{.NameNative}}.len;
-		char *s = malloc(len + 1);
-		memcpy(s, p, len);
-		s[len] = 0; // null terminator
-		o->{{.NameNative}}.utf8 = s;
-		p += len;
-	}
-   {{- else}}{{/* is array */}}
-    {{range $arrayIndex, $element := .Elements}}
-	{
-		size_t len = o->{{.NameNative}}[{{$arrayIndex}}].len ;
-		char *s = malloc(len + 1);
-		memcpy(s, p, len);
-		s[len] = 0; // null terminator
-		o->{{.NameNative}}[{{$arrayIndex}}].utf8 = s;
-		p += len;
-	}
-    {{- end}}
-   {{- end}}{{/* is array */}}
-
-  {{- end}}{{/* type match */}}
- {{- end}}{{/* reverse field range */}}
-{{- end}}{{/* has payloads */}}
-
-	return word0 & 0xfff;
+	return size;
 }
 
 {{- end}}{{/* struct range */}}

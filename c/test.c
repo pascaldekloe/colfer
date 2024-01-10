@@ -1,20 +1,21 @@
-#include "gen_test.h"
+#include "test.h"
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // encode data into buf as a null terminated hex string
 void hexstr(char* buf, const void* data, size_t datalen);
 
 // field comparison
-int gen_base_types_dfr(const struct gen_base_types a, const struct gen_base_types b);
-int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_types b);
+int seal_base_types_dfr(const struct seal_base_types a, const struct seal_base_types b);
+int seal_list_types_dfr(const struct seal_list_types a, const struct seal_list_types b);
 
 // print data in human-readable form
-void gen_base_types_dump(const struct gen_base_types o);
-void gen_list_types_dump(const struct gen_list_types o);
+void seal_base_types_dump(const struct seal_base_types o);
+void seal_list_types_dump(const struct seal_list_types o);
 
 int main(void) {
 	const int n = sizeof(golden_base_types) / sizeof(golden_base_types[0]);
@@ -25,7 +26,7 @@ int main(void) {
 	printf("TEST equality...\n");
 	for (int i = 0; i < n; ++i) {
 		for (int j = 0; j < n; ++j) {
-			bool dfr = gen_base_types_dfr(golden_base_types[i].values, golden_base_types[j].values);
+			bool dfr = seal_base_types_dfr(golden_base_types[i].values, golden_base_types[j].values);
 			if ((i == j) && (dfr != 0)) {
 				fail++;
 				printf("0x%s: compared not equal to self\n",
@@ -45,7 +46,7 @@ int main(void) {
 
 	printf("TEST encoding roundtrip...\n");
 	for (int i = 0; i < n; ++i) {
-		size_t wrote = gen_base_types_marshal(&golden_base_types[i].values, buf);
+		size_t wrote = seal_base_types_marshal(&golden_base_types[i].values, buf);
 		hexstr(hex, &buf, wrote);
 		if (strcmp(hex, golden_base_types[i].serial_hex)) {
 			fail++;
@@ -54,21 +55,21 @@ int main(void) {
 			continue;
 		}
 
-		struct gen_base_types got;
-		size_t read = gen_base_types_unmarshal(&got, buf);
+		struct seal_base_types got;
+		size_t read = seal_base_types_unmarshal(&got, buf, &malloc);
 		if (read == 0) {
 			fail++;
 			printf("0x%s: got unmarshal error\n",
 				golden_base_types[i].serial_hex);
 			continue;
 		}
-		if (read != wrote || gen_base_types_dfr(got, golden_base_types[i].values) != 0) {
+		if (read != wrote || seal_base_types_dfr(got, golden_base_types[i].values) != 0) {
 			fail++;
 			printf("0x%s: unmarshal read %zu bytes:\n\tgot: ",
 				golden_base_types[i].serial_hex, read);
-			gen_base_types_dump(got);
+			seal_base_types_dump(got);
 			printf("\n\twant: ");
-			gen_base_types_dump(golden_base_types[i].values);
+			seal_base_types_dump(golden_base_types[i].values);
 			putchar('\n');
 		}
 	}
@@ -88,8 +89,8 @@ void hexstr(char* buf, const void* data, size_t datalen) {
 	*buf = 0;
 }
 
-int gen_base_types_dfr(const struct gen_base_types a, const struct gen_base_types b) {
-	return a.bools != b.bools
+int seal_base_types_dfr(const struct seal_base_types a, const struct seal_base_types b) {
+	return a._flags != b._flags
 	    || a.u8 != b.u8
 	    || a.i8 != b.i8
 	    || a.u16 != b.u16
@@ -107,7 +108,7 @@ int gen_base_types_dfr(const struct gen_base_types a, const struct gen_base_type
 	;
 }
 
-int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_types b) {
+int seal_list_types_dfr(const struct seal_list_types a, const struct seal_list_types b) {
 	bool dfr = a.f32l.len != b.f32l.len
 	        || a.f64l.len != b.f64l.len
 	        || a.sl.len != b.sl.len
@@ -135,7 +136,7 @@ int gen_list_types_dfr(const struct gen_list_types a, const struct gen_list_type
 	return dfr;
 }
 
-void gen_base_types_dump(const struct gen_base_types o) {
+void seal_base_types_dump(const struct seal_base_types o) {
 	char buf[1024];
 
 	printf("{ ");
@@ -152,7 +153,7 @@ void gen_base_types_dump(const struct gen_base_types o) {
 	printf("f32=%f ", o.f32);
 	printf("f64=%f ", o.f64);
 
-	printf("t=%lld.%09ld s ", (long long) o.t.tv_sec, (long)o.t.tv_nsec);
+	printf("t=%lld.%09ld ", (long long) o.t.tv_sec, (long)o.t.tv_nsec);
 
 	if (!o.s.len) {
 		printf("s=0x ");
@@ -163,12 +164,12 @@ void gen_base_types_dump(const struct gen_base_types o) {
 		printf("s=0x%s ", buf);
 	}
 
-	printf("b=%d ", (o.bools & GEN_BASE_TYPES_B_FLAG));
+	printf("b=%d ", (o._flags & SEAL_BASE_TYPES_B_FLAG));
 
 	putchar('}');
 }
 
-void gen_list_types_dump(const struct gen_list_types o) {
+void seal_list_types_dump(const struct seal_list_types o) {
 	char buf[1024];
 
 	printf("{ ");

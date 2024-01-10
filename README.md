@@ -15,7 +15,7 @@ The format is inspired by Proto**col** Buf**fer**s.
 
 #### Language Support
 
-* **C**, ISO/IEC 9899:2011 compliant a.k.a. C11, C++ compatible
+* **C**, ISO/IEC 9899:2023 compliant a.k.a. C23, C++ compatible
 * **Go**, a.k.a. golang
 * **Java** LTS, base module exclusively, Android compatible
 * **JavaScript**, a.k.a. ECMAScript, NodeJS compatible
@@ -26,11 +26,10 @@ The format is inspired by Proto**col** Buf**fer**s.
 #### Features
 
 * Simple and straightforward in use
-* No dependencies other than the core library
-* Both faster and smaller than the competition
+* Generated code as optimal as hand written
+* No dependencies beyond the standard library
 * [Robust](#security) against malicious input
-* Maximum of 127 fields per data structure
-* No support for enumerations
+* Size limits on all variable-length data
 * Framed; suitable for concatenation/streaming
 
 

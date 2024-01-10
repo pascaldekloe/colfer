@@ -73,7 +73,7 @@ func GenerateC(basedir string, packages Packages) error {
 				case "timestamp":
 					f.TypeNative = "struct timespec"
 				case "text":
-					f.TypeNative = "const char"
+					f.TypeNative = "char*"
 				case "bool":
 					f.TypeNative = "int"
 				}
@@ -84,12 +84,17 @@ func GenerateC(basedir string, packages Packages) error {
 	if err := os.MkdirAll(basedir, os.ModeDir|os.ModePerm); err != nil {
 		return err
 	}
-
 	f, err := os.Create(filepath.Join(basedir, "Colfer.h"))
 	if err != nil {
 		return err
 	}
-	if err := template.Must(template.New("c-header").Parse(hTemplate)).Execute(f, packages); err != nil {
+
+	funcs := template.FuncMap{"upperSnake": upperSnake}
+	headerTemplate, err := template.New("c-header").Funcs(funcs).Parse(hTemplate)
+	if err != nil {
+		return err
+	}
+	if err := headerTemplate.Execute(f, packages); err != nil {
 		return err
 	}
 	if err = f.Close(); err != nil {
@@ -110,6 +115,7 @@ func GenerateC(basedir string, packages Packages) error {
 	template.Must(t.New("unmarshal16").Parse(cUnmarshal16Template))
 	template.Must(t.New("unmarshal32").Parse(cUnmarshal32Template))
 	template.Must(t.New("unmarshal64").Parse(cUnmarshal64Template))
+	template.Must(t.New("malloc-error").Parse(cMallocErrorTemplate))
 	if err := t.Execute(f, packages); err != nil {
 		return err
 	}
@@ -145,6 +151,9 @@ var cUnmarshal32Template string
 
 //go:embed template/c-unmarshal64.txt
 var cUnmarshal64Template string
+
+//go:embed template/c-malloc-error.txt
+var cMallocErrorTemplate string
 
 // ECMAKeywords are the reserved tokens for ECMA Script.
 // Some entries are redundant due to the use of a Go parser.
@@ -361,32 +370,9 @@ func toJavaName(name string) string {
 
 // GenerateJava writes the code into the respective ".java" files.
 func GenerateJava(basedir string, packages Packages) error {
-	titleCache := make(map[string]string)
-	upperSnakeCache := make(map[string]string)
-
 	funcs := template.FuncMap{
-		"title": func(s string) string {
-			if t, ok := titleCache[s]; ok {
-				return t
-			}
-
-			r, size := utf8.DecodeRuneInString(s)
-			if size == 0 {
-				return s
-			}
-			t := string([]rune{unicode.ToUpper(r)}) + s[size:]
-
-			titleCache[s] = t
-			return t
-		},
-		"upperSnake": func(s string) string {
-			if t, ok := upperSnakeCache[s]; ok {
-				return t
-			}
-			t := strings.ToUpper(name.SnakeCase(s))
-			upperSnakeCache[s] = t
-			return t
-		},
+		"title":      title,
+		"upperSnake": upperSnake,
 	}
 
 	packageTemplate := template.New("java-package")
@@ -519,3 +505,34 @@ var javaUnmarshal32Template string
 
 //go:embed template/java-unmarshal64.txt
 var javaUnmarshal64Template string
+
+var titleCache map[string]string
+
+func title(s string) string {
+	if t, ok := titleCache[s]; ok {
+		return t
+	}
+	if titleCache == nil {
+		titleCache = make(map[string]string)
+	}
+
+	r, size := utf8.DecodeRuneInString(s)
+	t := string([]rune{unicode.ToUpper(r)}) + s[size:]
+	titleCache[s] = t
+	return t
+}
+
+var upperSnakeCache map[string]string
+
+func upperSnake(s string) string {
+	if t, ok := upperSnakeCache[s]; ok {
+		return t
+	}
+	if upperSnakeCache == nil {
+		upperSnakeCache = make(map[string]string)
+	}
+
+	t := strings.ToUpper(name.SnakeCase(s))
+	upperSnakeCache[s] = t
+	return t
+}

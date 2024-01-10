@@ -1,0 +1,22 @@
+{{/* clear fields with pending malloc */}}
+{{- $failedIndex := .Index}}
+{{- range .Struct.Fields}}
+ {{- if lt .Index $failedIndex}}
+  {{- if .TypeList}}
+				o->{{.NameNative}}.list = NULL;
+				o->{{.NameNative}}.len = 0;
+
+  {{- else if eq .Type "text"}}
+   {{- if not .ElementCount}}
+				o->{{.NameNative}}.utf8 = NULL;
+				o->{{.NameNative}}.len = 0;
+   {{- else}}{{- range $arrayIndex, $element := .Elements}}
+				o->{{.NameNative}}[{{$arrayIndex}}].utf8 = NULL;
+				o->{{.NameNative}}[{{$arrayIndex}}].len = 0;
+   {{- end}}{{end}}{{/* text elements */}}
+
+  {{- end}}{{/* type match */}}
+ {{- end}}{{/* undone match */}}
+{{- end}}{{/* field range */}}
+				return 0;
+{{- /* no newline */ -}}

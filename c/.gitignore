@@ -1,3 +1,4 @@
 *.o
 
-gen_test
+test
+test.dSYM

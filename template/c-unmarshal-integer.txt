@@ -1,15 +1,8 @@
-	uint64_t v{{.Index}} = word{{.WordIndex}} >> ({{.WordShift}} + 1) & 0x7f;
+	word_t v{{.Index}} = word{{.WordIndex}} >> ({{.WordShift}} + 1) & 0x7f;
 	if (((uint64_t)1 << {{.WordShift}} & word{{.WordIndex}}) == 0) {
-		uint64_t tail = p[0];
-		tail |= (uint64_t)p[1] << 8;
-		tail |= (uint64_t)p[2] << 16;
-		tail |= (uint64_t)p[3] << 24;
-		tail |= (uint64_t)p[4] << 32;
-		tail |= (uint64_t)p[5] << 40;
-		tail |= (uint64_t)p[6] << 48;
-		tail |= (uint64_t)p[7] << 56;
-
-		size_t tail_size = __builtin_ctz(v{{.Index}} | 0x80) + 1;
+		int tail_size = __builtin_ctz(v{{.Index}} | 0x80) + 1;
+		word_t tail;
+		memcpy(&tail, p, 8);
 		p += tail_size;
 		v{{.Index}} <<= (tail_size << 3) - tail_size;
 		v{{.Index}} |= tail & COLFER_MASKS[tail_size];

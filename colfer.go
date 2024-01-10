@@ -67,6 +67,17 @@ func (p Packages) HasTimestamp() bool {
 	return false
 }
 
+// HasStructWithPayloadSection returns whether any of the packages has any
+// structs that encode with a payload section.
+func (p Packages) HasStructWithPayloadSection() bool {
+	for _, o := range p {
+		if o.HasStructWithPayloadSection() {
+			return true
+		}
+	}
+	return false
+}
+
 // Package is a named definition bundle.
 type Package struct {
 	// Name is the identification token.
@@ -148,6 +159,17 @@ func (p *Package) HasTimestamp() bool {
 func (p *Package) HasList() bool {
 	for _, t := range p.Structs {
 		if t.HasList() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasStructWithPayloadSection returns whether p has any structs that encode
+// with a payload section.
+func (p Package) HasStructWithPayloadSection() bool {
+	for _, t := range p.Structs {
+		if t.HasPayloadSection() {
 			return true
 		}
 	}
@@ -307,6 +329,7 @@ func (t *Struct) HasVariableSection() bool {
 	return t.OverflowMax != 0 || t.HasPayloadSection()
 }
 
+// HasPayloadSection returns whether the struct encodes with a payload section.
 func (t *Struct) HasPayloadSection() bool {
 	return t.HasText() || t.HasList()
 }

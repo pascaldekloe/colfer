@@ -1,29 +1,27 @@
 include ../common.mk
 
-CFLAGS += -O0 -pedantic -Werror
+CFLAGS += -O0 -g -pedantic -Werror -std=c2x
 
-.PHONY: test
-test: gen_test breaktest
-	./gen_test
+test: test.c test.h Colfer.o
+	$(CC) $(CFLAGS) -o $@ test.c Colfer.o
+	./test
 
-breaktest: ../testdata/break*.colf ../*.go ../cmd/colf/*.go
+breaktest: ../testdata/break*.colf ../template/*.txt ../*.go ../cmd/colf/*.go
 	$(COLF) -b $@ C ../testdata/break*.colf
-	$(CC) $(CFLAGS) -c -std=c17 $@/Colfer.c
+	$(CC) $(CFLAGS) -c $@/Colfer.c
 	touch $@
 
-Colfer.h Colfer.c &: ../testdata/test.colf ../*.go ../template/*.txt ../cmd/colf/*.go
-	$(COLF) C ../testdata/test.colf
+Colfer.c: ../testdata/seal.colf ../template/*.txt ../*.go ../cmd/colf/*.go
+	$(COLF) C ../testdata/seal.colf
 
-Colfer.o: Colfer.h Colfer.c
-	$(CC) $(CFLAGS) -o $@ -c -std=c17 Colfer.c
+Colfer.h: Colfer.c
 
-gen_test: gen_test.h gen_test.c Colfer.o
-	$(CC) $(CFLAGS) -o $@ -std=c17 gen_test.c Colfer.o
+Colfer.o: Colfer.c
+	$(CC) $(CFLAGS) -o $@ -c $?
 
 .PHONY: clean
 clean:
-	rm -fr gen_test *.o breaktest
-
-.PHONY: clean-all
-clean-all: clean
-	rm -f Colfer.?
+	rm -f test
+	rm -f *.o
+	rm -f Colfer.[ch]
+	rm -fr breaktest

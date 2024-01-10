@@ -13,22 +13,54 @@
 extern "C" {
 #endif
 {{- range .}}{{/* package range */}}
+{{- range .Structs}}
 
-{{range .Structs}}
+// Encodings with the {{.SizeProfile}} profile are limited to {{.SizeMaxSI}} in size.
+#define {{upperSnake .NameNative}}_FRAME_CAP {{.SizeMax}}
+{{- if .HasText}}
+// Encodings with the {{.SizeProfile}} profile limit each text in byte size.
+#define {{upperSnake .NameNative}}_UTF8_CAP {{.UTF8Max}}
+{{- end}}
+{{- if .HasList}}
+// Encodings with the {{.SizeProfile}} profile limit each lists in element count.
+#define {{upperSnake .NameNative}}_LIST_CAP {{.ListMax}}
+{{- end}}
+
+// Encodings from this version of the data structure
+{{- if not .HasVariableSection}} have a fixed size.
+#define {{upperSnake .NameNative}}_MARSHAL_MAX {{.FixedSize}}
+{{- else if not .HasPayloadSection}} have a natural size limit.
+#define {{upperSnake .NameNative}}_MARSHAL_MAX ({{.FixedSize}} + {{.OverflowMax}})
+{{- else}} are limited in size by the
+// profile capacity.
+#define {{upperSnake .NameNative}}_MARSHAL_MAX {{upperSnake .NameNative}}_FRAME_CAP
+{{- end}}
+
+// Output buffers with a capacity of fewer bytes may overflow. ☠️
+#define {{upperSnake .NameNative}}_MARSHAL_BUF ({{upperSnake .NameNative}}_MARSHAL_MAX+7 & ~7)
+
 {{.DocText "// "}}
 struct {{.NameNative}} {
 
 {{- range .Fields}}
- {{- if ne .Index 0}}{{/* newline separator */}}
- {{end}}
-{{.DocText "\t// "}}
- {{- if not .TypeList}}
-  {{- if eq .Type "bool"}}
-	// {{.NameNative}} in bools bit-field;
+ {{- if eq .Type "bool"}}{{if ne .BoolIndex 0}}{{continue}}{{end}}{{end}}
 
-  {{- else if eq .Type "text"}}
+ {{- if ne .Index 0}}
+{{end}}{{/* new line separtes fields */}}
+
+ {{- if eq .Type "bool"}}{{/* first in struct due .BoolIndex check above */}}
+	// Bit field for booleans defined as {{upperSnake .NameNative}}_*_FLAG.
+	unsigned int _flags;
+  {{- continue}}
+ {{- end}}
+
+ {{- if .Docs}}
+{{.DocText "\t// "}}
+ {{- end}}
+ {{- if not .TypeList}}
+  {{- if eq .Type "text"}}
 	struct {
-		{{.TypeNative}}* utf8;
+		const {{.TypeNative}} utf8;
 		size_t len; // octet count
 	}
 
@@ -43,7 +75,7 @@ struct {{.NameNative}} {
   {{- if eq .Type "text"}}
 	struct {
 		struct {
-			{{.TypeNative}}* utf8;
+			const {{.TypeNative}} utf8;
 			size_t len; // octet count
 		}* list;
 		size_t len; // element count
@@ -64,37 +96,55 @@ struct {{.NameNative}} {
   {{- end}}{{/* type match */}}
  {{- end}}{{/* is list */}} {{.NameNative}}{{if ne .ElementCount 0}}[{{.ElementCount}}]{{end}};
 {{- end}}{{/* field range */}}
-{{- if .HasBool}}
-
-	// Bit field for booleans.
-	unsigned int bools;
-{{- end}}
 };
 
 {{- if .HasBool}}
-// Boolean fields of struct {{.NameNative}}.
+
 {{- range .Fields}}{{if eq .Type "bool"}}
+{{if .Docs}}
+{{.DocText "// "}}{{end}}
 #define {{.NameNative}} (1 << {{.BoolIndex}})
-{{- end}}{{end}}
+{{- end}}{{end}}{{/* boolean range */}}
+
 {{- end}}{{/* has boolean */}}
 
-// octet boundaries for {{.NameNative}}_marshal output
-#define {{.NameNative}}_marshal_min {{.FixedSize}}
-#define {{.NameNative}}_marshal_max {{if .SizeMax}}{{.SizeMax}}{{else}}4096{{end}}
-
-// Encode a struct as Colfer into a buffer. The encoder writes at least
-// {{.NameNative}}_marshal_min, and at most {{.NameNative}}_marshal_max.{{if not .SizeMax}}
-// The return is zero only when encoding halted on the size maximum.{{end}}
+// Encode the data structure as Colfer into a buffer. Marshal may overflow
+// buffers with a capacity of less than {{upperSnake .NameNative}}_MARSHAL_BUF.
+{{- if not .HasPayloadSection}}
+// This specific version of the data structure always succeeds with a return of
+// {{if not .HasVariableSection}}exactly{{else}}up to{{end}} {{upperSnake .NameNative}}_MARSHAL_MAX.
+// However, future revisions may return zero (0) on any the following.
+{{- else}}
+// The return is zero (0) on any of the following, exclusively.
+{{- end}}
+//
+//  • encoding exceeds {{upperSnake .NameNative}}_FRAME_CAP
+//  • a text exceeds {{upperSnake .NameNative}}_TEXT_CAP
+//  • a list exceeds {{upperSnake .NameNative}}_LIST_CAP
+//
 size_t
 {{.NameNative}}_marshal(const struct {{.NameNative}}* o, void* buf);
 
-// Decode a struct from a data pointer as Colfer. Unmarshal reads at least {{.SizeMin}}
-// and at most 4096 octets. A zero return signals malformed data.{{if or .HasText .HasList}}
-// {{if .HasText}}Each UTF-8 string includes a null terminator. {{end}}Caller owns the memory.{{end}}
+// Decode the data structure as Colfer from a data pointer. Unmarshal may over
+// read buffers with a capacity of less than {{upperSnake .NameNative}}_FRAME_CAP.
+// The return equals the encoding size when successful, and it is zero (0) on
+// error encounters.
+//
+// All struct fields are updated, regardless of their initial value. The struct
+// is fully zeroed on error encounters.{{if .HasPayloadSection}} Malloc is not used on decoding errors.
+// ENOMEM may leave fields unintialized
+{{- if .HasText}}
+// Texts are allocated including null ('\0') terminator, even when empty.
+{{- end}}
+{{- if .HasList}}
+// Lists are allocated including <stddef.h> nullptr sentinel, even when empty.
+{{- end}}
+// Caller owns the memory.
+{{- end}}
 size_t
-{{.NameNative}}_unmarshal(struct {{.NameNative}}* o, const void* start);
+{{.NameNative}}_unmarshal(struct {{.NameNative}}* o, const void* start{{if .HasPayloadSection}}, void* (*malloc)(size_t){{end}});
 
-{{end}}{{/* struct range */}}
+{{- end}}{{/* struct range */}}
 
 {{- end}}{{/* package range */}}
 #ifdef __cplusplus
