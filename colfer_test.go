@@ -1,6 +1,9 @@
 package colfer
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func GoldenTagPackages() Packages {
 	p := &Package{Name: "gen"}
@@ -51,5 +54,25 @@ func TestTagFileErrors(t *testing.T) {
 		if err == nil || err.Error() != gold.Err {
 			t.Errorf("%s: got %v, want %v", gold.File, err, gold.Err)
 		}
+	}
+}
+
+func TestGoMod(t *testing.T) {
+	// Test case where no go.mod is found
+	tempDir, err := os.MkdirTemp("", "colfer_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	modDir, modPkg, err := goMod(tempDir)
+	if err != nil {
+		t.Errorf("goMod failed: %v", err)
+	}
+	if modDir != "" {
+		t.Errorf("expected empty modDir, got %q", modDir)
+	}
+	if modPkg != "" {
+		t.Errorf("expected empty modPkg, got %q", modPkg)
 	}
 }

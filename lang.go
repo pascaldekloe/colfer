@@ -1,8 +1,8 @@
 package colfer
 
 import (
-	_ "embed"
 	"bytes"
+	_ "embed"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -164,13 +164,14 @@ func goMod(dir string) (modDir, modPkg string, err error) {
 				return "", "", err
 			}
 
-			// The path does not end in a separator
-			// unless it is the root directory.
-			if dir[len(dir)-1] == filepath.Separator {
+			// If it is the root directory, break
+			parent := filepath.Dir(dir)
+			if parent == dir {
 				break
 			}
+
 			// try parent directory
-			dir = filepath.Dir(dir)
+			dir = parent
 			continue
 		}
 
