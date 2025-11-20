@@ -171,7 +171,7 @@ func goMod(dir string) (modDir, modPkg string, err error) {
 			}
 
 			// try parent directory
-			dir = filepath.Dir(dir)
+			dir = parent
 			continue
 		}
 
