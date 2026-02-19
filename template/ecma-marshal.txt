@@ -26,7 +26,7 @@
 				buf[i++] = this.{{.NameNative}};
 			} else {
 				buf[i++] = {{.Index}};
-				buf[i++] = this.{{.NameNative}} >>> 0;
+				buf[i++] = (this.{{.NameNative}} >>> 8) & 255;
 				buf[i++] = this.{{.NameNative}} & 255;
 			}
 		}
